@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm create *)",
+      "Bash(npm run *)",
+      "Bash(echo \"API server started with PID $!\")",
+      "Read(//tmp/**)"
+    ]
+  }
+}

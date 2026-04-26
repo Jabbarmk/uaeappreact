@@ -1,0 +1,10 @@
+RewriteEngine On
+
+# Block access to backup archives
+RewriteRule ^_php-backup-.*\.tar\.gz$ - [F,L]
+
+# Serve React SPA — proxy everything through Vite dev server or the built dist
+# In production: point DocumentRoot to react-app/dist and use this rule
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^ index.html [L]

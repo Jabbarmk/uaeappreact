@@ -44,7 +44,15 @@ function Slider({ slides }: { slides: any[] }) {
               <h2>{slide.title}</h2>
               <p>{slide.subtitle || slide.sub}</p>
               {(slide.button_text || slide.btn) && (
-                <Link to={slide.button_link || '/categories'} className="slide-btn">
+                <Link
+                  to={
+                    slide.button_link && slide.button_link !== '#'
+                      ? slide.button_link
+                      : slide.business_id
+                        ? `/businesses/${slide.business_id}`
+                        : '/categories'
+                  }
+                  className="slide-btn">
                   {slide.button_text || slide.btn}
                 </Link>
               )}

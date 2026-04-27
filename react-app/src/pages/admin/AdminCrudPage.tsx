@@ -1,11 +1,11 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import api from '../../api';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
-type FieldType = 'text' | 'textarea' | 'number' | 'select' | 'toggle' | 'date' | 'image';
+type FieldType = 'text' | 'textarea' | 'number' | 'select' | 'toggle' | 'date' | 'image' | 'business-search';
 
 interface FieldConfig {
   key: string;
@@ -20,6 +20,7 @@ interface ResourceConfig {
   resource: string;
   label: string;
   displayCol: string;
+  listCols?: string[];
   fields: FieldConfig[];
 }
 
@@ -29,36 +30,37 @@ const EMIRATES = ['Dubai', 'Abu Dhabi', 'Sharjah', 'Ajman', 'Fujairah', 'Ras Al 
 
 const RESOURCE_CONFIGS: Record<string, ResourceConfig> = {
   sliders: { resource: 'sliders', label: 'Sliders', displayCol: 'title', fields: [
-    { key: 'title',       label: 'Title',       type: 'text' },
-    { key: 'subtitle',    label: 'Subtitle',    type: 'text' },
-    { key: 'button_text', label: 'Button Text', type: 'text' },
-    { key: 'button_link', label: 'Button Link', type: 'text' },
-    { key: 'image',       label: 'Image',       type: 'image', folder: 'slides' },
-    { key: 'sort_order',  label: 'Sort Order',  type: 'number' },
-    { key: 'is_active',   label: 'Active',      type: 'toggle' },
+    { key: 'title',       label: 'Title',                          type: 'text' },
+    { key: 'subtitle',    label: 'Subtitle',                       type: 'text' },
+    { key: 'button_text', label: 'Button Text',                    type: 'text' },
+    { key: 'button_link', label: 'Button Link (overrides business)', type: 'text' },
+    { key: 'business_id', label: 'Link to Business (optional)',    type: 'business-search' },
+    { key: 'image',       label: 'Image',                          type: 'image', folder: 'slides' },
+    { key: 'sort_order',  label: 'Sort Order',                     type: 'number' },
+    { key: 'is_active',   label: 'Active',                         type: 'toggle' },
   ]},
-  'main-categories': { resource: 'main-categories', label: 'Main Categories', displayCol: 'name', fields: [
+  'main-categories': { resource: 'main-categories', label: 'Main Categories', displayCol: 'name', listCols: ['icon', 'name', 'link', 'sort_order'], fields: [
     { key: 'name',       label: 'Name',       type: 'text', required: true },
     { key: 'icon',       label: 'Icon',       type: 'text' },
     { key: 'link',       label: 'Link',       type: 'text' },
     { key: 'sort_order', label: 'Sort Order', type: 'number' },
     { key: 'is_active',  label: 'Active',     type: 'toggle' },
   ]},
-  'popular-categories': { resource: 'popular-categories', label: 'Popular Categories', displayCol: 'name', fields: [
+  'popular-categories': { resource: 'popular-categories', label: 'Popular Categories', displayCol: 'name', listCols: ['image', 'name', 'link', 'sort_order'], fields: [
     { key: 'name',       label: 'Name',       type: 'text', required: true },
     { key: 'image',      label: 'Image',      type: 'image', folder: 'categories' },
     { key: 'link',       label: 'Link',       type: 'text' },
     { key: 'sort_order', label: 'Sort Order', type: 'number' },
     { key: 'is_active',  label: 'Active',     type: 'toggle' },
   ]},
-  'business-categories': { resource: 'business-categories', label: 'Business Categories', displayCol: 'name', fields: [
+  'business-categories': { resource: 'business-categories', label: 'Business Categories', displayCol: 'name', listCols: ['icon', 'name', 'group_name', 'sort_order'], fields: [
     { key: 'name',       label: 'Name',       type: 'text', required: true },
     { key: 'icon',       label: 'Icon',       type: 'text' },
     { key: 'group_name', label: 'Group Name', type: 'text' },
     { key: 'sort_order', label: 'Sort Order', type: 'number' },
     { key: 'is_active',  label: 'Active',     type: 'toggle' },
   ]},
-  businesses: { resource: 'businesses', label: 'Businesses', displayCol: 'name', fields: [
+  businesses: { resource: 'businesses', label: 'Businesses', displayCol: 'name', listCols: ['image', 'name', 'emirate', 'phone', 'rating'], fields: [
     { key: 'name',             label: 'Name',             type: 'text', required: true },
     { key: 'category_id',      label: 'Category ID',      type: 'number' },
     { key: 'tagline',          label: 'Tagline',          type: 'text' },
@@ -78,7 +80,7 @@ const RESOURCE_CONFIGS: Record<string, ResourceConfig> = {
     { key: 'established_year', label: 'Est. Year',        type: 'number' },
     { key: 'is_active',        label: 'Active',           type: 'toggle' },
   ]},
-  offers: { resource: 'offers', label: 'Offers', displayCol: 'title', fields: [
+  offers: { resource: 'offers', label: 'Offers', displayCol: 'title', listCols: ['image', 'title', 'price', 'emirate', 'valid_to'], fields: [
     { key: 'business_id',      label: 'Business ID',      type: 'number', required: true },
     { key: 'title',            label: 'Title',            type: 'text',   required: true },
     { key: 'description',      label: 'Description',      type: 'textarea' },
@@ -195,13 +197,83 @@ function ImageUploader({ folder, currentValue, onChange }: { folder: string; cur
   return (
     <div>
       {currentValue && (
-        <img src={`/assets/uploads/${folder}/${currentValue}`} alt="preview"
+        <img src={currentValue.startsWith('http') ? currentValue : `/assets/uploads/${folder}/${currentValue}`} alt="preview"
           style={{ width: 80, height: 60, objectFit: 'cover', border: '1px solid #E0E0E0', borderRadius: 3, display: 'block', marginBottom: 6 }} />
       )}
       <input type="file" accept="image/*" onChange={handleFile} style={{ fontSize: 12 }} />
       {uploading && <div style={{ fontSize: 11, color: '#616161', marginTop: 3 }}>Uploading…</div>}
       {err && <div style={{ fontSize: 11, color: '#C42B1C', marginTop: 3 }}>{err}</div>}
       {currentValue && <div style={{ fontSize: 10, color: '#999', marginTop: 2 }}>{currentValue}</div>}
+    </div>
+  );
+}
+
+// ── BusinessSearchField ───────────────────────────────────────────────────────
+
+function BusinessSearchField({ value, onChange }: { value: string; onChange: (id: string, name: string) => void }) {
+  const [q, setQ] = useState('');
+  const [results, setResults] = useState<{ id: number; name: string }[]>([]);
+  const [selectedName, setSelectedName] = useState('');
+  const [open, setOpen] = useState(false);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const search = (v: string) => {
+    setQ(v);
+    if (timerRef.current) clearTimeout(timerRef.current);
+    if (v.length < 2) { setResults([]); setOpen(false); return; }
+    timerRef.current = setTimeout(async () => {
+      try {
+        const res = await api.get(`/admin/businesses/search?q=${encodeURIComponent(v)}`);
+        setResults(res.data);
+        setOpen(true);
+      } catch { setResults([]); }
+    }, 250);
+  };
+
+  const select = (b: { id: number; name: string }) => {
+    setSelectedName(b.name);
+    setQ('');
+    setResults([]);
+    setOpen(false);
+    onChange(String(b.id), b.name);
+  };
+
+  const clear = () => { setSelectedName(''); onChange('', ''); };
+
+  return (
+    <div style={{ position: 'relative' }}>
+      {value && selectedName ? (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 10px', border: '1px solid #C8C8C8', borderRadius: 3, background: '#EBF3FB', fontSize: 13 }}>
+          <span style={{ flex: 1, color: '#1a1a1a' }}>#{value} — {selectedName}</span>
+          <button type="button" onClick={clear} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#888', fontSize: 14, lineHeight: 1 }}>✕</button>
+        </div>
+      ) : (
+        <>
+          <input
+            type="text" value={q} onChange={(e) => search(e.target.value)}
+            placeholder={value ? `Business ID: ${value} (type to change)` : 'Type 2+ chars to search…'}
+            style={inputStyle}
+            onBlur={() => setTimeout(() => setOpen(false), 150)}
+          />
+          {open && results.length > 0 && (
+            <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, background: '#fff', border: '1px solid #C8C8C8', borderRadius: 3, zIndex: 200, maxHeight: 200, overflowY: 'auto', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}>
+              {results.map((b) => (
+                <div key={b.id} onMouseDown={() => select(b)}
+                  style={{ padding: '7px 12px', fontSize: 13, cursor: 'pointer', borderBottom: '1px solid #F0F0F0' }}
+                  onMouseEnter={(e) => { (e.currentTarget as HTMLDivElement).style.background = '#EBF3FB'; }}
+                  onMouseLeave={(e) => { (e.currentTarget as HTMLDivElement).style.background = '#fff'; }}>
+                  <span style={{ color: '#888', fontSize: 11, marginRight: 8 }}>#{b.id}</span>{b.name}
+                </div>
+              ))}
+            </div>
+          )}
+          {open && results.length === 0 && q.length >= 2 && (
+            <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, background: '#fff', border: '1px solid #C8C8C8', borderRadius: 3, padding: '8px 12px', fontSize: 12, color: '#888', zIndex: 200 }}>
+              No businesses found
+            </div>
+          )}
+        </>
+      )}
     </div>
   );
 }
@@ -230,6 +302,7 @@ function CrudDialog({ config, row, onClose, onSaved }: {
   }, [config, isEdit, row]);
 
   const [form, setForm] = useState<Record<string, string>>(initForm);
+  const [, setBizNames] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const set = (k: string, v: string) => setForm((p) => ({ ...p, [k]: v }));
@@ -316,6 +389,12 @@ function CrudDialog({ config, row, onClose, onSaved }: {
                 )}
                 {f.type === 'image' && f.folder && (
                   <ImageUploader folder={f.folder} currentValue={form[f.key] ?? ''} onChange={(fn) => set(f.key, fn)} />
+                )}
+                {f.type === 'business-search' && (
+                  <BusinessSearchField
+                    value={form[f.key] ?? ''}
+                    onChange={(id, name) => { set(f.key, id); setBizNames((p) => ({ ...p, [f.key]: name })); }}
+                  />
                 )}
               </div>
             ))}
@@ -429,7 +508,11 @@ export default function AdminCrudPage() {
               <thead>
                 <tr>
                   <th style={{ ...thStyle, width: 60 }}>ID</th>
-                  <th style={thStyle}>{config.fields.find((f) => f.key === config.displayCol)?.label ?? config.displayCol}</th>
+                  {(config.listCols ?? [config.displayCol]).map((col) => (
+                    <th key={col} style={thStyle}>
+                      {config.fields.find((f) => f.key === col)?.label ?? col}
+                    </th>
+                  ))}
                   <th style={{ ...thStyle, width: 80, textAlign: 'center' }}>Active</th>
                   <th style={{ ...thStyle, width: 120, textAlign: 'right' }}>Actions</th>
                 </tr>
@@ -437,20 +520,39 @@ export default function AdminCrudPage() {
               <tbody>
                 {rows.length === 0 ? (
                   <tr>
-                    <td colSpan={4} style={{ ...tdStyle, textAlign: 'center', padding: 32, color: '#aaa' }}>
+                    <td colSpan={(config.listCols ?? [config.displayCol]).length + 3} style={{ ...tdStyle, textAlign: 'center', padding: 32, color: '#aaa' }}>
                       No records. Click <strong>New {config.label.replace(/s$/, '')}</strong> to add one.
                     </td>
                   </tr>
                 ) : rows.map((row, ri) => {
                   const isActive = row.is_active === 1 || row.is_active === true || row.is_active === '1';
+                  const cols = config.listCols ?? [config.displayCol];
                   return (
                     <tr key={String(row.id)} style={{ background: ri % 2 === 1 ? '#FAFAFA' : '#fff' }}
                       onMouseEnter={(e) => { (e.currentTarget as HTMLTableRowElement).style.background = '#EBF3FB'; }}
                       onMouseLeave={(e) => { (e.currentTarget as HTMLTableRowElement).style.background = ri % 2 === 1 ? '#FAFAFA' : '#fff'; }}>
                       <td style={{ ...tdStyle, color: '#888', fontSize: 12, fontFamily: 'monospace' }}>{String(row.id)}</td>
-                      <td style={{ ...tdStyle, fontWeight: 500, color: '#1a1a1a', maxWidth: 320, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                        {String(row[config.displayCol] ?? '—')}
-                      </td>
+                      {cols.map((col) => {
+                        const fieldCfg = config.fields.find((f) => f.key === col);
+                        const val = row[col];
+                        if (fieldCfg?.type === 'image' && fieldCfg.folder && val) {
+                          const imgSrc = String(val).startsWith('http')
+                            ? String(val)
+                            : `/assets/uploads/${fieldCfg.folder}/${String(val)}`;
+                          return (
+                            <td key={col} style={tdStyle}>
+                              <img src={imgSrc} alt=""
+                                style={{ width: 40, height: 32, objectFit: 'cover', borderRadius: 3, border: '1px solid #E0E0E0' }} />
+                            </td>
+                          );
+                        }
+                        const isDisplayCol = col === config.displayCol;
+                        return (
+                          <td key={col} style={{ ...tdStyle, fontWeight: isDisplayCol ? 500 : 400, color: isDisplayCol ? '#1a1a1a' : '#555', maxWidth: 220, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                            {val === null || val === undefined || val === '' ? <span style={{ color: '#ccc' }}>—</span> : String(val)}
+                          </td>
+                        );
+                      })}
                       <td style={{ ...tdStyle, textAlign: 'center' }}>
                         <span style={{ display: 'inline-block', width: 8, height: 8, borderRadius: '50%', background: isActive ? '#107C10' : '#C8C8C8', marginRight: 4 }} />
                         <span style={{ fontSize: 11, color: isActive ? '#107C10' : '#888' }}>{isActive ? 'Yes' : 'No'}</span>

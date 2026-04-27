@@ -134,6 +134,20 @@ function crudRoutes(table: string, imageFolder?: string) {
   return r;
 }
 
+// ── Business search (for slider linking) ─────────────────────────────────────
+
+router.get('/businesses/search', requireAdmin, async (req, res, next) => {
+  try {
+    const q = (req.query.q as string) || '';
+    if (q.length < 2) return res.json([]);
+    const results = await query<any>(
+      'SELECT id, name FROM businesses WHERE is_active = 1 AND name LIKE ? ORDER BY name LIMIT 10',
+      [`%${q}%`]
+    );
+    res.json(results);
+  } catch (err) { next(err); }
+});
+
 // ── Resource routes ──────────────────────────────────────────────────────────
 
 router.use('/sliders', crudRoutes('sliders', 'slides'));

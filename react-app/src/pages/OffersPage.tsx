@@ -91,7 +91,7 @@ export default function OffersPage() {
               No offers found in {loc}.
             </div>
           )}
-          {offers.map((offer: any, idx: number) => {
+          {offers.map((offer: any) => {
             const waLink = offer.business_whatsapp
               ? `https://wa.me/${offer.business_whatsapp.replace(/\D/g, '')}?text=${encodeURIComponent(`Hi, I want to order: ${offer.title} (${offer.currency} ${Math.round(offer.price)})`)}`
               : null;

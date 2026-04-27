@@ -11,14 +11,6 @@ function renderStars(r: number) {
   });
 }
 
-function ytEmbed(url: string) {
-  const m = url?.match(/(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|embed\/|shorts\/))([a-zA-Z0-9_-]{11})/);
-  return m ? `https://www.youtube.com/embed/${m[1]}?rel=0&modestbranding=1` : url;
-}
-function ytThumb(url: string) {
-  const m = url?.match(/(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|embed\/|shorts\/))([a-zA-Z0-9_-]{11})/);
-  return m ? `https://img.youtube.com/vi/${m[1]}/hqdefault.jpg` : null;
-}
 
 const GALLERY_FALLBACKS = [
   { src: 'https://images.unsplash.com/photo-1555396273-367ea4eb4db5?w=400&h=400&fit=crop', caption: 'Ambiance' },
@@ -97,7 +89,7 @@ export default function BusinessDetailPage() {
   if (isLoading) return <div style={{ padding: 40, textAlign: 'center' }}>Loading…</div>;
   if (!data?.business) return <div style={{ padding: 40 }}>Business not found. <Link to="/businesses">Back</Link></div>;
 
-  const { business: biz, gallery, services, testimonials, clients, videos, reels } = data;
+  const { business: biz, gallery, services, testimonials, clients } = data;
   const avgRating = biz.rating > 0 ? Number(biz.rating) : 4.5;
 
   const sliderImgs = gallery.length > 0

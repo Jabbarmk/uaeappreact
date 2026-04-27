@@ -16,8 +16,9 @@ router.get('/', async (req, res, next) => {
     const emirates = [...new Set([...UAE_EMIRATES, ...dbEmirates.map((e) => e.emirate)])];
 
     const categories = await query(
-      `SELECT DISTINCT bc.id, bc.name, bc.icon FROM offers o
+      `SELECT bc.id, bc.name, bc.icon FROM offers o
        JOIN business_categories bc ON o.category_id = bc.id WHERE o.is_active=1
+       GROUP BY bc.id, bc.name, bc.icon, bc.sort_order
        ORDER BY bc.sort_order, bc.name`
     );
 

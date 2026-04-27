@@ -2,6 +2,7 @@ import { Router, Request, Response, NextFunction } from 'express';
 import bcrypt from 'bcrypt';
 import multer from 'multer';
 import path from 'path';
+import fs from 'fs/promises';
 import { query, queryOne } from '../db/pool';
 import { requireAdmin } from '../middleware/auth';
 import { getImageUrl } from '../services/imageUrl';
@@ -15,6 +16,20 @@ const upload = multer({
     const allowed = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
     cb(null, allowed.includes(file.mimetype));
   },
+});
+
+// ── File upload ───────────────────────────────────────────────────────────────
+
+router.post('/upload/:folder', requireAdmin, upload.single('file'), async (req, res, next) => {
+  try {
+    if (!req.file) return res.status(400).json({ error: 'No file' });
+    const ext = path.extname(req.file.originalname).toLowerCase() || '.jpg';
+    const filename = `${Date.now()}${ext}`;
+    const destDir = path.resolve(process.env.UPLOAD_PATH || '../assets/uploads') + `/${req.params.folder}/`;
+    await fs.mkdir(destDir, { recursive: true });
+    await fs.rename(req.file.path, destDir + filename);
+    res.json({ filename });
+  } catch (err) { next(err); }
 });
 
 // ── Auth ──────────────────────────────────────────────────────────────────────

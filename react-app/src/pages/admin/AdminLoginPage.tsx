@@ -25,6 +25,7 @@ export default function AdminLoginPage() {
 
   return (
     <div style={{ fontFamily: "'Inter', sans-serif", background: '#f0f2f5', display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh' }}>
+      <style>{`body { max-width: none !important; margin: 0 !important; padding-bottom: 0 !important; }`}</style>
       <div style={{ background: '#fff', padding: 40, borderRadius: 16, boxShadow: '0 4px 24px rgba(0,0,0,0.1)', width: '100%', maxWidth: 400 }}>
         <h1 style={{ textAlign: 'center', marginBottom: 8, fontSize: 24 }}>SMART<span style={{ color: '#E53935' }}>UAE</span></h1>
         <p style={{ textAlign: 'center', color: '#777', marginBottom: 24, fontSize: 14 }}>Admin Dashboard Login</p>

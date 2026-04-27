@@ -5,7 +5,7 @@ import BottomNav from './BottomNav';
 export default function Layout() {
   return (
     <>
-      <Topbar />
+      {/* <Topbar /> */}
       <main>
         <Outlet />
       </main>

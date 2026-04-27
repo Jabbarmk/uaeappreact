@@ -1,6 +1,7 @@
 import { lazy, Suspense } from 'react';
 import { Routes, Route } from 'react-router-dom';
 import Layout from './components/Layout';
+import AdminLayout from './components/AdminLayout';
 
 const Home             = lazy(() => import('./pages/HomePage'));
 const Categories       = lazy(() => import('./pages/CategoriesPage'));
@@ -17,6 +18,8 @@ const Profile          = lazy(() => import('./pages/ProfilePage'));
 const DynamicPage      = lazy(() => import('./pages/DynamicPage'));
 const AdminLogin       = lazy(() => import('./pages/admin/AdminLoginPage'));
 const AdminDashboard   = lazy(() => import('./pages/admin/AdminDashboardPage'));
+const AdminCrudPage    = lazy(() => import('./pages/admin/AdminCrudPage'));
+const AdminSettingsPage = lazy(() => import('./pages/admin/AdminSettingsPage'));
 
 function PageLoader() {
   return <div style={{ padding: 40, textAlign: 'center', color: '#6C5CE7' }}>Loading…</div>;
@@ -26,6 +29,7 @@ export default function App() {
   return (
     <Suspense fallback={<PageLoader />}>
       <Routes>
+        {/* Public routes */}
         <Route element={<Layout />}>
           <Route index element={<Home />} />
           <Route path="categories" element={<Categories />} />
@@ -42,8 +46,27 @@ export default function App() {
           <Route path="profile/:id" element={<Profile />} />
           <Route path="page/:slug" element={<DynamicPage />} />
         </Route>
+
+        {/* Admin login (no layout guard) */}
         <Route path="admin/login" element={<AdminLogin />} />
-        <Route path="admin" element={<AdminDashboard />} />
+
+        {/* Admin routes (guarded by AdminLayout) */}
+        <Route path="admin" element={<AdminLayout />}>
+          <Route index element={<AdminDashboard />} />
+          <Route path="sliders"               element={<AdminCrudPage />} />
+          <Route path="main-categories"       element={<AdminCrudPage />} />
+          <Route path="popular-categories"    element={<AdminCrudPage />} />
+          <Route path="business-categories"   element={<AdminCrudPage />} />
+          <Route path="businesses"            element={<AdminCrudPage />} />
+          <Route path="offers"                element={<AdminCrudPage />} />
+          <Route path="classified-categories" element={<AdminCrudPage />} />
+          <Route path="classified-sections"   element={<AdminCrudPage />} />
+          <Route path="classifieds"           element={<AdminCrudPage />} />
+          <Route path="jobs"                  element={<AdminCrudPage />} />
+          <Route path="profiles"              element={<AdminCrudPage />} />
+          <Route path="pages"                 element={<AdminCrudPage />} />
+          <Route path="settings"              element={<AdminSettingsPage />} />
+        </Route>
       </Routes>
     </Suspense>
   );

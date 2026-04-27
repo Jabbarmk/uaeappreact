@@ -4,7 +4,9 @@
       "Bash(npm create *)",
       "Bash(npm run *)",
       "Bash(echo \"API server started with PID $!\")",
-      "Read(//tmp/**)"
+      "Read(//tmp/**)",
+      "Bash(./mysql.exe -u root smartuae -e \"SHOW TABLES;\")",
+      "Bash(./mysqldump.exe -u root smartuae --no-tablespaces)"
     ]
   }
 }

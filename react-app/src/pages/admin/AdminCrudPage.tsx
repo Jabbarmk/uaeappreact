@@ -451,6 +451,26 @@ export default function AdminCrudPage() {
     enabled: !!config,
   });
 
+  const [exporting, setExporting] = useState(false);
+
+  const handleExport = async () => {
+    setExporting(true);
+    try {
+      const res = await api.get(`/admin/${resourceKey}?page=1&pageSize=10000`);
+      const allRows: Record<string, unknown>[] = res.data.rows;
+      if (!allRows.length) { alert('No data to export.'); return; }
+      const keys = Object.keys(allRows[0]).filter((k) => k !== 'imageUrl');
+      const headers = keys.map((k) => config.fields.find((f) => f.key === k)?.label ?? k);
+      const escape = (v: unknown) => `"${String(v === null || v === undefined ? '' : v).replace(/"/g, '""')}"`;
+      const csv = [headers.map(escape).join(','), ...allRows.map((r) => keys.map((k) => escape(r[k])).join(','))].join('\n');
+      const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8;' }));
+      const a = document.createElement('a');
+      a.href = url; a.download = `${resourceKey}-export.csv`; a.click();
+      URL.revokeObjectURL(url);
+    } catch { alert('Export failed.'); }
+    finally { setExporting(false); }
+  };
+
   const handleDelete = async (id: unknown) => {
     if (!window.confirm(`Delete record #${id}?`)) return;
     try {
@@ -483,6 +503,9 @@ export default function AdminCrudPage() {
         </button>
         <button onClick={() => queryClient.invalidateQueries({ queryKey: ['admin', resourceKey] })} style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '5px 12px', background: '#fff', color: '#333', border: '1px solid #C8C8C8', borderRadius: 3, fontSize: 13, cursor: 'pointer', fontFamily: 'inherit' }}>
           ↻ Refresh
+        </button>
+        <button onClick={handleExport} disabled={exporting} style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '5px 12px', background: '#fff', color: exporting ? '#aaa' : '#333', border: '1px solid #C8C8C8', borderRadius: 3, fontSize: 13, cursor: exporting ? 'not-allowed' : 'pointer', fontFamily: 'inherit' }}>
+          {exporting ? '…' : '↓'} Export CSV
         </button>
         <div style={{ marginLeft: 'auto', fontSize: 12, color: '#888' }}>
           {total > 0 && <>{total} record{total !== 1 ? 's' : ''}</>}

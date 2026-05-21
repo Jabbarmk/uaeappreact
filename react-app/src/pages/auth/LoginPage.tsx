@@ -3,8 +3,6 @@ import { Link, useNavigate } from 'react-router-dom';
 import api from '../../api';
 import { useAuth } from '../../context/AuthContext';
 
-const EMIRATES = ['Dubai','Abu Dhabi','Sharjah','Ajman','Fujairah','Ras Al Khaimah','Umm Al Quwain'];
-
 type Mode = 'password' | 'otp';
 
 export default function LoginPage() {

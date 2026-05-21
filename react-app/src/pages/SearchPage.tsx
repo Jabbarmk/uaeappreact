@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import api from '../api';
 
@@ -23,7 +23,6 @@ function saveRecent(kw: string) {
 function clearRecent() { localStorage.removeItem(RECENT_KEY); }
 
 export default function SearchPage() {
-  const navigate = useNavigate();
   const [tab, setTab] = useState('keyword');
   const [input, setInput] = useState('');
   const [query, setQuery] = useState('');
@@ -36,11 +35,6 @@ export default function SearchPage() {
   // Visible category groups — load more on scroll
   const [visibleGroups, setVisibleGroups] = useState(3);
   const loaderRef = useRef<HTMLDivElement>(null);
-
-  const { data: topKeywords } = useQuery({
-    queryKey: ['top-keywords'],
-    queryFn: () => api.get('/search/top-keywords').then((r) => r.data as { keyword: string; count: number }[]),
-  });
 
   const { data: topCats } = useQuery({
     queryKey: ['top-categories'],

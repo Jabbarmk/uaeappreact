@@ -1,6 +1,16 @@
+import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Link, useParams } from 'react-router-dom';
 import api from '../api';
+
+const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+function formatExpDate(month?: number, year?: number, isCurrent?: number) {
+  if (isCurrent) return 'Present';
+  const m = month ? MONTHS[month - 1] : '';
+  const y = year ? String(year) : '';
+  return [m, y].filter(Boolean).join(' ');
+}
 
 function parseLines(text: string | null): string[] {
   if (!text) return [];
@@ -20,6 +30,12 @@ export default function ProfilePage() {
   });
 
   const profile = data?.profile;
+  const [expandedExpIds, setExpandedExpIds] = useState<Set<number>>(new Set());
+  const toggleExpDesc = (expId: number) => setExpandedExpIds(prev => {
+    const next = new Set(prev);
+    next.has(expId) ? next.delete(expId) : next.add(expId);
+    return next;
+  });
 
   return (
     <>
@@ -83,20 +99,38 @@ export default function ProfilePage() {
           )}
 
           {/* Work Experience */}
-          {profile.work_experience && (
+          {profile.workExperience && profile.workExperience.length > 0 && (
             <div className="cv-section">
               <div className="cv-section-title"><i className="fas fa-briefcase" style={{ marginRight: 8 }}></i>Work Experience</div>
               <div className="cv-section-body">
-                {parseLines(profile.work_experience).map((line, i) => {
-                  const [title, company, dates, location] = line.split('|').map((s) => s.trim());
+                {profile.workExperience.map((exp: any, i: number) => {
+                  const start = formatExpDate(exp.start_month, exp.start_year);
+                  const end = formatExpDate(exp.end_month, exp.end_year, exp.is_current);
+                  const dateStr = [start, end].filter(Boolean).join(' – ');
+                  const expanded = expandedExpIds.has(exp.id);
                   return (
-                    <div className="cv-exp-item" key={i}>
-                      <div>
-                        <div style={{ fontWeight: 700, fontSize: 14 }}>{title}</div>
-                        {company && <div style={{ fontSize: 12, color: 'var(--primary)', fontWeight: 600 }}>{company}</div>}
-                        {location && <div style={{ fontSize: 11, color: '#888' }}>{location}</div>}
+                    <div className="cv-exp-item" key={exp.id} style={{ flexDirection: 'column', alignItems: 'flex-start', gap: 4, borderBottom: i < profile.workExperience.length - 1 ? undefined : 'none' }}>
+                      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', width: '100%' }}>
+                        <div>
+                          <div style={{ fontWeight: 700, fontSize: 14 }}>{exp.job_title}</div>
+                          {exp.company && <div style={{ fontSize: 12, color: 'var(--primary)', fontWeight: 600, marginTop: 2 }}>{exp.company}</div>}
+                          {exp.location && <div style={{ fontSize: 11, color: '#888', marginTop: 2 }}>{exp.location}</div>}
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
+                          {dateStr && <span style={{ fontSize: 11, color: '#888' }}>{dateStr}</span>}
+                          {exp.description && (
+                            <button onClick={() => toggleExpDesc(exp.id)}
+                              style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 16, color: 'var(--primary)', fontWeight: 700, padding: '0 2px', lineHeight: 1 }}>
+                              {expanded ? '−' : '+'}
+                            </button>
+                          )}
+                        </div>
                       </div>
-                      {dates && <div style={{ fontSize: 11, color: '#888', textAlign: 'right', flexShrink: 0 }}>{dates}</div>}
+                      {expanded && exp.description && (
+                        <div style={{ fontSize: 13, color: '#555', lineHeight: 1.6, whiteSpace: 'pre-wrap', marginTop: 6 }}>
+                          {exp.description}
+                        </div>
+                      )}
                     </div>
                   );
                 })}

@@ -1,11 +1,11 @@
-import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import api from '../../api';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
-type FieldType = 'text' | 'textarea' | 'number' | 'select' | 'toggle' | 'date' | 'image' | 'business-search';
+type FieldType = 'text' | 'textarea' | 'number' | 'select' | 'toggle' | 'date' | 'image' | 'business-search' | 'main-category-select' | 'category-search' | 'time-picker' | 'user-search';
 
 interface FieldConfig {
   key: string;
@@ -14,6 +14,11 @@ interface FieldConfig {
   options?: string[];
   folder?: string;
   required?: boolean;
+  placeholder?: string;
+  syncTo?: string;
+  syncTransform?: 'strip-plus';
+  syncNameTo?: string;
+  syncIconTo?: string;
 }
 
 interface ResourceConfig {
@@ -46,36 +51,45 @@ const RESOURCE_CONFIGS: Record<string, ResourceConfig> = {
     { key: 'sort_order', label: 'Sort Order', type: 'number' },
     { key: 'is_active',  label: 'Active',     type: 'toggle' },
   ]},
+  'home-categories': { resource: 'home-categories', label: 'Home Categories', displayCol: 'name', listCols: ['icon', 'name', 'sort_order'], fields: [
+    { key: 'category_id', label: 'Business Category', type: 'category-search', syncNameTo: 'name', syncIconTo: 'icon' },
+    { key: 'name',        label: 'Name',              type: 'text', required: true },
+    { key: 'icon',        label: 'Icon (emoji)',       type: 'text' },
+    { key: 'sort_order',  label: 'Sort Order',        type: 'number' },
+    { key: 'is_active',   label: 'Active',            type: 'toggle' },
+  ]},
   'popular-categories': { resource: 'popular-categories', label: 'Popular Categories', displayCol: 'name', listCols: ['image', 'name', 'link', 'sort_order'], fields: [
-    { key: 'name',       label: 'Name',       type: 'text', required: true },
-    { key: 'image',      label: 'Image',      type: 'image', folder: 'categories' },
-    { key: 'link',       label: 'Link',       type: 'text' },
-    { key: 'sort_order', label: 'Sort Order', type: 'number' },
-    { key: 'is_active',  label: 'Active',     type: 'toggle' },
+    { key: 'category_id', label: 'Business Category', type: 'category-search', syncNameTo: 'name' },
+    { key: 'name',        label: 'Name',              type: 'text', required: true },
+    { key: 'image',       label: 'Image',             type: 'image', folder: 'categories' },
+    { key: 'link',        label: 'Link',              type: 'text' },
+    { key: 'sort_order',  label: 'Sort Order',        type: 'number' },
+    { key: 'is_active',   label: 'Active',            type: 'toggle' },
   ]},
   'business-categories': { resource: 'business-categories', label: 'Business Categories', displayCol: 'name', listCols: ['icon', 'name', 'group_name', 'sort_order'], fields: [
     { key: 'name',       label: 'Name',       type: 'text', required: true },
     { key: 'icon',       label: 'Icon',       type: 'text' },
-    { key: 'group_name', label: 'Group Name', type: 'text' },
+    { key: 'group_name', label: 'Group Name', type: 'main-category-select' },
     { key: 'sort_order', label: 'Sort Order', type: 'number' },
     { key: 'is_active',  label: 'Active',     type: 'toggle' },
   ]},
   businesses: { resource: 'businesses', label: 'Businesses', displayCol: 'name', listCols: ['image', 'name', 'emirate', 'phone', 'rating'], fields: [
-    { key: 'name',             label: 'Name',             type: 'text', required: true },
-    { key: 'category_id',      label: 'Category ID',      type: 'number' },
+    { key: 'user_id',          label: 'Assigned User',    type: 'user-search' },
+    { key: 'name',             label: 'Name',             type: 'text',            required: true },
+    { key: 'category_id',      label: 'Category',         type: 'category-search' },
     { key: 'tagline',          label: 'Tagline',          type: 'text' },
     { key: 'description',      label: 'Description',      type: 'textarea' },
     { key: 'about',            label: 'About',            type: 'textarea' },
-    { key: 'image',            label: 'Cover Image',      type: 'image', folder: 'businesses' },
-    { key: 'logo',             label: 'Logo',             type: 'image', folder: 'businesses' },
-    { key: 'emirate',          label: 'Emirate',          type: 'select', options: EMIRATES },
+    { key: 'image',            label: 'Cover Image',      type: 'image',           folder: 'businesses' },
+    { key: 'logo',             label: 'Logo',             type: 'image',           folder: 'businesses' },
+    { key: 'emirate',          label: 'Emirate',          type: 'select',          options: EMIRATES },
     { key: 'address',          label: 'Address',          type: 'text' },
-    { key: 'phone',            label: 'Phone',            type: 'text' },
-    { key: 'whatsapp',         label: 'WhatsApp',         type: 'text' },
+    { key: 'phone',            label: 'Phone',            type: 'text',            placeholder: '+971559164496', syncTo: 'whatsapp', syncTransform: 'strip-plus' },
+    { key: 'whatsapp',         label: 'WhatsApp',         type: 'text',            placeholder: '971559164496' },
     { key: 'email',            label: 'Email',            type: 'text' },
     { key: 'website',          label: 'Website',          type: 'text' },
-    { key: 'opening_time',     label: 'Opening Time',     type: 'text' },
-    { key: 'closing_time',     label: 'Closing Time',     type: 'text' },
+    { key: 'opening_time',     label: 'Opening Time',     type: 'time-picker' },
+    { key: 'closing_time',     label: 'Closing Time',     type: 'time-picker' },
     { key: 'rating',           label: 'Rating (0–5)',     type: 'number' },
     { key: 'established_year', label: 'Est. Year',        type: 'number' },
     { key: 'is_active',        label: 'Active',           type: 'toggle' },
@@ -107,6 +121,7 @@ const RESOURCE_CONFIGS: Record<string, ResourceConfig> = {
     { key: 'is_active',  label: 'Active',     type: 'toggle' },
   ]},
   classifieds: { resource: 'classifieds', label: 'Classifieds', displayCol: 'title', fields: [
+    { key: 'user_id',          label: 'Assigned User', type: 'user-search' },
     { key: 'title',            label: 'Title',       type: 'text', required: true },
     { key: 'description',      label: 'Description', type: 'textarea' },
     { key: 'price',            label: 'Price',       type: 'number' },
@@ -122,6 +137,7 @@ const RESOURCE_CONFIGS: Record<string, ResourceConfig> = {
     { key: 'is_active',        label: 'Active',      type: 'toggle' },
   ]},
   jobs: { resource: 'jobs', label: 'Jobs', displayCol: 'title', fields: [
+    { key: 'user_id',      label: 'Assigned User', type: 'user-search' },
     { key: 'title',        label: 'Title',        type: 'text', required: true },
     { key: 'company',      label: 'Company',      type: 'text' },
     { key: 'location',     label: 'Location',     type: 'text' },
@@ -136,6 +152,7 @@ const RESOURCE_CONFIGS: Record<string, ResourceConfig> = {
     { key: 'is_active',    label: 'Active',       type: 'toggle' },
   ]},
   profiles: { resource: 'profiles', label: 'Profiles', displayCol: 'full_name', fields: [
+    { key: 'user_id',           label: 'Assigned User',    type: 'user-search' },
     { key: 'full_name',         label: 'Full Name',        type: 'text', required: true },
     { key: 'title',             label: 'Job Title',        type: 'text' },
     { key: 'photo',             label: 'Photo',            type: 'image', folder: 'profiles' },
@@ -147,12 +164,23 @@ const RESOURCE_CONFIGS: Record<string, ResourceConfig> = {
     { key: 'current_company',   label: 'Current Company',  type: 'text' },
     { key: 'experience_years',  label: 'Experience Years', type: 'number' },
     { key: 'technical_skills',  label: 'Skills (comma-sep)', type: 'text' },
-    { key: 'work_experience',   label: 'Work Exp (Title|Company|Dates|Location per line)', type: 'textarea' },
     { key: 'education_details', label: 'Education (Degree@Uni|Years per line)', type: 'textarea' },
     { key: 'certifications',    label: 'Certifications (one per line)', type: 'textarea' },
     { key: 'projects',          label: 'Projects (one per line)', type: 'textarea' },
     { key: 'languages',         label: 'Languages (comma-sep)', type: 'text' },
     { key: 'is_active',         label: 'Active', type: 'toggle' },
+  ]},
+  'work-experience': { resource: 'work-experience', label: 'Work Experience', displayCol: 'job_title', listCols: ['job_title', 'company', 'start_year', 'is_current'], fields: [
+    { key: 'user_id',     label: 'Assigned User',          type: 'user-search' },
+    { key: 'job_title',   label: 'Job Title',              type: 'text', required: true },
+    { key: 'company',     label: 'Company',                type: 'text', required: true },
+    { key: 'location',    label: 'Location',               type: 'text' },
+    { key: 'start_month', label: 'Start Month (1–12)',     type: 'select', options: ['1','2','3','4','5','6','7','8','9','10','11','12'] },
+    { key: 'start_year',  label: 'Start Year',             type: 'number' },
+    { key: 'end_month',   label: 'End Month (1–12)',       type: 'select', options: ['1','2','3','4','5','6','7','8','9','10','11','12'] },
+    { key: 'end_year',    label: 'End Year',               type: 'number' },
+    { key: 'is_current',  label: 'Currently Working Here', type: 'toggle' },
+    { key: 'description', label: 'Description',            type: 'textarea' },
   ]},
   pages: { resource: 'pages', label: 'Pages', displayCol: 'title', fields: [
     { key: 'slug',             label: 'Slug (URL)',        type: 'text', required: true },
@@ -217,6 +245,15 @@ function BusinessSearchField({ value, onChange }: { value: string; onChange: (id
   const [open, setOpen] = useState(false);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  useEffect(() => {
+    if (value && !selectedName) {
+      api.get(`/admin/businesses/search?q=${value}`).then((r) => {
+        const found = (r.data as { id: number; name: string }[]).find((b) => String(b.id) === String(value));
+        if (found) setSelectedName(found.name);
+      }).catch(() => {});
+    }
+  }, [value]); // selectedName intentionally omitted – init only
+
   const search = (v: string) => {
     setQ(v);
     if (timerRef.current) clearTimeout(timerRef.current);
@@ -278,6 +315,243 @@ function BusinessSearchField({ value, onChange }: { value: string; onChange: (id
   );
 }
 
+// ── MainCategorySelectField ───────────────────────────────────────────────────
+
+function MainCategorySelectField({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  const { data, isLoading } = useQuery({
+    queryKey: ['admin', 'main-categories', 'all'],
+    queryFn: () => api.get('/admin/main-categories?page=1&pageSize=100').then((r) => r.data.rows as { id: number; name: string }[]),
+  });
+
+  return (
+    <select value={value} onChange={(e) => onChange(e.target.value)} style={inputStyle}>
+      <option value="">— Select Group —</option>
+      {isLoading && <option disabled>Loading…</option>}
+      {data?.map((cat) => <option key={cat.id} value={cat.name}>{cat.name}</option>)}
+    </select>
+  );
+}
+
+// ── CategorySearchField ───────────────────────────────────────────────────────
+
+function CategorySearchField({ value, onChange }: { value: string; onChange: (id: string, name: string, icon?: string) => void }) {
+  const [q, setQ] = useState('');
+  const [selectedName, setSelectedName] = useState('');
+  const [open, setOpen] = useState(false);
+
+  const { data } = useQuery({
+    queryKey: ['admin', 'business-categories', 'all'],
+    queryFn: () => api.get('/admin/business-categories?page=1&pageSize=500').then((r) => r.data.rows as { id: number; name: string; icon?: string }[]),
+  });
+
+  useEffect(() => {
+    if (value && !selectedName && data) {
+      const cat = data.find((c) => String(c.id) === String(value));
+      if (cat) setSelectedName(cat.name);
+    }
+  }, [value, data]); // selectedName intentionally omitted – init only
+
+  const filtered = q.length >= 1 ? (data ?? []).filter((c) => c.name.toLowerCase().includes(q.toLowerCase())) : [];
+
+  const select = (c: { id: number; name: string; icon?: string }) => {
+    setSelectedName(c.name);
+    setQ('');
+    setOpen(false);
+    onChange(String(c.id), c.name, c.icon);
+  };
+
+  const clear = () => { setSelectedName(''); onChange('', ''); };
+
+  return (
+    <div style={{ position: 'relative' }}>
+      {value && selectedName ? (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 10px', border: '1px solid #C8C8C8', borderRadius: 3, background: '#EBF3FB', fontSize: 13 }}>
+          <span style={{ flex: 1, color: '#1a1a1a' }}>#{value} — {selectedName}</span>
+          <button type="button" onClick={clear} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#888', fontSize: 14, lineHeight: 1 }}>✕</button>
+        </div>
+      ) : (
+        <>
+          <input
+            type="text" value={q}
+            onChange={(e) => { setQ(e.target.value); setOpen(true); }}
+            placeholder={value ? `Category ID: ${value} (type to change)` : 'Type to search categories…'}
+            style={inputStyle}
+            onBlur={() => setTimeout(() => setOpen(false), 150)}
+          />
+          {open && filtered.length > 0 && (
+            <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, background: '#fff', border: '1px solid #C8C8C8', borderRadius: 3, zIndex: 200, maxHeight: 200, overflowY: 'auto', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}>
+              {filtered.map((c) => (
+                <div key={c.id} onMouseDown={() => select(c)}
+                  style={{ padding: '7px 12px', fontSize: 13, cursor: 'pointer', borderBottom: '1px solid #F0F0F0' }}
+                  onMouseEnter={(e) => { (e.currentTarget as HTMLDivElement).style.background = '#EBF3FB'; }}
+                  onMouseLeave={(e) => { (e.currentTarget as HTMLDivElement).style.background = '#fff'; }}>
+                  <span style={{ color: '#888', fontSize: 11, marginRight: 8 }}>#{c.id}</span>{c.name}
+                </div>
+              ))}
+            </div>
+          )}
+          {open && filtered.length === 0 && q.length >= 1 && (
+            <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, background: '#fff', border: '1px solid #C8C8C8', borderRadius: 3, padding: '8px 12px', fontSize: 12, color: '#888', zIndex: 200 }}>
+              No categories found
+            </div>
+          )}
+        </>
+      )}
+    </div>
+  );
+}
+
+// ── UserSearchField ───────────────────────────────────────────────────────────
+
+function UserSearchField({ value, onChange }: { value: string; onChange: (id: string, name: string) => void }) {
+  const [q, setQ] = useState('');
+  const [results, setResults] = useState<{ id: number; name: string; email: string; mobile: string }[]>([]);
+  const [selectedLabel, setSelectedLabel] = useState('');
+  const [open, setOpen] = useState(false);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    if (value && !selectedLabel) {
+      api.get(`/admin/users/${value}`).then((r) => {
+        const u = r.data;
+        setSelectedLabel(`${u.name}${u.email ? ` (${u.email})` : u.mobile ? ` (${u.mobile})` : ''}`);
+      }).catch(() => {});
+    }
+    if (!value) setSelectedLabel('');
+  }, [value]); // selectedLabel intentionally omitted – init only
+
+  const search = (v: string) => {
+    setQ(v);
+    if (timerRef.current) clearTimeout(timerRef.current);
+    if (v.length < 2) { setResults([]); setOpen(false); return; }
+    timerRef.current = setTimeout(async () => {
+      try {
+        const res = await api.get(`/admin/users/search?q=${encodeURIComponent(v)}`);
+        setResults(res.data);
+        setOpen(true);
+      } catch { setResults([]); }
+    }, 250);
+  };
+
+  const select = (u: { id: number; name: string; email: string; mobile: string }) => {
+    setSelectedLabel(`${u.name}${u.email ? ` (${u.email})` : u.mobile ? ` (${u.mobile})` : ''}`);
+    setQ(''); setResults([]); setOpen(false);
+    onChange(String(u.id), u.name);
+  };
+
+  const clear = () => { setSelectedLabel(''); setQ(''); onChange('', ''); };
+
+  return (
+    <div style={{ position: 'relative' }}>
+      {value && selectedLabel ? (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 10px', border: '1px solid #A5D6A7', borderRadius: 3, background: '#E8F5E9', fontSize: 13 }}>
+          <span>👤</span>
+          <span style={{ flex: 1, color: '#1a1a1a' }}>#{value} — {selectedLabel}</span>
+          <button type="button" onClick={clear} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#888', fontSize: 14, lineHeight: 1 }}>✕</button>
+        </div>
+      ) : (
+        <>
+          <input
+            type="text" value={q} onChange={(e) => search(e.target.value)}
+            placeholder={value ? `User ID: ${value} (type to change)` : 'Search by name, email or mobile…'}
+            style={inputStyle}
+            onBlur={() => setTimeout(() => setOpen(false), 150)}
+          />
+          {open && results.length > 0 && (
+            <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, background: '#fff', border: '1px solid #C8C8C8', borderRadius: 3, zIndex: 200, maxHeight: 200, overflowY: 'auto', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}>
+              {results.map((u) => (
+                <div key={u.id} onMouseDown={() => select(u)}
+                  style={{ padding: '7px 12px', fontSize: 13, cursor: 'pointer', borderBottom: '1px solid #F0F0F0' }}
+                  onMouseEnter={(e) => { (e.currentTarget as HTMLDivElement).style.background = '#E8F5E9'; }}
+                  onMouseLeave={(e) => { (e.currentTarget as HTMLDivElement).style.background = '#fff'; }}>
+                  <span style={{ color: '#888', fontSize: 11, marginRight: 8 }}>#{u.id}</span>
+                  <strong>{u.name}</strong>
+                  {u.email && <span style={{ color: '#888', fontSize: 11, marginLeft: 8 }}>{u.email}</span>}
+                  {!u.email && u.mobile && <span style={{ color: '#aaa', fontSize: 11, marginLeft: 8 }}>{u.mobile}</span>}
+                </div>
+              ))}
+            </div>
+          )}
+          {open && results.length === 0 && q.length >= 2 && (
+            <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, background: '#fff', border: '1px solid #C8C8C8', borderRadius: 3, padding: '8px 12px', fontSize: 12, color: '#888', zIndex: 200 }}>
+              No users found
+            </div>
+          )}
+        </>
+      )}
+    </div>
+  );
+}
+
+// ── TimePickerField ───────────────────────────────────────────────────────────
+
+function TimePickerField({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  const parseTime = (v: string) => {
+    if (!v || v === 'Open 24 Hours') return { h: '', m: '00', ampm: 'AM', fmt24: false, allDay: v === 'Open 24 Hours' };
+    const m12 = v.match(/^(\d{1,2}):(\d{2})\s*(AM|PM)$/i);
+    if (m12) return { h: m12[1], m: m12[2], ampm: m12[3].toUpperCase(), fmt24: false, allDay: false };
+    const m24 = v.match(/^(\d{1,2}):(\d{2})$/);
+    if (m24) return { h: m24[1], m: m24[2], ampm: 'AM', fmt24: true, allDay: false };
+    return { h: '', m: '00', ampm: 'AM', fmt24: false, allDay: false };
+  };
+
+  const init = parseTime(value);
+  const [hour, setHour] = useState(init.h);
+  const [minute, setMinute] = useState(init.m);
+  const [ampm, setAmpm] = useState(init.ampm);
+  const [fmt24, setFmt24] = useState(init.fmt24);
+  const [allDay, setAllDay] = useState(init.allDay);
+
+  const emit = (h: string, m: string, a: string, f: boolean, ad: boolean) => {
+    if (ad) { onChange('Open 24 Hours'); return; }
+    if (!h) { onChange(''); return; }
+    const hh = h.padStart(2, '0');
+    const mm = (m || '00').padStart(2, '0');
+    onChange(f ? `${hh}:${mm}` : `${hh}:${mm} ${a}`);
+  };
+
+  const hours12 = Array.from({ length: 12 }, (_, i) => String(i + 1));
+  const hours24 = Array.from({ length: 24 }, (_, i) => String(i).padStart(2, '0'));
+  const minutes = ['00', '05', '10', '15', '20', '25', '30', '35', '40', '45', '50', '55'];
+
+  const sStyle: React.CSSProperties = { ...inputStyle, width: 64 };
+
+  return (
+    <div>
+      <div style={{ display: 'flex', gap: 4, alignItems: 'center', flexWrap: 'wrap' }}>
+        <select value={hour} disabled={allDay} style={sStyle}
+          onChange={(e) => { setHour(e.target.value); emit(e.target.value, minute, ampm, fmt24, allDay); }}>
+          <option value="">HH</option>
+          {(fmt24 ? hours24 : hours12).map((h) => <option key={h} value={h}>{h}</option>)}
+        </select>
+        <span style={{ fontWeight: 700, color: '#555', fontSize: 14 }}>:</span>
+        <select value={minute} disabled={allDay} style={sStyle}
+          onChange={(e) => { setMinute(e.target.value); emit(hour, e.target.value, ampm, fmt24, allDay); }}>
+          {minutes.map((m) => <option key={m} value={m}>{m}</option>)}
+        </select>
+        {!fmt24 && (
+          <select value={ampm} disabled={allDay} style={{ ...sStyle, width: 60 }}
+            onChange={(e) => { setAmpm(e.target.value); emit(hour, minute, e.target.value, fmt24, allDay); }}>
+            <option>AM</option>
+            <option>PM</option>
+          </select>
+        )}
+        <label style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 11, color: '#555', cursor: 'pointer', marginLeft: 4, whiteSpace: 'nowrap' }}>
+          <input type="checkbox" checked={fmt24}
+            onChange={(e) => { setFmt24(e.target.checked); emit(hour, minute, ampm, e.target.checked, allDay); }} />
+          24HR
+        </label>
+      </div>
+      <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, color: '#444', cursor: 'pointer', marginTop: 5 }}>
+        <input type="checkbox" checked={allDay}
+          onChange={(e) => { setAllDay(e.target.checked); emit(hour, minute, ampm, fmt24, e.target.checked); }} />
+        Open 24 Hours
+      </label>
+      {value && <div style={{ fontSize: 10, color: '#999', marginTop: 3 }}>{value}</div>}
+    </div>
+  );
+}
+
 // ── Dialog (Windows-style modal) ──────────────────────────────────────────────
 
 function CrudDialog({ config, row, onClose, onSaved }: {
@@ -305,7 +579,14 @@ function CrudDialog({ config, row, onClose, onSaved }: {
   const [, setBizNames] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
-  const set = (k: string, v: string) => setForm((p) => ({ ...p, [k]: v }));
+  const set = (k: string, v: string) => setForm((p) => {
+    const next = { ...p, [k]: v };
+    const fieldCfg = config.fields.find((f) => f.key === k);
+    if (fieldCfg?.syncTo) {
+      next[fieldCfg.syncTo] = fieldCfg.syncTransform === 'strip-plus' ? v.replace(/^\+/, '') : v;
+    }
+    return next;
+  });
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -315,7 +596,7 @@ function CrudDialog({ config, row, onClose, onSaved }: {
       for (const f of config.fields) {
         const v = form[f.key];
         if (f.type === 'toggle') payload[f.key] = v === '1' ? 1 : 0;
-        else if (f.type === 'number') payload[f.key] = v === '' ? null : Number(v);
+        else if (f.type === 'number' || f.type === 'category-search' || f.type === 'business-search' || f.type === 'user-search') payload[f.key] = v === '' ? null : Number(v);
         else payload[f.key] = v;
       }
       if (isEdit && row) await api.put(`/admin/${config.resource}/${String(row.id)}`, payload);
@@ -364,13 +645,13 @@ function CrudDialog({ config, row, onClose, onSaved }: {
           {/* Two-column layout for short fields */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: '10px 16px' }}>
             {textFields.map((f) => (
-              <div key={f.key} style={{ gridColumn: f.type === 'textarea' ? '1 / -1' : undefined }}>
+              <div key={f.key} style={{ gridColumn: (f.type === 'textarea' || f.type === 'time-picker' || f.type === 'user-search' || f.type === 'business-search' || f.type === 'category-search') ? '1 / -1' : undefined }}>
                 <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: '#444', marginBottom: 4 }}>
                   {f.label}{f.required && <span style={{ color: '#C42B1C', marginLeft: 2 }}>*</span>}
                 </label>
 
                 {f.type === 'text' && (
-                  <input type="text" value={form[f.key] ?? ''} onChange={(e) => set(f.key, e.target.value)} required={f.required} style={inputStyle} />
+                  <input type="text" value={form[f.key] ?? ''} onChange={(e) => set(f.key, e.target.value)} required={f.required} placeholder={f.placeholder} style={inputStyle} />
                 )}
                 {f.type === 'number' && (
                   <input type="number" value={form[f.key] ?? ''} onChange={(e) => set(f.key, e.target.value)} required={f.required} style={inputStyle} />
@@ -395,6 +676,26 @@ function CrudDialog({ config, row, onClose, onSaved }: {
                     value={form[f.key] ?? ''}
                     onChange={(id, name) => { set(f.key, id); setBizNames((p) => ({ ...p, [f.key]: name })); }}
                   />
+                )}
+                {f.type === 'main-category-select' && (
+                  <MainCategorySelectField value={form[f.key] ?? ''} onChange={(v) => set(f.key, v)} />
+                )}
+                {f.type === 'category-search' && (
+                  <CategorySearchField
+                    value={form[f.key] ?? ''}
+                    onChange={(id, name, icon) => {
+                      set(f.key, id);
+                      setBizNames((p) => ({ ...p, [f.key]: name }));
+                      if (f.syncNameTo) setForm((p) => ({ ...p, [f.syncNameTo!]: name }));
+                      if (f.syncIconTo && icon) setForm((p) => ({ ...p, [f.syncIconTo!]: icon }));
+                    }}
+                  />
+                )}
+                {f.type === 'time-picker' && (
+                  <TimePickerField key={`${f.key}-tp`} value={form[f.key] ?? ''} onChange={(v) => set(f.key, v)} />
+                )}
+                {f.type === 'user-search' && (
+                  <UserSearchField value={form[f.key] ?? ''} onChange={(id) => set(f.key, id)} />
                 )}
               </div>
             ))}

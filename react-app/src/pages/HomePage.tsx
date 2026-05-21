@@ -9,12 +9,6 @@ const SLIDER_FALLBACKS = [
   { img: 'https://images.unsplash.com/photo-1518684079-3c830dcef090?w=800&fit=crop', title: 'Career in UAE', sub: 'Thousands of jobs waiting for you', btn: 'Find Jobs' },
 ];
 
-const CLS_FALLBACKS = [
-  'https://images.unsplash.com/photo-1510557880182-3d4d3cba35a5?w=300&h=300&fit=crop',
-  'https://images.unsplash.com/photo-1555041469-a586c61ea9bc?w=300&h=300&fit=crop',
-  'https://images.unsplash.com/photo-1492144534655-ae79c964c9d7?w=300&h=300&fit=crop',
-  'https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=300&h=300&fit=crop',
-];
 
 function Slider({ slides }: { slides: any[] }) {
   const [cur, setCur] = useState(0);
@@ -35,30 +29,30 @@ function Slider({ slides }: { slides: any[] }) {
   return (
     <div className="slider-container">
       <div className="slider-track" ref={trackRef}>
-        {slides.map((slide, i) => (
-          <div className="slide" key={i}>
-            <img src={slide.imageUrl || slide.img} alt={slide.title || slide.title}
-              loading={i === 0 ? undefined : 'lazy'} decoding="async"
-              onError={(e) => { (e.target as HTMLImageElement).src = SLIDER_FALLBACKS[i % SLIDER_FALLBACKS.length].img; }} />
-            <div className="slide-content">
-              <h2>{slide.title}</h2>
-              <p>{slide.subtitle || slide.sub}</p>
-              {(slide.button_text || slide.btn) && (
-                <Link
-                  to={
-                    slide.button_link && slide.button_link !== '#'
-                      ? slide.button_link
-                      : slide.business_id
-                        ? `/businesses/${slide.business_id}`
-                        : '/categories'
-                  }
-                  className="slide-btn">
-                  {slide.button_text || slide.btn}
-                </Link>
-              )}
-            </div>
-          </div>
-        ))}
+        {slides.map((slide, i) => {
+          const slideTo = slide.button_link && slide.button_link !== '#'
+            ? slide.button_link
+            : slide.business_id
+              ? `/businesses/${slide.business_id}`
+              : null;
+          const inner = (
+            <>
+              <img src={slide.imageUrl || slide.img} alt={slide.title}
+                loading={i === 0 ? undefined : 'lazy'} decoding="async"
+                onError={(e) => { (e.target as HTMLImageElement).src = SLIDER_FALLBACKS[i % SLIDER_FALLBACKS.length].img; }} />
+              <div className="slide-content">
+                <h2>{slide.title}</h2>
+                <p>{slide.subtitle || slide.sub}</p>
+                {(slide.button_text || slide.btn) && (
+                  <span className="slide-btn">{slide.button_text || slide.btn}</span>
+                )}
+              </div>
+            </>
+          );
+          return slideTo
+            ? <Link className="slide" key={i} to={slideTo}>{inner}</Link>
+            : <div className="slide" key={i}>{inner}</div>;
+        })}
       </div>
       <div className="slider-dots">
         {slides.map((_, i) => (
@@ -78,31 +72,30 @@ export default function HomePage() {
   if (isLoading) return <div className="loading">Loading…</div>;
 
   const sliders = data?.sliders?.length ? data.sliders : SLIDER_FALLBACKS;
-  const mainCats = data?.mainCategories || [];
+  const homeCats = data?.homeCategories || [];
   const popCats = data?.popularCategories || [];
-  const sections = data?.sections || [];
   const stats = data?.stats || { businesses: 50, jobs: 30, classifieds: 100 };
 
   return (
     <>
       <Slider slides={sliders} />
 
-      <div className="section-header">
-        <h2>Categories</h2>
-        <Link to="/categories">See all</Link>
-      </div>
-      <div className="category-icons">
-        {mainCats.map((cat: any) => (
-          <Link key={cat.id} to={`/categories?cat=${cat.id}`} className="cat-icon-item">
-            <div className="icon">{cat.icon}</div>
-            <span>{cat.name}</span>
-          </Link>
-        ))}
-        <Link to="/categories" className="cat-icon-item">
-          <div className="icon">📋</div>
-          <span>All</span>
-        </Link>
-      </div>
+      {homeCats.length > 0 && (
+        <>
+          <div className="section-header">
+            <h2>Featured Categories</h2>
+            <Link to="/categories">View all</Link>
+          </div>
+          <div className="category-icons">
+            {homeCats.map((cat: any) => (
+              <Link key={cat.id} to={`/businesses?cat=${cat.category_id}`} className="cat-icon-item">
+                <div className="icon">{cat.icon}</div>
+                <span>{cat.name}</span>
+              </Link>
+            ))}
+          </div>
+        </>
+      )}
 
       <div className="section-header"><h2>Our Services</h2></div>
       <div className="feature-grid">
@@ -143,48 +136,10 @@ export default function HomePage() {
         ))}
       </div>
 
-      <div className="promo-card">
-        <div className="promo-text">
-          <h3>Post Your Ad Free!</h3>
-          <p>Reach thousands of buyers in UAE instantly</p>
-        </div>
-        <img src="https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?w=160&h=160&fit=crop"
-          alt="Post Ad" className="promo-img" loading="lazy" decoding="async" width="160" height="160" />
-      </div>
 
-      <div className="hero-banner">
-        <h2>Discover the Best in UAE</h2>
-        <p>Businesses · Jobs · Classifieds – all in one place</p>
-        <Link to="/categories" className="hero-btn">Explore Now</Link>
-        <img src="https://images.unsplash.com/photo-1512453979798-5ea266f8880c?w=240&h=160&fit=crop"
-          alt="Dubai" className="hero-img"
-          style={{ borderRadius: 14, objectFit: 'cover', width: 130, height: 100 }}
-          loading="lazy" decoding="async" />
-      </div>
 
-      {sections.map((section: any) => (
-        <div key={section.id}>
-          <div className="section-header">
-            <h2>{section.name}</h2>
-            <Link to={`/classifieds/list?section=${section.id}`}>View all</Link>
-          </div>
-          <div className="classified-row">
-            {section.items.map((item: any, idx: number) => (
-              <Link key={item.id} to={`/classifieds/${item.id}`} className="classified-card">
-                <img src={item.imageUrl} alt={item.title} className="card-img"
-                  loading="lazy" decoding="async"
-                  onError={(e) => { (e.target as HTMLImageElement).src = CLS_FALLBACKS[idx % CLS_FALLBACKS.length]; }} />
-                <div className="card-body">
-                  <div className="price">{item.currency} {Number(item.price).toLocaleString()} <small>/month</small></div>
-                  <div className="card-title">{item.title}</div>
-                </div>
-              </Link>
-            ))}
-          </div>
-        </div>
-      ))}
 
-      <div className="section-header"><h2>Explore UAE</h2></div>
+      <div className="section-header"><h2>Explore the best in UAE</h2></div>
       <div className="gallery-row">
         {[
           ['https://images.unsplash.com/photo-1512453979798-5ea266f8880c?w=400&h=300&fit=crop', 'Dubai Skyline'],

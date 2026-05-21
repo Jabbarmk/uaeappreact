@@ -4,6 +4,19 @@ import { getImageUrl } from '../services/imageUrl';
 
 const router = Router();
 
+// Track business view by emirate
+router.post('/view/:id', async (req, res, next) => {
+  try {
+    const id = Number(req.params.id);
+    const emirate = (req.body.emirate as string) || 'Unknown';
+    await query(
+      'INSERT INTO business_views (business_id, emirate, count) VALUES (?, ?, 1) ON DUPLICATE KEY UPDATE count = count + 1',
+      [id, emirate]
+    );
+    res.json({ ok: true });
+  } catch (err) { next(err); }
+});
+
 // Search endpoint
 router.get('/search', async (req, res, next) => {
   try {

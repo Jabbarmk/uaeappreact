@@ -6,10 +6,11 @@ const router = Router();
 
 router.get('/', async (_req, res, next) => {
   try {
-    const [sliders, mainCats, popCats, sections] = await Promise.all([
+    const [sliders, mainCats, popCats, homeCats, sections] = await Promise.all([
       query('SELECT * FROM sliders WHERE is_active = 1 ORDER BY sort_order'),
       query('SELECT * FROM main_categories WHERE is_active = 1 ORDER BY sort_order'),
       query('SELECT * FROM popular_categories WHERE is_active = 1 ORDER BY sort_order'),
+      query('SELECT * FROM home_categories WHERE is_active = 1 ORDER BY sort_order'),
       query('SELECT * FROM classified_sections WHERE is_active = 1 ORDER BY sort_order'),
     ]);
 
@@ -37,6 +38,7 @@ router.get('/', async (_req, res, next) => {
         imageUrl: getImageUrl(s.image, 'slides'),
       })),
       mainCategories: mainCats,
+      homeCategories: homeCats,
       popularCategories: (popCats as any[]).map((p) => ({
         ...p,
         imageUrl: getImageUrl(p.image, 'categories'),

@@ -11,7 +11,7 @@ export default function BottomNav() {
         <i className="fas fa-th-large"></i>
         <span>Classifieds</span>
       </NavLink>
-      <NavLink to="/offers" className="nav-item nav-center">
+      <NavLink to="/search" className="nav-item nav-center">
         <div className="nav-plus"><i className="fas fa-search"></i></div>
       </NavLink>
       <NavLink to="/offers" className={({ isActive }) => `nav-item${isActive ? ' active' : ''}`}>

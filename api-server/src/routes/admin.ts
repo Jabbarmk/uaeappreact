@@ -6,6 +6,7 @@ import fs from 'fs/promises';
 import { query, queryOne } from '../db/pool';
 import { requireAdmin } from '../middleware/auth';
 import { getImageUrl } from '../services/imageUrl';
+import { sendTestEmail } from '../services/mailer';
 
 const router = Router();
 
@@ -82,6 +83,17 @@ router.put('/settings', requireAdmin, async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
+router.post('/settings/test-email', requireAdmin, async (req: Request, res: Response) => {
+  try {
+    const { to } = req.body as { to: string };
+    if (!to) return res.status(400).json({ error: 'Recipient email required' });
+    await sendTestEmail(to);
+    res.json({ ok: true });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message || 'Failed to send test email' });
+  }
+});
+
 // ── Generic CRUD factory ──────────────────────────────────────────────────────
 
 function crudRoutes(table: string, imageFolder?: string) {
@@ -109,7 +121,7 @@ function crudRoutes(table: string, imageFolder?: string) {
       const fields = Object.keys(req.body);
       const values = Object.values(req.body);
       const sql = `INSERT INTO \`${table}\` (${fields.map((f) => `\`${f}\``).join(',')}) VALUES (${fields.map(() => '?').join(',')})`;
-      const [result] = await query<any>(sql, values) as any;
+      const result = await query<any>(sql, values) as any;
       res.json({ ok: true, id: result.insertId });
     } catch (err) { next(err); }
   });
@@ -152,6 +164,7 @@ router.get('/businesses/search', requireAdmin, async (req, res, next) => {
 
 router.use('/sliders', crudRoutes('sliders', 'slides'));
 router.use('/main-categories', crudRoutes('main_categories'));
+router.use('/home-categories', crudRoutes('home_categories'));
 router.use('/popular-categories', crudRoutes('popular_categories', 'categories'));
 router.use('/business-categories', crudRoutes('business_categories'));
 router.use('/businesses', crudRoutes('businesses', 'businesses'));
@@ -162,5 +175,6 @@ router.use('/classifieds', crudRoutes('classifieds', 'classifieds'));
 router.use('/jobs', crudRoutes('jobs'));
 router.use('/profiles', crudRoutes('user_profiles', 'profiles'));
 router.use('/pages', crudRoutes('pages'));
+router.use('/work-experience', crudRoutes('user_work_experience'));
 
 export default router;

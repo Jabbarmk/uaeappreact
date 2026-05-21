@@ -5,6 +5,10 @@ import compression from 'compression';
 import path from 'path';
 
 import homeRouter from './routes/home';
+import searchRouter from './routes/search';
+import authRouter from './routes/auth';
+import userRouter from './routes/user';
+import adminUsersRouter from './routes/adminUsers';
 import categoriesRouter from './routes/categories';
 import businessesRouter from './routes/businesses';
 import classifiedsRouter from './routes/classifieds';
@@ -39,6 +43,7 @@ app.use('/assets/images', express.static(path.resolve('../assets/images')));
 
 // API routes
 app.use('/api/home', homeRouter);
+app.use('/api/search', searchRouter);
 app.use('/api/categories', categoriesRouter);
 app.use('/api/businesses', businessesRouter);
 app.use('/api/classifieds', classifiedsRouter);
@@ -47,6 +52,9 @@ app.use('/api/offers', offersRouter);
 app.use('/api/profiles', profilesRouter);
 app.use('/api/pages', pagesRouter);
 app.use('/api/admin', adminRouter);
+app.use('/api/admin/users', adminUsersRouter);
+app.use('/api/auth', authRouter);
+app.use('/api/user', userRouter);
 
 app.use(errorHandler);
 

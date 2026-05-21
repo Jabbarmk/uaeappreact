@@ -11,6 +11,7 @@ const NAV_ITEMS = [
   { label: 'Dashboard',            path: '/admin',                       icon: '⊞' },
   { label: 'Sliders',              path: '/admin/sliders',               icon: '▶' },
   { label: 'Main Categories',      path: '/admin/main-categories',       icon: '⊟' },
+  { label: 'Home Categories',      path: '/admin/home-categories',       icon: '⊞' },
   { label: 'Popular Categories',   path: '/admin/popular-categories',    icon: '★' },
   { label: 'Business Categories',  path: '/admin/business-categories',   icon: '◈' },
   { label: 'Businesses',           path: '/admin/businesses',            icon: '⬡' },
@@ -20,8 +21,11 @@ const NAV_ITEMS = [
   { label: 'Classifieds',          path: '/admin/classifieds',           icon: '◻' },
   { label: 'Jobs',                 path: '/admin/jobs',                  icon: '⊕' },
   { label: 'Profiles',             path: '/admin/profiles',              icon: '○' },
+  { label: 'Work Experience',      path: '/admin/work-experience',       icon: '⊘' },
   { label: 'Pages',                path: '/admin/pages',                 icon: '□' },
   { label: 'Settings',             path: '/admin/settings',              icon: '⚙' },
+  { label: 'Users',                path: '/admin/users',                 icon: '👤' },
+  { label: 'Approvals',            path: '/admin/approvals',             icon: '✓' },
 ];
 
 function useAdminAuth() {

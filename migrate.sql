@@ -1,0 +1,13 @@
+CREATE TABLE IF NOT EXISTS user_otps (id INT AUTO_INCREMENT PRIMARY KEY, identifier VARCHAR(255) NOT NULL, otp_type VARCHAR(50) NOT NULL, otp VARCHAR(10) NOT NULL, expires_at TIMESTAMP NOT NULL, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, UNIQUE KEY uq_identifier_type (identifier, otp_type)) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS home_categories (id INT AUTO_INCREMENT PRIMARY KEY, category_id INT, name VARCHAR(100) NOT NULL, icon VARCHAR(100), sort_order INT DEFAULT 0, is_active TINYINT(1) DEFAULT 1, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS user_work_experience (id INT AUTO_INCREMENT PRIMARY KEY, user_id INT NOT NULL, job_title VARCHAR(255) NOT NULL, company VARCHAR(255) NOT NULL, location VARCHAR(255), start_month TINYINT, start_year SMALLINT, end_month TINYINT, end_year SMALLINT, is_current TINYINT(1) NOT NULL DEFAULT 0, description TEXT, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, INDEX idx_user_id (user_id)) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+ALTER TABLE businesses ADD COLUMN IF NOT EXISTS status ENUM('pending','approved','rejected') NOT NULL DEFAULT 'approved', ADD COLUMN IF NOT EXISTS user_id INT NULL;
+
+ALTER TABLE jobs ADD COLUMN IF NOT EXISTS status ENUM('pending','approved','rejected') NOT NULL DEFAULT 'approved', ADD COLUMN IF NOT EXISTS user_id INT NULL;
+
+ALTER TABLE classifieds ADD COLUMN IF NOT EXISTS status ENUM('pending','approved','rejected') NOT NULL DEFAULT 'approved', ADD COLUMN IF NOT EXISTS user_id INT NULL;
+
+ALTER TABLE user_profiles ADD COLUMN IF NOT EXISTS user_id INT NULL;

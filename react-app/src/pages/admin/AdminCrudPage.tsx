@@ -5,7 +5,7 @@ import api from '../../api';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
-type FieldType = 'text' | 'textarea' | 'number' | 'select' | 'toggle' | 'date' | 'image' | 'business-search' | 'main-category-select' | 'category-search' | 'time-picker' | 'user-search';
+type FieldType = 'text' | 'textarea' | 'number' | 'select' | 'toggle' | 'date' | 'image' | 'business-search' | 'main-category-select' | 'category-search' | 'time-picker' | 'user-search' | 'event-category-select';
 
 interface FieldConfig {
   key: string;
@@ -135,6 +135,98 @@ const RESOURCE_CONFIGS: Record<string, ResourceConfig> = {
     { key: 'color',            label: 'Color',       type: 'text' },
     { key: 'condition_status', label: 'Condition',   type: 'text' },
     { key: 'is_active',        label: 'Active',      type: 'toggle' },
+  ]},
+  'property-categories': { resource: 'property-categories', label: 'Property Categories', displayCol: 'name', listCols: ['icon', 'name', 'sort_order'], fields: [
+    { key: 'name',       label: 'Name',       type: 'text', required: true },
+    { key: 'icon',       label: 'Icon (emoji)', type: 'text' },
+    { key: 'sort_order', label: 'Sort Order', type: 'number' },
+    { key: 'is_active',  label: 'Active',     type: 'toggle' },
+  ]},
+  'real-estate-companies': { resource: 'real-estate-companies', label: 'Real Estate Companies', displayCol: 'name', listCols: ['logo', 'name', 'emirate', 'is_featured'], fields: [
+    { key: 'user_id',     label: 'Assigned User',  type: 'user-search' },
+    { key: 'name',        label: 'Name',           type: 'text', required: true },
+    { key: 'logo',        label: 'Logo',           type: 'image', folder: 'realestate' },
+    { key: 'banner',      label: 'Banner',         type: 'image', folder: 'realestate' },
+    { key: 'about',       label: 'About',          type: 'textarea' },
+    { key: 'phone',       label: 'Phone',          type: 'text', placeholder: '+9714...', syncTo: 'whatsapp', syncTransform: 'strip-plus' },
+    { key: 'whatsapp',    label: 'WhatsApp',       type: 'text' },
+    { key: 'email',       label: 'Email',          type: 'text' },
+    { key: 'website',     label: 'Website',        type: 'text' },
+    { key: 'emirate',     label: 'Emirate',        type: 'select', options: EMIRATES },
+    { key: 'address',     label: 'Address',        type: 'text' },
+    { key: 'sort_order',  label: 'Sort Order',     type: 'number' },
+    { key: 'status',      label: 'Status',         type: 'select', options: ['pending', 'approved', 'rejected'] },
+    { key: 'is_featured', label: 'Featured (major player)', type: 'toggle' },
+    { key: 'is_active',   label: 'Active',         type: 'toggle' },
+  ]},
+  properties: { resource: 'properties', label: 'Properties', displayCol: 'title', listCols: ['image', 'title', 'purpose', 'price', 'emirate'], fields: [
+    { key: 'user_id',     label: 'Assigned User',  type: 'user-search' },
+    { key: 'company_id',  label: 'Company ID',     type: 'number' },
+    { key: 'category_id', label: 'Category ID',    type: 'number' },
+    { key: 'title',       label: 'Title',          type: 'text', required: true },
+    { key: 'description', label: 'Description',     type: 'textarea' },
+    { key: 'purpose',     label: 'Purpose',        type: 'select', options: ['Rent', 'Sale'] },
+    { key: 'price',       label: 'Price',          type: 'number' },
+    { key: 'currency',    label: 'Currency',       type: 'text' },
+    { key: 'rent_period', label: 'Rent Period',    type: 'select', options: ['Monthly', 'Yearly'] },
+    { key: 'bedrooms',    label: 'Bedrooms',       type: 'text' },
+    { key: 'bathrooms',   label: 'Bathrooms',      type: 'text' },
+    { key: 'area_sqft',   label: 'Area (sqft)',    type: 'text' },
+    { key: 'furnished',   label: 'Furnishing',     type: 'select', options: ['Furnished', 'Unfurnished', 'Partly Furnished'] },
+    { key: 'parking',     label: 'Parking',        type: 'text' },
+    { key: 'amenities',   label: 'Amenities (comma-sep)', type: 'textarea' },
+    { key: 'location',    label: 'Location',       type: 'text' },
+    { key: 'emirate',     label: 'Emirate',        type: 'select', options: EMIRATES },
+    { key: 'image',       label: 'Cover Image',    type: 'image', folder: 'realestate' },
+    { key: 'status',      label: 'Status',         type: 'select', options: ['pending', 'approved', 'rejected'] },
+    { key: 'is_active',   label: 'Active',         type: 'toggle' },
+  ]},
+  'real-estate-projects': { resource: 'real-estate-projects', label: 'Off-Plan Projects', displayCol: 'name', listCols: ['image', 'name', 'developer', 'emirate'], fields: [
+    { key: 'user_id',       label: 'Assigned User',  type: 'user-search' },
+    { key: 'company_id',    label: 'Company ID',     type: 'number' },
+    { key: 'name',          label: 'Name',           type: 'text', required: true },
+    { key: 'developer',     label: 'Developer',      type: 'text' },
+    { key: 'location',      label: 'Location',       type: 'text' },
+    { key: 'emirate',       label: 'Emirate',        type: 'select', options: EMIRATES },
+    { key: 'description',   label: 'Description',     type: 'textarea' },
+    { key: 'starting_price', label: 'Starting Price', type: 'number' },
+    { key: 'currency',      label: 'Currency',       type: 'text' },
+    { key: 'handover',      label: 'Handover',       type: 'text', placeholder: 'Q4 2026' },
+    { key: 'payment_plan',  label: 'Payment Plan',   type: 'text' },
+    { key: 'image',         label: 'Cover Image',    type: 'image', folder: 'realestate' },
+    { key: 'status',        label: 'Status',         type: 'select', options: ['pending', 'approved', 'rejected'] },
+    { key: 'is_featured',   label: 'Featured',       type: 'toggle' },
+    { key: 'is_active',     label: 'Active',         type: 'toggle' },
+  ]},
+  'event-categories': { resource: 'event-categories', label: 'Event Categories', displayCol: 'name', listCols: ['icon', 'name', 'sort_order'], fields: [
+    { key: 'name',       label: 'Name',         type: 'text', required: true },
+    { key: 'icon',       label: 'Icon (emoji)', type: 'text' },
+    { key: 'sort_order', label: 'Sort Order',   type: 'number' },
+    { key: 'is_active',  label: 'Active',       type: 'toggle' },
+  ]},
+  events: { resource: 'events', label: 'Events', displayCol: 'title', listCols: ['poster', 'title', 'event_date', 'emirate'], fields: [
+    { key: 'user_id',            label: 'Assigned User',   type: 'user-search' },
+    { key: 'category_id',        label: 'Category',        type: 'event-category-select' },
+    { key: 'title',              label: 'Event Title',     type: 'text', required: true },
+    { key: 'description',        label: 'Description',     type: 'textarea' },
+    { key: 'poster',             label: 'Event Poster',    type: 'image', folder: 'events' },
+    { key: 'location',           label: 'Location',        type: 'text', placeholder: 'Downtown Dubai' },
+    { key: 'venue',              label: 'Venue',           type: 'text', placeholder: 'Dubai World Trade Centre' },
+    { key: 'emirate',            label: 'Emirate',         type: 'select', options: EMIRATES },
+    { key: 'event_date',         label: 'Start Date',      type: 'date' },
+    { key: 'end_date',           label: 'End Date',        type: 'date' },
+    { key: 'start_time',         label: 'Start Time',      type: 'time-picker' },
+    { key: 'end_time',           label: 'End Time',        type: 'time-picker' },
+    { key: 'price',              label: 'Ticket Price (0 = Free)', type: 'number' },
+    { key: 'currency',           label: 'Currency',        type: 'text' },
+    { key: 'booking_url',        label: 'Booking Link',    type: 'text', placeholder: 'https://' },
+    { key: 'organizer',          label: 'Organizer',       type: 'text' },
+    { key: 'organizer_phone',    label: 'Organizer Phone', type: 'text', placeholder: '+9714...', syncTo: 'organizer_whatsapp', syncTransform: 'strip-plus' },
+    { key: 'organizer_whatsapp', label: 'Organizer WhatsApp', type: 'text' },
+    { key: 'organizer_email',    label: 'Organizer Email', type: 'text' },
+    { key: 'status',             label: 'Status',          type: 'select', options: ['pending', 'approved', 'rejected'] },
+    { key: 'is_featured',        label: 'Featured',        type: 'toggle' },
+    { key: 'is_active',          label: 'Active',          type: 'toggle' },
   ]},
   jobs: { resource: 'jobs', label: 'Jobs', displayCol: 'title', fields: [
     { key: 'user_id',      label: 'Assigned User', type: 'user-search' },
@@ -328,6 +420,23 @@ function MainCategorySelectField({ value, onChange }: { value: string; onChange:
       <option value="">— Select Group —</option>
       {isLoading && <option disabled>Loading…</option>}
       {data?.map((cat) => <option key={cat.id} value={cat.name}>{cat.name}</option>)}
+    </select>
+  );
+}
+
+// ── EventCategorySelectField ──────────────────────────────────────────────────
+
+function EventCategorySelectField({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  const { data, isLoading } = useQuery({
+    queryKey: ['admin', 'event-categories', 'all'],
+    queryFn: () => api.get('/admin/event-categories?page=1&pageSize=100').then((r) => r.data.rows as { id: number; name: string; icon?: string }[]),
+  });
+
+  return (
+    <select value={value} onChange={(e) => onChange(e.target.value)} style={inputStyle}>
+      <option value="">— Select Category —</option>
+      {isLoading && <option disabled>Loading…</option>}
+      {data?.map((cat) => <option key={cat.id} value={String(cat.id)}>{cat.icon ? `${cat.icon} ` : ''}{cat.name}</option>)}
     </select>
   );
 }
@@ -596,7 +705,7 @@ function CrudDialog({ config, row, onClose, onSaved }: {
       for (const f of config.fields) {
         const v = form[f.key];
         if (f.type === 'toggle') payload[f.key] = v === '1' ? 1 : 0;
-        else if (f.type === 'number' || f.type === 'category-search' || f.type === 'business-search' || f.type === 'user-search') payload[f.key] = v === '' ? null : Number(v);
+        else if (f.type === 'number' || f.type === 'category-search' || f.type === 'business-search' || f.type === 'user-search' || f.type === 'event-category-select') payload[f.key] = v === '' ? null : Number(v);
         else payload[f.key] = v;
       }
       if (isEdit && row) await api.put(`/admin/${config.resource}/${String(row.id)}`, payload);
@@ -679,6 +788,9 @@ function CrudDialog({ config, row, onClose, onSaved }: {
                 )}
                 {f.type === 'main-category-select' && (
                   <MainCategorySelectField value={form[f.key] ?? ''} onChange={(v) => set(f.key, v)} />
+                )}
+                {f.type === 'event-category-select' && (
+                  <EventCategorySelectField value={form[f.key] ?? ''} onChange={(v) => set(f.key, v)} />
                 )}
                 {f.type === 'category-search' && (
                   <CategorySearchField

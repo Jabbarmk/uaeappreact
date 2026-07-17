@@ -15,7 +15,7 @@ router.get('/', async (_req, res, next) => {
     const sectionsWithItems = await Promise.all(
       (sections as any[]).map(async (s) => {
         const items = await query(
-          'SELECT * FROM classifieds WHERE section_id = ? AND is_active = 1 ORDER BY created_at DESC LIMIT 6',
+          'SELECT * FROM classifieds WHERE section_id = ? AND is_active = 1 AND (expires_at IS NULL OR expires_at > NOW()) ORDER BY created_at DESC LIMIT 6',
           [s.id]
         );
         return {
@@ -33,7 +33,7 @@ router.get('/', async (_req, res, next) => {
 router.get('/list', async (req, res, next) => {
   try {
     const { category, section, search, page = '1', pageSize = '25' } = req.query as Record<string, string>;
-    const where: string[] = ['c.is_active = 1'];
+    const where: string[] = ['c.is_active = 1', '(c.expires_at IS NULL OR c.expires_at > NOW())'];
     const params: unknown[] = [];
     if (category) { where.push('c.category_id = ?'); params.push(category); }
     if (section)  { where.push('c.section_id = ?');  params.push(section); }
@@ -77,11 +77,13 @@ router.get('/:id', async (req, res, next) => {
     const item = await queryOne<any>(
       `SELECT c.*, cc.name as category_name FROM classifieds c
        LEFT JOIN classified_categories cc ON c.category_id = cc.id
-       WHERE c.id = ?`,
+       WHERE c.id = ? AND c.is_active = 1 AND (c.expires_at IS NULL OR c.expires_at > NOW())`,
       [Number(req.params.id)]
     );
     if (!item) return res.status(404).json({ error: 'Not found' });
-    res.json({ item: { ...item, imageUrl: getImageUrl(item.image, 'classifieds') } });
+    const gallery = await query<any>('SELECT filename FROM classified_images WHERE classified_id=? ORDER BY sort_order, id', [item.id]);
+    const images = gallery.map((g) => getImageUrl(g.filename, 'classifieds'));
+    res.json({ item: { ...item, imageUrl: getImageUrl(item.image, 'classifieds'), images: images.length ? images : [getImageUrl(item.image, 'classifieds')] } });
   } catch (err) { next(err); }
 });
 

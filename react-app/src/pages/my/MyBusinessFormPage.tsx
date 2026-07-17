@@ -2,11 +2,12 @@ import { useState, useEffect } from 'react';
 import { useNavigate, useParams, Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import api from '../../api';
+import CategoryPicker from '../../components/CategoryPicker';
+import { EMIRATES } from '../../constants/uae';
 
-const EMIRATES = ['Dubai','Abu Dhabi','Sharjah','Ajman','Fujairah','Ras Al Khaimah','Umm Al Quwain'];
 const FONT = "'Segoe UI',Inter,sans-serif";
 
-const emptyForm = { name: '', category_id: '', tagline: '', description: '', emirate: '', address: '', phone: '', whatsapp: '', email: '', website: '' };
+const emptyForm = { name: '', category_id: '', requested_category_name: '', tagline: '', description: '', emirate: '', address: '', phone: '', whatsapp: '', email: '', website: '' };
 
 export default function MyBusinessFormPage() {
   const { id } = useParams();
@@ -25,16 +26,19 @@ export default function MyBusinessFormPage() {
   useEffect(() => {
     if (isEdit && myBusinesses) {
       const b = myBusinesses.find((x: any) => String(x.id) === id);
-      if (b) setForm({ name: b.name || '', category_id: String(b.category_id || ''), tagline: b.tagline || '', description: b.description || '', emirate: b.emirate || '', address: b.address || '', phone: b.phone || '', whatsapp: b.whatsapp || '', email: b.email || '', website: b.website || '' });
+      // A business parked under "Other" with a pending request should show the request, not "Other".
+      const hasRequest = !!b?.requested_category_name;
+      if (b) setForm({ name: b.name || '', category_id: hasRequest ? '' : String(b.category_id || ''), requested_category_name: b.requested_category_name || '', tagline: b.tagline || '', description: b.description || '', emirate: b.emirate || '', address: b.address || '', phone: b.phone || '', whatsapp: b.whatsapp || '', email: b.email || '', website: b.website || '' });
     }
   }, [isEdit, myBusinesses, id]);
 
-  const { data: categories = [] } = useQuery<{ id: number; name: string }[]>({
+  const { data: categories = [] } = useQuery<{ id: number; name: string; group_name?: string }[]>({
     queryKey: ['categories-flat'],
     queryFn: () => api.get('/categories').then(r => {
-      const cats: { id: number; name: string }[] = [];
+      const cats: { id: number; name: string; group_name?: string }[] = [];
       Object.values(r.data.groups as Record<string, any[]>).forEach(g => cats.push(...g));
-      return cats.sort((a, b) => a.name.localeCompare(b.name));
+      // "Other" is a system bucket for unresolved requests — not a user-pickable choice.
+      return cats.filter(c => c.name !== 'Other').sort((a, b) => a.name.localeCompare(b.name));
     }),
   });
 
@@ -42,6 +46,7 @@ export default function MyBusinessFormPage() {
 
   const submit = async () => {
     if (!form.name.trim()) return setError('Business name is required');
+    if (!form.category_id && !form.requested_category_name.trim()) return setError('Please select a category or request a new one');
     setError(''); setLoading(true);
     try {
       if (isEdit) await api.put(`/user/businesses/${id}`, form);
@@ -69,11 +74,18 @@ export default function MyBusinessFormPage() {
             <input value={form.name} onChange={e => set('name', e.target.value)} placeholder="e.g. Al Noor Trading LLC" style={inp} />
           </div>
           <div>
-            <label style={{ fontSize: 12, color: '#888', fontWeight: 600, display: 'block', marginBottom: 4 }}>Category</label>
-            <select value={form.category_id} onChange={e => set('category_id', e.target.value)} style={{ ...inp, color: form.category_id ? '#1a1a1a' : '#aaa' }}>
-              <option value="">Select Category</option>
-              {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-            </select>
+            <label style={{ fontSize: 12, color: '#888', fontWeight: 600, display: 'block', marginBottom: 4 }}>Category *</label>
+            <CategoryPicker
+              categories={categories}
+              categoryId={form.category_id}
+              requestedName={form.requested_category_name}
+              onChange={({ categoryId, requestedName }) => setForm(p => ({ ...p, category_id: categoryId, requested_category_name: requestedName }))}
+            />
+            {form.requested_category_name && (
+              <div style={{ fontSize: 11, color: '#B26A00', marginTop: 4 }}>
+                We'll review your requested category. Until then your business will appear under “Other”.
+              </div>
+            )}
           </div>
           <div>
             <label style={{ fontSize: 12, color: '#888', fontWeight: 600, display: 'block', marginBottom: 4 }}>Tagline</label>

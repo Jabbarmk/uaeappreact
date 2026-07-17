@@ -14,21 +14,37 @@ function Slider({ slides }: { slides: any[] }) {
   const [cur, setCur] = useState(0);
   const total = slides.length;
   const trackRef = useRef<HTMLDivElement>(null);
+  const curRef = useRef(0);
+
+  // Slide's snap position is its left edge minus the container's left inset (16px).
+  const scrollToIndex = (i: number) => {
+    const track = trackRef.current;
+    const child = track?.children[i] as HTMLElement | undefined;
+    if (track && child) track.scrollTo({ left: child.offsetLeft - 16, behavior: 'smooth' });
+  };
+
+  // Keep the active dot in sync with whatever card is nearest the left inset.
+  const onScroll = () => {
+    const track = trackRef.current;
+    if (!track) return;
+    let best = 0, bestDist = Infinity;
+    Array.from(track.children).forEach((ch, i) => {
+      const d = Math.abs((ch as HTMLElement).offsetLeft - 16 - track.scrollLeft);
+      if (d < bestDist) { bestDist = d; best = i; }
+    });
+    if (best !== curRef.current) { curRef.current = best; setCur(best); }
+  };
 
   useEffect(() => {
-    const timer = setInterval(() => setCur((c) => (c + 1) % total), 4000);
+    const timer = setInterval(() => scrollToIndex((curRef.current + 1) % total), 4500);
     return () => clearInterval(timer);
   }, [total]);
 
-  useEffect(() => {
-    if (trackRef.current) {
-      trackRef.current.style.transform = `translateX(-${cur * 100}%)`;
-    }
-  }, [cur]);
+  const go = (i: number) => { curRef.current = i; setCur(i); scrollToIndex(i); };
 
   return (
-    <div className="slider-container">
-      <div className="slider-track" ref={trackRef}>
+    <>
+      <div className="slider-container" ref={trackRef} onScroll={onScroll}>
         {slides.map((slide, i) => {
           const slideTo = slide.button_link && slide.button_link !== '#'
             ? slide.button_link
@@ -56,10 +72,10 @@ function Slider({ slides }: { slides: any[] }) {
       </div>
       <div className="slider-dots">
         {slides.map((_, i) => (
-          <div key={i} className={`dot${i === cur ? ' active' : ''}`} onClick={() => setCur(i)} />
+          <div key={i} className={`dot${i === cur ? ' active' : ''}`} onClick={() => go(i)} />
         ))}
       </div>
-    </div>
+    </>
   );
 }
 
@@ -84,21 +100,24 @@ export default function HomePage() {
         <>
           <div className="section-header">
             <h2>Featured Categories</h2>
-            <Link to="/categories">View all</Link>
           </div>
-          <div className="category-icons">
-            {homeCats.map((cat: any) => (
+          <div className="category-icons home-featured">
+            {homeCats.slice(0, 6).map((cat: any) => (
               <Link key={cat.id} to={`/businesses?cat=${cat.category_id}`} className="cat-icon-item">
                 <div className="icon">{cat.icon}</div>
                 <span>{cat.name}</span>
               </Link>
             ))}
+            <Link to="/categories" className="cat-icon-item">
+              <div className="icon"><i className="fas fa-th-large"></i></div>
+              <span>View All</span>
+            </Link>
           </div>
         </>
       )}
 
       <div className="section-header"><h2>Our Services</h2></div>
-      <div className="feature-grid">
+      <div className="feature-row">
         <Link to="/categories" className="feature-card purple">
           <div className="feature-icon"><i className="fas fa-store"></i></div>
           <h4>Business Directory</h4>
@@ -108,6 +127,11 @@ export default function HomePage() {
           <div className="feature-icon"><i className="fas fa-tags"></i></div>
           <h4>Classifieds</h4>
           <p>Buy and sell used items</p>
+        </Link>
+        <Link to="/realestate" className="feature-card purple">
+          <div className="feature-icon"><i className="fas fa-building"></i></div>
+          <h4>Real Estate</h4>
+          <p>Rooms, flats, villas &amp; projects</p>
         </Link>
         <Link to="/jobs" className="feature-card pink">
           <div className="feature-icon"><i className="fas fa-briefcase"></i></div>

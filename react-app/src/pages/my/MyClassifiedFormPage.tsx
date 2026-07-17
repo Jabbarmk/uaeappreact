@@ -1,46 +1,105 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate, useParams, Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import api from '../../api';
+import { getClassifiedFields, ALL_CLASSIFIED_FIELD_KEYS, type FieldDef } from '../../constants/classifieds';
 
 const FONT = "'Segoe UI',Inter,sans-serif";
-const emptyForm = { title: '', description: '', price: '', currency: 'AED', category_id: '', location: '', brand: '', model: '', color: '', condition_status: '' };
+
+const baseForm: Record<string, string> = { title: '', description: '', price: '', currency: 'AED', category_id: '', location: '' };
+ALL_CLASSIFIED_FIELD_KEYS.forEach(k => { baseForm[k] = ''; });
+const emptyForm = () => ({ ...baseForm });
+
+interface GalleryImage { id: number; url: string }
 
 export default function MyClassifiedFormPage() {
   const { id } = useParams();
   const navigate = useNavigate();
   const isEdit = !!id;
-  const [form, setForm] = useState(emptyForm);
+  const [form, setForm] = useState<Record<string, string>>(emptyForm());
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [images, setImages] = useState<GalleryImage[]>([]);          // already uploaded (edit mode)
+  const [pending, setPending] = useState<{ file: File; url: string }[]>([]); // chosen, not yet uploaded (new mode)
+  const [uploading, setUploading] = useState(false);
+  const fileInput = useRef<HTMLInputElement>(null);
 
-  const { data: myClassifieds } = useQuery({
-    queryKey: ['my-classifieds'],
-    queryFn: () => api.get('/user/classifieds').then(r => r.data),
-    enabled: isEdit,
-  });
-
-  useEffect(() => {
-    if (isEdit && myClassifieds) {
-      const c = myClassifieds.find((x: any) => String(x.id) === id);
-      if (c) setForm({ title: c.title || '', description: c.description || '', price: c.price || '', currency: c.currency || 'AED', category_id: String(c.category_id || ''), location: c.location || '', brand: c.brand || '', model: c.model || '', color: c.color || '', condition_status: c.condition_status || '' });
-    }
-  }, [isEdit, myClassifieds, id]);
-
+  // Categories (for the picker + to know which fields to render).
   const { data: catData } = useQuery({
     queryKey: ['classified-categories'],
     queryFn: () => api.get('/classifieds').then(r => r.data.categories || []),
   });
   const categories: any[] = Array.isArray(catData) ? catData : [];
 
+  // Load the ad being edited (with its image gallery).
+  const { data: existing } = useQuery({
+    queryKey: ['my-classified', id],
+    queryFn: () => api.get(`/user/classifieds/${id}`).then(r => r.data),
+    enabled: isEdit,
+  });
+
+  useEffect(() => {
+    if (isEdit && existing) {
+      const f = emptyForm();
+      f.title = existing.title || ''; f.description = existing.description || '';
+      f.price = existing.price != null ? String(existing.price) : '';
+      f.currency = existing.currency || 'AED'; f.category_id = String(existing.category_id || '');
+      f.location = existing.location || '';
+      ALL_CLASSIFIED_FIELD_KEYS.forEach(k => { f[k] = existing[k] != null ? String(existing[k]) : ''; });
+      setForm(f);
+      setImages(existing.images || []);
+    }
+  }, [isEdit, existing]);
+
   const set = (k: string, v: string) => setForm(p => ({ ...p, [k]: v }));
+
+  const selectedCategoryName = categories.find(c => String(c.id) === form.category_id)?.name;
+  const fields: FieldDef[] = getClassifiedFields(selectedCategoryName);
+
+  // ── Image handling ──────────────────────────────────────────────────────────
+  const onPickFiles = async (filesList: FileList | null) => {
+    if (!filesList || !filesList.length) return;
+    const files = Array.from(filesList);
+    if (isEdit) {
+      // Upload straight away against the existing ad.
+      setUploading(true); setError('');
+      try {
+        const fd = new FormData();
+        files.forEach(f => fd.append('files', f));
+        const r = await api.post(`/user/classifieds/${id}/images`, fd);
+        setImages(prev => [...prev, ...(r.data.images || [])]);
+      } catch (e: any) { setError(e.response?.data?.error || 'Image upload failed'); }
+      finally { setUploading(false); }
+    } else {
+      // Stash for upload after the ad is created.
+      setPending(prev => [...prev, ...files.map(f => ({ file: f, url: URL.createObjectURL(f) }))]);
+    }
+    if (fileInput.current) fileInput.current.value = '';
+  };
+
+  const removeExisting = async (imgId: number) => {
+    try {
+      await api.delete(`/user/classifieds/${id}/images/${imgId}`);
+      setImages(prev => prev.filter(i => i.id !== imgId));
+    } catch (e: any) { setError(e.response?.data?.error || 'Delete failed'); }
+  };
+  const removePending = (idx: number) => setPending(prev => prev.filter((_, i) => i !== idx));
 
   const submit = async () => {
     if (!form.title.trim()) return setError('Title is required');
     setError(''); setLoading(true);
     try {
-      if (isEdit) await api.put(`/user/classifieds/${id}`, form);
-      else await api.post('/user/classifieds', form);
+      if (isEdit) {
+        await api.put(`/user/classifieds/${id}`, form);
+      } else {
+        const r = await api.post('/user/classifieds', form);
+        const newId = r.data.id;
+        if (newId && pending.length) {
+          const fd = new FormData();
+          pending.forEach(p => fd.append('files', p.file));
+          await api.post(`/user/classifieds/${newId}/images`, fd);
+        }
+      }
       navigate('/my/classifieds');
     } catch (e: any) { setError(e.response?.data?.error || 'Save failed'); }
     finally { setLoading(false); }
@@ -48,6 +107,23 @@ export default function MyClassifiedFormPage() {
 
   const inp: React.CSSProperties = { width: '100%', padding: '10px 12px', border: '1px solid #E0E0E0', borderRadius: 8, fontSize: 14, boxSizing: 'border-box', fontFamily: FONT, outline: 'none' };
   const lbl = (text: string) => <label style={{ fontSize: 12, color: '#888', fontWeight: 600, display: 'block', marginBottom: 4 }}>{text}</label>;
+
+  const renderField = (fd: FieldDef) => (
+    <div key={fd.key}>
+      {lbl(fd.label)}
+      {fd.type === 'select' ? (
+        <select value={form[fd.key] || ''} onChange={e => set(fd.key, e.target.value)} style={{ ...inp, color: form[fd.key] ? '#1a1a1a' : '#aaa' }}>
+          <option value="">Select {fd.label}</option>
+          {(fd.options || []).map(o => <option key={o} value={o}>{o}</option>)}
+        </select>
+      ) : (
+        <input value={form[fd.key] || ''} onChange={e => set(fd.key, e.target.value)} placeholder={fd.placeholder} type={fd.type === 'number' ? 'number' : 'text'} style={inp} />
+      )}
+    </div>
+  );
+
+  const thumb: React.CSSProperties = { width: 72, height: 72, borderRadius: 8, objectFit: 'cover', border: '1px solid #E0E0E0' };
+  const delBtn: React.CSSProperties = { position: 'absolute', top: -6, right: -6, width: 20, height: 20, borderRadius: '50%', background: '#C42B1C', color: '#fff', border: '2px solid #fff', fontSize: 11, lineHeight: '16px', cursor: 'pointer', padding: 0 };
 
   return (
     <div style={{ minHeight: '100vh', background: '#F3F3F3', paddingBottom: 80, fontFamily: FONT }}>
@@ -79,19 +155,36 @@ export default function MyClassifiedFormPage() {
             <div>{lbl('Location')}<input value={form.location} onChange={e => set('location', e.target.value)} placeholder="Dubai, UAE" style={inp} /></div>
           </div>
 
+          {/* Photos */}
           <div style={{ borderTop: '1px solid #F0F0F0', paddingTop: 14 }}>
-            <div style={{ fontSize: 12, color: '#888', fontWeight: 600, marginBottom: 10 }}>Optional Details</div>
+            <div style={{ fontSize: 12, color: '#888', fontWeight: 600, marginBottom: 10 }}>Photos {uploading && <span style={{ color: '#0067C0' }}>· uploading…</span>}</div>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
+              {images.map(img => (
+                <div key={`e${img.id}`} style={{ position: 'relative' }}>
+                  <img src={img.url} alt="" style={thumb} />
+                  <button type="button" onClick={() => removeExisting(img.id)} style={delBtn}>×</button>
+                </div>
+              ))}
+              {pending.map((p, i) => (
+                <div key={`p${i}`} style={{ position: 'relative' }}>
+                  <img src={p.url} alt="" style={thumb} />
+                  <button type="button" onClick={() => removePending(i)} style={delBtn}>×</button>
+                </div>
+              ))}
+              <button type="button" onClick={() => fileInput.current?.click()}
+                style={{ width: 72, height: 72, borderRadius: 8, border: '1px dashed #BBB', background: '#FAFAFA', color: '#0067C0', fontSize: 26, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>+</button>
+              <input ref={fileInput} type="file" accept="image/*" multiple onChange={e => onPickFiles(e.target.files)} style={{ display: 'none' }} />
+            </div>
+            <div style={{ fontSize: 11, color: '#aaa', marginTop: 6 }}>First photo is used as the listing thumbnail.</div>
+          </div>
+
+          {/* Category-specific details */}
+          <div style={{ borderTop: '1px solid #F0F0F0', paddingTop: 14 }}>
+            <div style={{ fontSize: 12, color: '#888', fontWeight: 600, marginBottom: 10 }}>
+              {selectedCategoryName ? `${selectedCategoryName} Details` : 'Item Details'}
+            </div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-              <div>{lbl('Brand')}<input value={form.brand} onChange={e => set('brand', e.target.value)} placeholder="Apple, Samsung..." style={inp} /></div>
-              <div>{lbl('Model')}<input value={form.model} onChange={e => set('model', e.target.value)} placeholder="Model name" style={inp} /></div>
-              <div>{lbl('Color')}<input value={form.color} onChange={e => set('color', e.target.value)} placeholder="Black, White..." style={inp} /></div>
-              <div>
-                {lbl('Condition')}
-                <select value={form.condition_status} onChange={e => set('condition_status', e.target.value)} style={{ ...inp, color: form.condition_status ? '#1a1a1a' : '#aaa' }}>
-                  <option value="">Select Condition</option>
-                  {['New', 'Like New', 'Good', 'Fair', 'Poor'].map(c => <option key={c} value={c}>{c}</option>)}
-                </select>
-              </div>
+              {fields.map(renderField)}
             </div>
           </div>
 

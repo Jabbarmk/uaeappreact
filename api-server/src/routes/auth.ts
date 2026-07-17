@@ -56,11 +56,12 @@ router.post('/verify-otp', async (req: Request, res: Response, next: NextFunctio
 router.post('/register', async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { name, email, mobile, password, emirate, otp_code } = req.body as Record<string, string>;
-    if (!name || !password || (!email && !mobile)) return res.status(400).json({ error: 'Missing required fields' });
+    // OTP-only signup: email is verified, password is optional (kept for future use).
+    if (!name || !email) return res.status(400).json({ error: 'Name and email are required' });
 
-    const identifier = (email || mobile).toLowerCase();
+    const identifier = email.toLowerCase();
 
-    // Verify OTP
+    // Verify the email signup OTP
     const otpRecord = await queryOne<any>(
       'SELECT * FROM user_otps WHERE identifier=? AND otp_type=? AND used=0 AND expires_at > NOW() ORDER BY id DESC LIMIT 1',
       [identifier, 'signup']
@@ -69,8 +70,8 @@ router.post('/register', async (req: Request, res: Response, next: NextFunction)
     await query('UPDATE user_otps SET used=1 WHERE id=?', [otpRecord.id]);
 
     // Check duplicate
-    if (email) {
-      const exists = await queryOne('SELECT id FROM users WHERE email=?', [email.toLowerCase()]);
+    {
+      const exists = await queryOne('SELECT id FROM users WHERE email=?', [identifier]);
       if (exists) return res.status(400).json({ error: 'Email already registered' });
     }
     if (mobile) {
@@ -78,10 +79,10 @@ router.post('/register', async (req: Request, res: Response, next: NextFunction)
       if (exists) return res.status(400).json({ error: 'Mobile already registered' });
     }
 
-    const hash = await bcrypt.hash(password, 10);
+    const hash = password ? await bcrypt.hash(password, 10) : null;
     const result = await query<any>(
       'INSERT INTO users (name, email, mobile, password_hash, emirate, is_verified) VALUES (?, ?, ?, ?, ?, 1)',
-      [name, email?.toLowerCase() || null, mobile || null, hash, emirate || null]
+      [name, identifier, mobile || null, hash, emirate || null]
     ) as any;
 
     const userId = result.insertId;
@@ -93,7 +94,10 @@ router.post('/register', async (req: Request, res: Response, next: NextFunction)
   } catch (err) { next(err); }
 });
 
-// ── Login (password) ──────────────────────────────────────────────────────────
+// ── Login (password) — LEGACY/UNUSED ──────────────────────────────────────────
+// Password login was removed from the UI in favour of OTP-only sign in. The
+// endpoint and password_hash column are intentionally kept (not deleted) so a
+// password flow can be re-enabled later without data loss.
 router.post('/login', async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { identifier, password } = req.body as { identifier: string; password: string };

@@ -1,6 +1,8 @@
+import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useParams, useNavigate } from 'react-router-dom';
 import api from '../api';
+import { useAuth } from '../context/AuthContext';
 
 const BADGE_CLASS: Record<string, string> = {
   'Full Time': 'badge-fulltime', 'Part Time': 'badge-parttime',
@@ -9,10 +11,37 @@ const BADGE_CLASS: Record<string, string> = {
 
 export default function JobDetailPage() {
   const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
+  const { user } = useAuth();
+  const [applying, setApplying] = useState(false);
+  const [applyMsg, setApplyMsg] = useState('');
+
   const { data, isLoading } = useQuery({
     queryKey: ['job', id],
     queryFn: () => api.get(`/jobs/${id}`).then((r) => r.data),
   });
+
+  // Has the current user already applied?
+  const { data: applyState, refetch: refetchApplied } = useQuery({
+    queryKey: ['applied-check', id],
+    queryFn: () => api.get(`/user/applications/check/${id}`).then((r) => r.data),
+    enabled: !!user && !!id,
+  });
+  const applied = !!applyState?.applied;
+  const isOwnJob = !!user && data?.job && data.job.user_id === user.id;
+
+  const apply = async () => {
+    if (!user) { navigate('/auth/login'); return; }
+    setApplying(true); setApplyMsg('');
+    try {
+      await api.post('/user/applications', { job_id: Number(id) });
+      setApplyMsg('Application submitted! The employer will be in touch.');
+      refetchApplied();
+    } catch (e: any) {
+      if (e.response?.status === 409) { setApplyMsg('You have already applied to this job.'); refetchApplied(); }
+      else setApplyMsg(e.response?.data?.error || 'Could not submit application.');
+    } finally { setApplying(false); }
+  };
 
   if (isLoading) return <div style={{ padding: 40, textAlign: 'center' }}>Loading…</div>;
   if (!data?.job) return <div style={{ padding: 40 }}>Not found. <Link to="/jobs">Back</Link></div>;
@@ -64,14 +93,28 @@ export default function JobDetailPage() {
         <div className="company" style={{ marginTop: 4 }}>{job.company}</div>
         <div className="meta" style={{ marginTop: 12 }}>
           <span><i className="fas fa-coins"></i> {job.currency} {Number(job.salary_min).toLocaleString()} – {Number(job.salary_max).toLocaleString()}/mo</span>
-          <span><i className="fas fa-map-marker-alt"></i> {job.location}</span>
+          <span><i className="fas fa-map-marker-alt"></i> {[job.emirate, job.location].filter(Boolean).join(', ') || job.location}</span>
+          {job.work_model && <span><i className="fas fa-laptop-house"></i> {job.work_model}</span>}
           <span><i className="far fa-clock"></i> {new Date(job.posted_at).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}</span>
         </div>
       </div>
 
-      <button className="apply-btn" onClick={() => alert('Application submitted! We will contact you soon.')}>
-        <i className="fas fa-paper-plane" style={{ marginRight: 8 }}></i>Apply Now
-      </button>
+      {isOwnJob ? (
+        <Link to={`/my/jobs/${job.id}/applicants`} className="apply-btn" style={{ display: 'block', textAlign: 'center', textDecoration: 'none' }}>
+          <i className="fas fa-users" style={{ marginRight: 8 }}></i>View Applicants
+        </Link>
+      ) : (
+        <button className="apply-btn" onClick={apply} disabled={applying || applied}
+          style={applied ? { opacity: 0.85, background: '#2E7D32' } : undefined}>
+          <i className={`fas ${applied ? 'fa-check' : 'fa-paper-plane'}`} style={{ marginRight: 8 }}></i>
+          {applied ? 'Applied' : applying ? 'Submitting…' : 'Apply Now'}
+        </button>
+      )}
+      {applyMsg && (
+        <div style={{ margin: '0 16px 12px', padding: '10px 14px', background: '#E8F5E9', border: '1px solid #A5D6A7', color: '#2E7D32', borderRadius: 8, fontSize: 13 }}>
+          {applyMsg}
+        </div>
+      )}
 
       <div style={{ display: 'flex', gap: 8, padding: '0 16px 16px', overflowX: 'auto' }}>
         {perks.map((p) => (

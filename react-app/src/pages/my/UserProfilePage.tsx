@@ -130,6 +130,9 @@ export default function UserProfilePage() {
             { to: '/my/businesses', icon: '🏢', label: 'My Businesses' },
             { to: '/my/jobs', icon: '💼', label: 'My Jobs' },
             { to: '/my/classifieds', icon: '🏷️', label: 'My Classifieds' },
+            { to: '/my/properties', icon: '🏠', label: 'My Properties' },
+            { to: '/my/re-companies', icon: '🏢', label: 'My Real Estate Companies' },
+            { to: '/my/projects', icon: '🏗️', label: 'My Projects' },
             { to: '/my/cv', icon: '📄', label: 'My CV' },
           ].map(item => (
             <Link key={item.to} to={item.to}

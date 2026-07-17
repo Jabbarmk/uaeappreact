@@ -98,6 +98,24 @@ export default function ProfilePage() {
             </div>
           )}
 
+          {/* Visa status + availability */}
+          {(profile.visa_status || profile.notice_period) && (
+            <div className="cv-section">
+              <div className="cv-section-body" style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+                {profile.visa_status && (
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 13, fontWeight: 600, color: '#444', background: '#F3F3F3', borderRadius: 20, padding: '6px 14px' }}>
+                    <i className="fas fa-id-card" style={{ color: 'var(--primary)' }}></i>{profile.visa_status}
+                  </span>
+                )}
+                {profile.notice_period && (
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 13, fontWeight: 600, color: '#444', background: '#F3F3F3', borderRadius: 20, padding: '6px 14px' }}>
+                    <i className="far fa-clock" style={{ color: 'var(--primary)' }}></i>{profile.notice_period}
+                  </span>
+                )}
+              </div>
+            </div>
+          )}
+
           {/* Work Experience */}
           {profile.workExperience && profile.workExperience.length > 0 && (
             <div className="cv-section">

@@ -1,9 +1,12 @@
+import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Link, useParams } from 'react-router-dom';
 import api from '../api';
+import { getClassifiedFields } from '../constants/classifieds';
 
 export default function ClassifiedDetailPage() {
   const { id } = useParams<{ id: string }>();
+  const [active, setActive] = useState(0);
   const { data, isLoading } = useQuery({
     queryKey: ['classified', id],
     queryFn: () => api.get(`/classifieds/${id}`).then((r) => r.data),
@@ -24,6 +27,14 @@ export default function ClassifiedDetailPage() {
     if (categoryLower.includes(key)) { fallback = url; break; }
   }
 
+  const gallery: string[] = (item.images && item.images.length ? item.images : [item.imageUrl]).filter(Boolean);
+  const mainImage = gallery[active] || item.imageUrl;
+
+  // Category-specific spec rows (only the ones that have a value).
+  const specs = getClassifiedFields(item.category_name)
+    .map((f) => [f.label, item[f.key]] as [string, unknown])
+    .filter(([, v]) => v != null && v !== '');
+
   return (
     <>
       <div className="page-topbar">
@@ -36,7 +47,7 @@ export default function ClassifiedDetailPage() {
       </div>
 
       <div style={{ position: 'relative', background: 'linear-gradient(135deg,#f8f9fc,#eef0f5)' }}>
-        <img src={item.imageUrl} alt={item.title} className="detail-image"
+        <img src={mainImage} alt={item.title} className="detail-image"
           onError={(e) => { (e.target as HTMLImageElement).src = fallback; }}
           loading="lazy" decoding="async" />
         {item.category_name && (
@@ -45,6 +56,16 @@ export default function ClassifiedDetailPage() {
           </div>
         )}
       </div>
+
+      {/* Thumbnail gallery */}
+      {gallery.length > 1 && (
+        <div style={{ display: 'flex', gap: 8, padding: '12px 16px 0', overflowX: 'auto' }}>
+          {gallery.map((g, i) => (
+            <img key={i} src={g} alt="" onClick={() => setActive(i)}
+              style={{ width: 60, height: 60, borderRadius: 10, objectFit: 'cover', flexShrink: 0, cursor: 'pointer', border: i === active ? '2px solid var(--primary)' : '2px solid transparent', opacity: i === active ? 1 : 0.7 }} />
+          ))}
+        </div>
+      )}
 
       <div className="detail-body">
         <h1>{item.title}</h1>
@@ -55,32 +76,17 @@ export default function ClassifiedDetailPage() {
           {item.location && <div className="location-text"><i className="fas fa-map-marker-alt"></i> {item.location}</div>}
         </div>
 
-        {(item.age || item.model || item.warranty || item.color) && (
-          <div className="detail-specs">
-            {item.age && <div className="detail-spec"><div className="label">Age</div><div className="value">{item.age}</div></div>}
-            {item.model && <div className="detail-spec"><div className="label">Model</div><div className="value">{item.model}</div></div>}
-            {item.warranty && <div className="detail-spec"><div className="label">Warranty</div><div className="value">{item.warranty}</div></div>}
-            {item.color && <div className="detail-spec"><div className="label">Color</div><div className="value">{item.color}</div></div>}
+        {specs.length > 0 && (
+          <div className="detail-table">
+            <h3>Item Details</h3>
+            {specs.map(([label, value]) => (
+              <div className="detail-row" key={label}>
+                <span className="dt-label">{label}</span>
+                <span className="dt-value">{String(value)}</span>
+              </div>
+            ))}
           </div>
         )}
-
-        <div className="detail-table">
-          <h3>Item Details</h3>
-          {[
-            ['Storage Capacity', item.storage],
-            ['Memory', item.memory],
-            ['Condition', item.condition_status],
-            ['Version', item.version],
-            ['Battery Health', item.battery_health],
-            ['Accompaniments', item.accompaniments],
-            ['Carrier Lock', item.carrier_lock],
-          ].filter(([, v]) => v).map(([label, value]) => (
-            <div className="detail-row" key={label}>
-              <span className="dt-label">{label}</span>
-              <span className="dt-value">{value}</span>
-            </div>
-          ))}
-        </div>
 
         <div className="detail-date">
           <i className="far fa-calendar-alt" style={{ marginRight: 6, color: 'var(--primary)' }}></i>

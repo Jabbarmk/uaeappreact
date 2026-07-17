@@ -1481,6 +1481,27 @@ a { text-decoration: none; color: inherit; }
     gap: 12px;
     padding: 0 16px 16px;
 }
+
+/* Home: featured-category buttons ~10% taller (scoped so other grids are unaffected) */
+.category-icons.home-featured .cat-icon-item {
+    padding-top: 20px;
+    padding-bottom: 18px;
+}
+
+/* Home: "Our Services" as a horizontally slidable row */
+.feature-row {
+    display: flex;
+    gap: 12px;
+    padding: 0 16px 16px;
+    overflow-x: auto;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+}
+.feature-row::-webkit-scrollbar { display: none; }
+.feature-row .feature-card {
+    flex: 0 0 auto;
+    width: 150px;
+}
 .feature-card {
     padding: 20px 16px;
     border-radius: var(--radius);

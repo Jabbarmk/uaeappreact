@@ -49,6 +49,10 @@ export default function ClassifiedsPage() {
       </div>
 
       <div className="category-icons">
+        <Link to="/realestate" className="cat-icon-item">
+          <div className="icon">🏠</div>
+          <span>Real Estate</span>
+        </Link>
         {categories.map((cat: any, i: number) => (
           <Link key={cat.id || i} to={cat.id ? `/classifieds/list?category=${cat.id}` : '/classifieds/list'} className="cat-icon-item">
             <div className="icon">{cat.icon}</div>
@@ -56,6 +60,19 @@ export default function ClassifiedsPage() {
           </Link>
         ))}
       </div>
+
+      {/* Real Estate spotlight */}
+      <Link to="/realestate" style={{ display: 'block', margin: '4px 16px 8px', borderRadius: 18, overflow: 'hidden', position: 'relative', height: 96, textDecoration: 'none' }}>
+        <img src="https://images.unsplash.com/photo-1512453979798-5ea266f8880c?w=800&h=200&fit=crop" alt="Real Estate"
+          style={{ width: '100%', height: '100%', objectFit: 'cover' }} loading="lazy" />
+        <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(135deg,rgba(108,92,231,.85),rgba(0,206,201,.55))', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 18px' }}>
+          <div>
+            <div style={{ color: '#fff', fontSize: 16, fontWeight: 800 }}>Real Estate</div>
+            <div style={{ color: 'rgba(255,255,255,.9)', fontSize: 12, marginTop: 2 }}>Rooms, flats, villas &amp; off-plan projects</div>
+          </div>
+          <span style={{ color: '#fff', fontSize: 13, fontWeight: 700, background: 'rgba(255,255,255,.2)', padding: '6px 14px', borderRadius: 50 }}>Explore →</span>
+        </div>
+      </Link>
 
       {sections.map((section: any) => (
         <div key={section.id}>

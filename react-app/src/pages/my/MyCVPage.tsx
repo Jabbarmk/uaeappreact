@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import api from '../../api';
+import TagPicker from '../../components/TagPicker';
+import { VISA_STATUSES, NOTICE_PERIODS } from '../../constants/uae';
 
 const FONT = "'Segoe UI',Inter,sans-serif";
 
@@ -18,8 +20,6 @@ const CV_FIELDS = [
   { key: 'location', label: 'Location', placeholder: 'Dubai, UAE' },
   { key: 'current_company', label: 'Current Company', placeholder: 'Company name' },
   { key: 'experience_years', label: 'Experience (Years)', placeholder: '5', type: 'number' },
-  { key: 'technical_skills', label: 'Skills (comma-separated)', placeholder: 'React, Node.js, Python...' },
-  { key: 'languages', label: 'Languages (comma-separated)', placeholder: 'English, Arabic, Hindi...' },
 ];
 
 const CV_TEXTAREA_FIELDS = [
@@ -28,10 +28,13 @@ const CV_TEXTAREA_FIELDS = [
   { key: 'projects', label: 'Projects', placeholder: 'One project per line' },
 ];
 
+// Fields edited via custom controls (tag pickers / selects) rather than plain inputs.
+const EXTRA_KEYS = ['technical_skills', 'languages', 'visa_status', 'notice_period'];
+
 const emptyCV: Record<string, string> = [
   ...CV_FIELDS,
   ...CV_TEXTAREA_FIELDS,
-].reduce((acc, f) => ({ ...acc, [f.key]: '' }), {});
+].reduce((acc, f) => ({ ...acc, [f.key]: '' }), EXTRA_KEYS.reduce((a, k) => ({ ...a, [k]: '' }), {}));
 
 interface WorkExp {
   id: number;
@@ -210,6 +213,7 @@ export default function MyCVPage() {
     if (cv) {
       const filled: Record<string, string> = {};
       [...CV_FIELDS, ...CV_TEXTAREA_FIELDS].forEach(f => { filled[f.key] = cv[f.key] ?? ''; });
+      EXTRA_KEYS.forEach(k => { filled[k] = cv[k] ?? ''; });
       setForm(filled);
     }
   }, [cv]);
@@ -287,6 +291,40 @@ export default function MyCVPage() {
                 />
               </div>
             ))}
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+              <div>
+                <label style={{ fontSize: 12, color: '#888', fontWeight: 600, display: 'block', marginBottom: 4 }}>Visa Status</label>
+                <select value={form.visa_status ?? ''} onChange={e => set('visa_status', e.target.value)}
+                  style={{ ...inp, background: '#fff', color: form.visa_status ? '#1a1a1a' : '#aaa' }}>
+                  <option value="">Select visa status</option>
+                  {VISA_STATUSES.map(v => <option key={v} value={v}>{v}</option>)}
+                </select>
+              </div>
+              <div>
+                <label style={{ fontSize: 12, color: '#888', fontWeight: 600, display: 'block', marginBottom: 4 }}>Notice Period (Availability)</label>
+                <select value={form.notice_period ?? ''} onChange={e => set('notice_period', e.target.value)}
+                  style={{ ...inp, background: '#fff', color: form.notice_period ? '#1a1a1a' : '#aaa' }}>
+                  <option value="">Select availability</option>
+                  {NOTICE_PERIODS.map(n => <option key={n} value={n}>{n}</option>)}
+                </select>
+              </div>
+            </div>
+
+            <TagPicker
+              label="Skills"
+              endpoint="skills"
+              value={form.technical_skills ?? ''}
+              onChange={v => set('technical_skills', v)}
+              placeholder="Type a skill, e.g. React…"
+            />
+            <TagPicker
+              label="Languages"
+              endpoint="languages"
+              value={form.languages ?? ''}
+              onChange={v => set('languages', v)}
+              placeholder="Type a language, e.g. English…"
+            />
           </div>
         </div>
 

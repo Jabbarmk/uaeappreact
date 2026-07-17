@@ -11,6 +11,13 @@ const BusinessDetail   = lazy(() => import('./pages/BusinessDetailPage'));
 const Classifieds      = lazy(() => import('./pages/ClassifiedsPage'));
 const ClassifiedList   = lazy(() => import('./pages/ClassifiedListPage'));
 const ClassifiedDetail = lazy(() => import('./pages/ClassifiedDetailPage'));
+const RealEstateHub    = lazy(() => import('./pages/RealEstateHubPage'));
+const PropertyList     = lazy(() => import('./pages/PropertyListPage'));
+const PropertyDetail   = lazy(() => import('./pages/PropertyDetailPage'));
+const RealEstateCompanies = lazy(() => import('./pages/RealEstateCompaniesPage'));
+const RealEstateCompany   = lazy(() => import('./pages/RealEstateCompanyPage'));
+const RealEstateProjects  = lazy(() => import('./pages/RealEstateProjectsPage'));
+const ProjectDetail    = lazy(() => import('./pages/ProjectDetailPage'));
 const Jobs             = lazy(() => import('./pages/JobsPage'));
 const JobDetail        = lazy(() => import('./pages/JobDetailPage'));
 const Offers           = lazy(() => import('./pages/OffersPage'));
@@ -22,7 +29,6 @@ const Search           = lazy(() => import('./pages/SearchPage'));
 // Auth pages
 const LoginPage  = lazy(() => import('./pages/auth/LoginPage'));
 const SignupPage  = lazy(() => import('./pages/auth/SignupPage'));
-const ForgotPage = lazy(() => import('./pages/auth/ForgotPage'));
 
 // User pages
 const UserProfilePage       = lazy(() => import('./pages/my/UserProfilePage'));
@@ -30,8 +36,15 @@ const MyBusinessesPage      = lazy(() => import('./pages/my/MyBusinessesPage'));
 const MyBusinessFormPage    = lazy(() => import('./pages/my/MyBusinessFormPage'));
 const MyJobsPage            = lazy(() => import('./pages/my/MyJobsPage'));
 const MyJobFormPage         = lazy(() => import('./pages/my/MyJobFormPage'));
+const MyJobApplicantsPage   = lazy(() => import('./pages/my/MyJobApplicantsPage'));
 const MyClassifiedsPage     = lazy(() => import('./pages/my/MyClassifiedsPage'));
 const MyClassifiedFormPage  = lazy(() => import('./pages/my/MyClassifiedFormPage'));
+const MyPropertiesPage      = lazy(() => import('./pages/my/MyPropertiesPage'));
+const MyPropertyFormPage    = lazy(() => import('./pages/my/MyPropertyFormPage'));
+const MyCompaniesPage       = lazy(() => import('./pages/my/MyCompaniesPage'));
+const MyCompanyFormPage     = lazy(() => import('./pages/my/MyCompanyFormPage'));
+const MyProjectsPage        = lazy(() => import('./pages/my/MyProjectsPage'));
+const MyProjectFormPage     = lazy(() => import('./pages/my/MyProjectFormPage'));
 const MyCVPage              = lazy(() => import('./pages/my/MyCVPage'));
 
 // Admin pages
@@ -41,6 +54,7 @@ const AdminCrudPage     = lazy(() => import('./pages/admin/AdminCrudPage'));
 const AdminSettingsPage = lazy(() => import('./pages/admin/AdminSettingsPage'));
 const AdminUsersPage    = lazy(() => import('./pages/admin/AdminUsersPage'));
 const AdminApprovalsPage = lazy(() => import('./pages/admin/AdminApprovalsPage'));
+const AdminClassifiedsPage = lazy(() => import('./pages/admin/AdminClassifiedsPage'));
 
 function PageLoader() {
   return <div style={{ padding: 40, textAlign: 'center', color: '#6C5CE7' }}>Loading…</div>;
@@ -66,6 +80,13 @@ export default function App() {
           <Route path="classifieds" element={<Classifieds />} />
           <Route path="classifieds/list" element={<ClassifiedList />} />
           <Route path="classifieds/:id" element={<ClassifiedDetail />} />
+          <Route path="realestate" element={<RealEstateHub />} />
+          <Route path="realestate/properties" element={<PropertyList />} />
+          <Route path="realestate/properties/:id" element={<PropertyDetail />} />
+          <Route path="realestate/companies" element={<RealEstateCompanies />} />
+          <Route path="realestate/companies/:id" element={<RealEstateCompany />} />
+          <Route path="realestate/projects" element={<RealEstateProjects />} />
+          <Route path="realestate/projects/:id" element={<ProjectDetail />} />
           <Route path="jobs" element={<Jobs />} />
           <Route path="jobs/:id" element={<JobDetail />} />
           <Route path="offers" element={<Offers />} />
@@ -84,9 +105,19 @@ export default function App() {
             <Route path="my/jobs" element={<MyJobsPage />} />
             <Route path="my/jobs/new" element={<MyJobFormPage />} />
             <Route path="my/jobs/:id/edit" element={<MyJobFormPage />} />
+            <Route path="my/jobs/:id/applicants" element={<MyJobApplicantsPage />} />
             <Route path="my/classifieds" element={<MyClassifiedsPage />} />
             <Route path="my/classifieds/new" element={<MyClassifiedFormPage />} />
             <Route path="my/classifieds/:id/edit" element={<MyClassifiedFormPage />} />
+            <Route path="my/properties" element={<MyPropertiesPage />} />
+            <Route path="my/properties/new" element={<MyPropertyFormPage />} />
+            <Route path="my/properties/:id/edit" element={<MyPropertyFormPage />} />
+            <Route path="my/re-companies" element={<MyCompaniesPage />} />
+            <Route path="my/re-companies/new" element={<MyCompanyFormPage />} />
+            <Route path="my/re-companies/:id/edit" element={<MyCompanyFormPage />} />
+            <Route path="my/projects" element={<MyProjectsPage />} />
+            <Route path="my/projects/new" element={<MyProjectFormPage />} />
+            <Route path="my/projects/:id/edit" element={<MyProjectFormPage />} />
             <Route path="my/cv" element={<MyCVPage />} />
           </Route>
         </Route>
@@ -94,7 +125,6 @@ export default function App() {
         {/* Auth pages (no layout) */}
         <Route path="auth/login"  element={<LoginPage />} />
         <Route path="auth/signup" element={<SignupPage />} />
-        <Route path="auth/forgot" element={<ForgotPage />} />
 
         {/* Admin login (no layout) */}
         <Route path="admin/login" element={<AdminLogin />} />
@@ -111,7 +141,13 @@ export default function App() {
           <Route path="offers"                element={<AdminCrudPage />} />
           <Route path="classified-categories" element={<AdminCrudPage />} />
           <Route path="classified-sections"   element={<AdminCrudPage />} />
-          <Route path="classifieds"           element={<AdminCrudPage />} />
+          <Route path="classifieds"           element={<AdminClassifiedsPage />} />
+          <Route path="property-categories"   element={<AdminCrudPage />} />
+          <Route path="real-estate-companies" element={<AdminCrudPage />} />
+          <Route path="properties"            element={<AdminCrudPage />} />
+          <Route path="real-estate-projects"  element={<AdminCrudPage />} />
+          <Route path="event-categories"      element={<AdminCrudPage />} />
+          <Route path="events"                element={<AdminCrudPage />} />
           <Route path="jobs"                  element={<AdminCrudPage />} />
           <Route path="profiles"              element={<AdminCrudPage />} />
           <Route path="work-experience"       element={<AdminCrudPage />} />

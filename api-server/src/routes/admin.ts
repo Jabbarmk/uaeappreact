@@ -59,6 +59,54 @@ router.get('/me', requireAdmin, (req: Request, res: Response) => {
   res.json({ id: (req.session as any).adminId, name: (req.session as any).adminName });
 });
 
+// ── Dashboard summary + analytics ─────────────────────────────────────────────
+
+router.get('/dashboard', requireAdmin, async (_req, res, next) => {
+  try {
+    const one = async (sql: string) => (await queryOne<{ n: number }>(sql))?.n ?? 0;
+
+    const [
+      businesses, jobs, classifieds, properties, events, companies, projects, users,
+      pBiz, pJob, pCls, pProp, pComp, pProj, pEvt,
+      topBusinesses, topKeywords, topCategories, recentBusinesses,
+    ] = await Promise.all([
+      one('SELECT COUNT(*) n FROM businesses'),
+      one('SELECT COUNT(*) n FROM jobs'),
+      one('SELECT COUNT(*) n FROM classifieds'),
+      one('SELECT COUNT(*) n FROM properties'),
+      one('SELECT COUNT(*) n FROM events'),
+      one('SELECT COUNT(*) n FROM real_estate_companies'),
+      one('SELECT COUNT(*) n FROM real_estate_projects'),
+      one('SELECT COUNT(*) n FROM users'),
+      one("SELECT COUNT(*) n FROM businesses WHERE status='pending'"),
+      one("SELECT COUNT(*) n FROM jobs WHERE status='pending'"),
+      one("SELECT COUNT(*) n FROM classifieds WHERE status='pending'"),
+      one("SELECT COUNT(*) n FROM properties WHERE status='pending'"),
+      one("SELECT COUNT(*) n FROM real_estate_companies WHERE status='pending'"),
+      one("SELECT COUNT(*) n FROM real_estate_projects WHERE status='pending'"),
+      one("SELECT COUNT(*) n FROM events WHERE status='pending'"),
+      query<any>(`SELECT b.id, b.name, b.image, b.emirate, COALESCE(SUM(v.count),0) AS hits
+                  FROM businesses b LEFT JOIN business_views v ON v.business_id=b.id
+                  GROUP BY b.id ORDER BY hits DESC, b.id DESC LIMIT 6`),
+      query<any>('SELECT keyword, count FROM search_keywords ORDER BY count DESC, keyword LIMIT 10'),
+      query<any>(`SELECT bc.name, bc.icon, cc.count
+                  FROM category_clicks cc JOIN business_categories bc ON bc.id=cc.category_id
+                  ORDER BY cc.count DESC LIMIT 8`),
+      query<any>('SELECT id, name, image, emirate, created_at FROM businesses ORDER BY created_at DESC LIMIT 5'),
+    ]);
+
+    res.json({
+      counts: { businesses, jobs, classifieds, properties, events, companies, projects, users },
+      pendingApprovals: pBiz + pJob + pCls + pProp + pComp + pProj + pEvt,
+      pendingBreakdown: { businesses: pBiz, jobs: pJob, classifieds: pCls, properties: pProp, companies: pComp, projects: pProj, events: pEvt },
+      topBusinesses: topBusinesses.map((b) => ({ ...b, hits: Number(b.hits), imageUrl: getImageUrl(b.image, 'businesses') })),
+      topKeywords,
+      topCategories,
+      recentBusinesses: recentBusinesses.map((b) => ({ ...b, imageUrl: getImageUrl(b.image, 'businesses') })),
+    });
+  } catch (err) { next(err); }
+});
+
 // ── Settings ──────────────────────────────────────────────────────────────────
 
 router.get('/settings', requireAdmin, async (_req, res, next) => {
@@ -96,22 +144,38 @@ router.post('/settings/test-email', requireAdmin, async (req: Request, res: Resp
 
 // ── Generic CRUD factory ──────────────────────────────────────────────────────
 
-function crudRoutes(table: string, imageFolder?: string) {
+interface CrudOpts { searchCols?: string[]; filterCols?: string[] }
+
+function crudRoutes(table: string, imageFolder?: string, opts: CrudOpts = {}) {
   const r = Router();
+  const searchCols = opts.searchCols ?? ['name'];
+  const filterCols = opts.filterCols ?? [];
 
   r.get('/', requireAdmin, async (req, res, next) => {
     try {
-      const { page = '1', pageSize = '50', search } = req.query as Record<string, string>;
+      const q = req.query as Record<string, string>;
+      const page = q.page || '1';
+      const pageSize = q.pageSize || '50';
+      const search = q.search;
       const offset = (Number(page) - 1) * Number(pageSize);
-      let sql = `SELECT * FROM \`${table}\``;
+
+      const where: string[] = [];
       const params: unknown[] = [];
-      if (search) { sql += ' WHERE name LIKE ?'; params.push(`%${search}%`); }
-      sql += ` ORDER BY id DESC LIMIT ? OFFSET ?`;
-      params.push(Number(pageSize), offset);
-      const rows = await query<any>(sql, params);
-      const [[{ total }]] = await Promise.all([
-        query<{ total: number }>(`SELECT COUNT(*) as total FROM \`${table}\``),
-      ]);
+      if (search) {
+        where.push('(' + searchCols.map((c) => `\`${c}\` LIKE ?`).join(' OR ') + ')');
+        searchCols.forEach(() => params.push(`%${search}%`));
+      }
+      for (const c of filterCols) {
+        if (q[c] !== undefined && q[c] !== '') { where.push(`\`${c}\` = ?`); params.push(q[c]); }
+      }
+      const whereSql = where.length ? `WHERE ${where.join(' AND ')}` : '';
+
+      const rows = await query<any>(
+        `SELECT * FROM \`${table}\` ${whereSql} ORDER BY id DESC LIMIT ? OFFSET ?`,
+        [...params, Number(pageSize), offset]
+      );
+      const totalRow = await query<{ total: number }>(`SELECT COUNT(*) as total FROM \`${table}\` ${whereSql}`, params);
+      const total = totalRow[0]?.total ?? 0;
       res.json({ rows: imageFolder ? rows.map((r) => ({ ...r, imageUrl: getImageUrl(r.image, imageFolder) })) : rows, total });
     } catch (err) { next(err); }
   });
@@ -283,14 +347,73 @@ router.delete('/manage-classifieds/:id/images/:imageId', requireAdmin, async (re
   } catch (err) { next(err); }
 });
 
+// ── Universities manager (set institution type + extras on a business) ─────────
+
+// Metadata for the university & course forms.
+router.get('/universities/meta', requireAdmin, async (_req, res, next) => {
+  try {
+    const [institutionTypes, universities] = await Promise.all([
+      query<any>('SELECT id, name FROM institution_types WHERE is_active=1 ORDER BY sort_order, name'),
+      query<any>('SELECT b.id, b.name FROM businesses b JOIN university_profiles up ON up.business_id=b.id ORDER BY b.name'),
+    ]);
+    res.json({ institutionTypes, universities });
+  } catch (err) { next(err); }
+});
+
+// List Universities-category businesses with their profile (if any).
+router.get('/universities', requireAdmin, async (_req, res, next) => {
+  try {
+    const rows = await query<any>(
+      `SELECT b.id, b.name, b.emirate, b.logo, b.status, b.is_active,
+              up.institution_type_id, up.ranking, up.campus_size, up.established_year,
+              it.name AS institution_type,
+              (up.business_id IS NOT NULL) AS is_university,
+              (SELECT COUNT(*) FROM courses c WHERE c.business_id=b.id) AS course_count
+       FROM businesses b
+       LEFT JOIN university_profiles up ON up.business_id=b.id
+       LEFT JOIN institution_types it ON it.id=up.institution_type_id
+       WHERE b.category_id = (SELECT id FROM business_categories WHERE name='Universities' LIMIT 1)
+       ORDER BY b.name`
+    );
+    res.json({ rows: rows.map((r) => ({ ...r, is_university: Number(r.is_university), course_count: Number(r.course_count), logoUrl: getImageUrl(r.logo, 'businesses') })) });
+  } catch (err) { next(err); }
+});
+
+// Upsert the university profile for a business (marks it as a university).
+router.put('/universities/:id', requireAdmin, async (req, res, next) => {
+  try {
+    const b = Number(req.params.id);
+    const { institution_type_id, ranking, campus_size, established_year } = req.body as Record<string, any>;
+    await query(
+      `INSERT INTO university_profiles (business_id, institution_type_id, ranking, campus_size, established_year)
+       VALUES (?,?,?,?,?)
+       ON DUPLICATE KEY UPDATE institution_type_id=VALUES(institution_type_id), ranking=VALUES(ranking), campus_size=VALUES(campus_size), established_year=VALUES(established_year)`,
+      [b, institution_type_id || null, ranking || null, campus_size || null, established_year || null]
+    );
+    res.json({ ok: true });
+  } catch (err) { next(err); }
+});
+
+// Unmark a business as a university (removes profile; keeps the business).
+router.delete('/universities/:id', requireAdmin, async (req, res, next) => {
+  try {
+    await query('DELETE FROM university_profiles WHERE business_id=?', [Number(req.params.id)]);
+    res.json({ ok: true });
+  } catch (err) { next(err); }
+});
+
 // ── Resource routes ──────────────────────────────────────────────────────────
 
+router.use('/institution-types', crudRoutes('institution_types', undefined, { searchCols: ['name'] }));
+router.use('/course-categories', crudRoutes('course_categories', undefined, { searchCols: ['name'] }));
+router.use('/study-levels', crudRoutes('study_levels', undefined, { searchCols: ['name'] }));
+router.use('/courses', crudRoutes('courses', undefined, { searchCols: ['name'], filterCols: ['study_level_id', 'course_category_id', 'business_id'] }));
 router.use('/sliders', crudRoutes('sliders', 'slides'));
-router.use('/main-categories', crudRoutes('main_categories'));
-router.use('/home-categories', crudRoutes('home_categories'));
-router.use('/popular-categories', crudRoutes('popular_categories', 'categories'));
-router.use('/business-categories', crudRoutes('business_categories'));
-router.use('/businesses', crudRoutes('businesses', 'businesses'));
+router.use('/main-categories', crudRoutes('main_categories', undefined, { searchCols: ['name'] }));
+router.use('/home-categories', crudRoutes('home_categories', undefined, { searchCols: ['name'] }));
+router.use('/popular-categories', crudRoutes('popular_categories', 'categories', { searchCols: ['name'] }));
+router.use('/business-categories', crudRoutes('business_categories', undefined, { searchCols: ['name'], filterCols: ['group_name', 'main_category_id'] }));
+router.use('/businesses', crudRoutes('businesses', 'businesses', { searchCols: ['name'], filterCols: ['category_id', 'emirate'] }));
 router.use('/offers', crudRoutes('offers', 'offers'));
 router.use('/classified-categories', crudRoutes('classified_categories'));
 router.use('/classified-sections', crudRoutes('classified_sections'));

@@ -1,0 +1,1 @@
+function e(e,t=`AED`){let n=Number(e);return n?`${t} ${n.toLocaleString()}`:`Fee on request`}function t(e){if(!e)return``;let t=String(e),n=new Date(t.includes(`T`)?t:t.replace(` `,`T`));return isNaN(n.getTime())?t:n.toLocaleDateString(`en-GB`,{day:`numeric`,month:`long`,year:`numeric`})}export{e as n,t};

@@ -295,13 +295,13 @@ a { text-decoration: none; color: inherit; }
 }
 .slider-container::-webkit-scrollbar { display: none; }
 .slide {
-    flex: 0 0 88%;
+    flex: 0 0 98%;
     scroll-snap-align: start;
     position: relative;
     display: block;
     border-radius: var(--radius);
     overflow: hidden;
-    aspect-ratio: 1 / 1.12;
+    height: 65vh;
     box-shadow: 0 12px 30px rgba(20, 30, 60, 0.16);
     text-decoration: none;
     color: inherit;
@@ -311,14 +311,6 @@ a { text-decoration: none; color: inherit; }
     height: 100%;
     object-fit: cover;
     display: block;
-}
-.slide::after {
-    content: '';
-    position: absolute;
-    left: 0; right: 0; bottom: 0;
-    height: 48%;
-    background: linear-gradient(to top, rgba(10, 16, 34, 0.92), rgba(10, 16, 34, 0.5) 48%, transparent);
-    z-index: 1;
 }
 .slide-content {
     position: absolute;
@@ -1966,6 +1958,57 @@ a { text-decoration: none; color: inherit; }
 .bs-hidden{display:none!important}
 .bs-divider{height:1px;background:linear-gradient(to right,transparent,rgba(108,92,231,.15),transparent);margin:0}
 .bs-page-wrap{background:#f0f0f5;padding-bottom:90px}
+
+/* ============================================================
+   Business Detail v2 — modern soft card UI (scoped to .biz-detail-v2)
+   ============================================================ */
+.biz-detail-v2{background:#EDEFF5}
+.biz-detail-v2 .page-topbar{background:#EDEFF5}
+
+/* Hero slider — rounded, floating card */
+.biz-detail-v2 .bd-slider-wrap{margin:10px 16px 0;border-radius:24px;overflow:hidden;height:230px;box-shadow:0 14px 34px rgba(22,32,64,.16)}
+
+/* Header — clean floating card */
+.biz-detail-v2 .bd-header{margin:-36px 16px 0;border-radius:22px;padding:18px;box-shadow:0 12px 30px rgba(22,32,64,.10);border:1px solid rgba(255,255,255,.6)}
+.biz-detail-v2 .bd-logo{border-radius:20px;box-shadow:0 6px 16px rgba(108,92,231,.22)}
+.biz-detail-v2 .bd-name{font-size:20px;letter-spacing:-.4px}
+
+/* Action row — soft rounded icon chips (reference style) */
+.biz-detail-v2 .bd-actions{padding:16px;gap:10px}
+.biz-detail-v2 .bd-action-icon{width:56px;height:56px;border-radius:18px;font-size:20px;box-shadow:0 10px 20px rgba(22,32,64,.14)}
+.biz-detail-v2 .bd-action:active .bd-action-icon{transform:scale(.92)}
+.biz-detail-v2 .bd-action span{font-size:11px;font-weight:700;color:var(--text-secondary)}
+
+/* Stack of rounded cards on a soft background */
+.biz-detail-v2 .bs-page-wrap{background:transparent;padding:2px 0 96px}
+.biz-detail-v2 .bs-section{margin:0 16px 14px;border-radius:22px;padding:18px 16px;box-shadow:0 6px 20px rgba(22,32,64,.06);border:1px solid rgba(255,255,255,.7)}
+.biz-detail-v2 .bs-divider{display:none}
+.biz-detail-v2 .bs-title{font-size:16px;letter-spacing:-.3px}
+.biz-detail-v2 .bs-sh::before{background:linear-gradient(to bottom,var(--primary),var(--accent));width:4px;border-radius:3px}
+
+/* Stat + tag rows */
+.biz-detail-v2 .bs-stats-row{margin:0 16px 14px;padding:0;background:transparent;gap:12px}
+.biz-detail-v2 .bs-stat{background:#fff;border-radius:18px;border:1px solid rgba(255,255,255,.7);box-shadow:0 6px 18px rgba(22,32,64,.06);padding:14px 8px}
+.biz-detail-v2 .bs-stat-num{font-size:22px}
+.biz-detail-v2 .bs-tags{padding:0 16px 14px}
+.biz-detail-v2 .bs-tag{padding:7px 14px;font-size:12px;box-shadow:0 2px 8px rgba(108,92,231,.08)}
+
+/* Service cards — gradient halo behind the icon (reference product-halo look) */
+.biz-detail-v2 .bs-svc-grid{gap:12px}
+.biz-detail-v2 .bs-svc-card{background:#fff;border:1px solid #EEF0F6;border-radius:20px;padding:16px 14px;box-shadow:0 4px 14px rgba(22,32,64,.05)}
+.biz-detail-v2 .bs-svc-icon{width:60px;height:60px;margin:0 auto 12px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:28px;background:radial-gradient(circle at 50% 42%,rgba(0,206,201,.24),rgba(108,92,231,.12) 68%,rgba(108,92,231,0) 78%)}
+.biz-detail-v2 .bs-svc-img{border-radius:14px;height:88px}
+.biz-detail-v2 .bs-svc-title{text-align:center}
+.biz-detail-v2 .bs-svc-desc{text-align:center}
+
+/* Gallery + reviews + contact rounding */
+.biz-detail-v2 .bs-gal-grid{gap:6px}
+.biz-detail-v2 .bs-gal-item{border-radius:16px}
+.biz-detail-v2 .bs-review-summary{border-radius:20px}
+.biz-detail-v2 .bs-review-card{border-radius:18px;border:1px solid #EEF0F6}
+.biz-detail-v2 .bs-contact-item{border-radius:16px;padding:13px 14px;border:1px solid #EEF0F6}
+.biz-detail-v2 .bs-contact-icon{border-radius:14px;width:42px;height:42px}
+.biz-detail-v2 .bs-client-avatar,.biz-detail-v2 .bs-client-logo{border-radius:18px}
 
 /* ===== OFFLINE PROJECTS & RE PLAYERS SLIDERS ===== */
 .proj-slider-row,.re-slider-row{display:flex;overflow-x:auto;gap:12px;padding:8px 16px 16px;scroll-snap-type:x mandatory;-webkit-overflow-scrolling:touch;scrollbar-width:none}

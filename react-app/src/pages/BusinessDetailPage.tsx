@@ -113,7 +113,7 @@ export default function BusinessDetailPage() {
   const waLink = biz.whatsapp ? `https://wa.me/${biz.whatsapp.replace(/\D/g, '')}` : null;
 
   return (
-    <>
+    <div className="biz-detail-v2">
       {lbOpen && <Lightbox imgs={lbImgs} cur={lbCur} onClose={closeLB} onNav={lbNav} />}
 
       <div className="page-topbar">
@@ -342,6 +342,6 @@ export default function BusinessDetailPage() {
           )}
         </div>
       </div>
-    </>
+    </div>
   );
 }

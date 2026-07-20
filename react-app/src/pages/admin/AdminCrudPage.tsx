@@ -5,7 +5,7 @@ import api from '../../api';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
-type FieldType = 'text' | 'textarea' | 'number' | 'select' | 'toggle' | 'date' | 'image' | 'business-search' | 'main-category-select' | 'category-search' | 'time-picker' | 'user-search' | 'event-category-select';
+type FieldType = 'text' | 'textarea' | 'number' | 'select' | 'toggle' | 'date' | 'image' | 'business-search' | 'main-category-select' | 'category-search' | 'time-picker' | 'user-search' | 'event-category-select' | 'resource-select' | 'university-select';
 
 interface FieldConfig {
   key: string;
@@ -19,6 +19,13 @@ interface FieldConfig {
   syncTransform?: 'strip-plus';
   syncNameTo?: string;
   syncIconTo?: string;
+  optionsResource?: string;                       // for 'resource-select': the admin CRUD resource to load options from
+}
+
+interface FilterConfig {
+  key: string;                                    // query param + column to filter on
+  label: string;
+  optionsFrom: string;                            // admin resource for options, or 'emirates'
 }
 
 interface ResourceConfig {
@@ -27,6 +34,8 @@ interface ResourceConfig {
   displayCol: string;
   listCols?: string[];
   fields: FieldConfig[];
+  searchable?: boolean;
+  filters?: FilterConfig[];
 }
 
 const EMIRATES = ['Dubai', 'Abu Dhabi', 'Sharjah', 'Ajman', 'Fujairah', 'Ras Al Khaimah', 'Umm Al Quwain'];
@@ -44,7 +53,7 @@ const RESOURCE_CONFIGS: Record<string, ResourceConfig> = {
     { key: 'sort_order',  label: 'Sort Order',                     type: 'number' },
     { key: 'is_active',   label: 'Active',                         type: 'toggle' },
   ]},
-  'main-categories': { resource: 'main-categories', label: 'Main Categories', displayCol: 'name', listCols: ['icon', 'name', 'link', 'sort_order'], fields: [
+  'main-categories': { resource: 'main-categories', label: 'Main Categories', displayCol: 'name', listCols: ['icon', 'name', 'link', 'sort_order'], searchable: true, fields: [
     { key: 'name',       label: 'Name',       type: 'text', required: true },
     { key: 'icon',       label: 'Icon',       type: 'text' },
     { key: 'link',       label: 'Link',       type: 'text' },
@@ -66,14 +75,14 @@ const RESOURCE_CONFIGS: Record<string, ResourceConfig> = {
     { key: 'sort_order',  label: 'Sort Order',        type: 'number' },
     { key: 'is_active',   label: 'Active',            type: 'toggle' },
   ]},
-  'business-categories': { resource: 'business-categories', label: 'Business Categories', displayCol: 'name', listCols: ['icon', 'name', 'group_name', 'sort_order'], fields: [
+  'business-categories': { resource: 'business-categories', label: 'Business Categories', displayCol: 'name', listCols: ['icon', 'name', 'group_name', 'sort_order'], searchable: true, filters: [{ key: 'main_category_id', label: 'Main Category', optionsFrom: 'main-categories' }], fields: [
     { key: 'name',       label: 'Name',       type: 'text', required: true },
     { key: 'icon',       label: 'Icon',       type: 'text' },
     { key: 'group_name', label: 'Group Name', type: 'main-category-select' },
     { key: 'sort_order', label: 'Sort Order', type: 'number' },
     { key: 'is_active',  label: 'Active',     type: 'toggle' },
   ]},
-  businesses: { resource: 'businesses', label: 'Businesses', displayCol: 'name', listCols: ['image', 'name', 'emirate', 'phone', 'rating'], fields: [
+  businesses: { resource: 'businesses', label: 'Businesses', displayCol: 'name', listCols: ['image', 'name', 'emirate', 'phone', 'rating'], searchable: true, filters: [{ key: 'category_id', label: 'Category', optionsFrom: 'business-categories' }, { key: 'emirate', label: 'Emirate', optionsFrom: 'emirates' }], fields: [
     { key: 'user_id',          label: 'Assigned User',    type: 'user-search' },
     { key: 'name',             label: 'Name',             type: 'text',            required: true },
     { key: 'category_id',      label: 'Category',         type: 'category-search' },
@@ -227,6 +236,48 @@ const RESOURCE_CONFIGS: Record<string, ResourceConfig> = {
     { key: 'status',             label: 'Status',          type: 'select', options: ['pending', 'approved', 'rejected'] },
     { key: 'is_featured',        label: 'Featured',        type: 'toggle' },
     { key: 'is_active',          label: 'Active',          type: 'toggle' },
+  ]},
+  'institution-types': { resource: 'institution-types', label: 'Institution Types', displayCol: 'name', listCols: ['icon', 'name', 'sort_order'], searchable: true, fields: [
+    { key: 'name',       label: 'Name',         type: 'text', required: true },
+    { key: 'icon',       label: 'Icon (emoji)', type: 'text' },
+    { key: 'sort_order', label: 'Sort Order',   type: 'number' },
+    { key: 'is_active',  label: 'Active',       type: 'toggle' },
+  ]},
+  'course-categories': { resource: 'course-categories', label: 'Course Categories', displayCol: 'name', listCols: ['icon', 'name', 'sort_order'], searchable: true, fields: [
+    { key: 'name',       label: 'Name',         type: 'text', required: true },
+    { key: 'icon',       label: 'Icon (emoji)', type: 'text' },
+    { key: 'sort_order', label: 'Sort Order',   type: 'number' },
+    { key: 'is_active',  label: 'Active',       type: 'toggle' },
+  ]},
+  'study-levels': { resource: 'study-levels', label: 'Study Levels', displayCol: 'name', listCols: ['icon', 'name', 'sort_order'], searchable: true, fields: [
+    { key: 'name',       label: 'Name',         type: 'text', required: true },
+    { key: 'icon',       label: 'Icon (emoji)', type: 'text' },
+    { key: 'sort_order', label: 'Sort Order',   type: 'number' },
+    { key: 'is_active',  label: 'Active',       type: 'toggle' },
+  ]},
+  courses: { resource: 'courses', label: 'Courses', displayCol: 'name', listCols: ['name', 'duration', 'emirate'], searchable: true,
+    filters: [{ key: 'study_level_id', label: 'Study Level', optionsFrom: 'study-levels' }, { key: 'course_category_id', label: 'Course Category', optionsFrom: 'course-categories' }],
+    fields: [
+    { key: 'business_id',          label: 'University',            type: 'university-select', required: true },
+    { key: 'course_category_id',   label: 'Course Category',       type: 'resource-select', optionsResource: 'course-categories' },
+    { key: 'study_level_id',       label: 'Study Level',           type: 'resource-select', optionsResource: 'study-levels' },
+    { key: 'name',                 label: 'Course Name',           type: 'text', required: true },
+    { key: 'specialisation',       label: 'Specialisation',        type: 'text' },
+    { key: 'duration',             label: 'Duration',              type: 'text', placeholder: '3–4 years' },
+    { key: 'total_fee',            label: 'Total Tuition Fee',     type: 'number' },
+    { key: 'fee_per_year',         label: 'Fee Per Year',          type: 'number' },
+    { key: 'currency',             label: 'Currency',              type: 'text' },
+    { key: 'study_mode',           label: 'Study Mode',            type: 'select', options: ['Full-time', 'Part-time'] },
+    { key: 'delivery',             label: 'Delivery',              type: 'select', options: ['On campus', 'Online', 'Hybrid'] },
+    { key: 'location',             label: 'Location',              type: 'text' },
+    { key: 'emirate',              label: 'Emirate',               type: 'select', options: EMIRATES },
+    { key: 'intake',               label: 'Intake',                type: 'text', placeholder: 'September 2026' },
+    { key: 'eligibility',          label: 'Eligibility',           type: 'text' },
+    { key: 'application_deadline', label: 'Application Deadline',   type: 'date' },
+    { key: 'accreditation',        label: 'Accreditation',         type: 'text' },
+    { key: 'scholarships',         label: 'Scholarships',          type: 'select', options: ['Available', 'Not Available'] },
+    { key: 'is_featured',          label: 'Featured',              type: 'toggle' },
+    { key: 'is_active',            label: 'Active',                type: 'toggle' },
   ]},
   jobs: { resource: 'jobs', label: 'Jobs', displayCol: 'title', fields: [
     { key: 'user_id',      label: 'Assigned User', type: 'user-search' },
@@ -437,6 +488,38 @@ function EventCategorySelectField({ value, onChange }: { value: string; onChange
       <option value="">— Select Category —</option>
       {isLoading && <option disabled>Loading…</option>}
       {data?.map((cat) => <option key={cat.id} value={String(cat.id)}>{cat.icon ? `${cat.icon} ` : ''}{cat.name}</option>)}
+    </select>
+  );
+}
+
+// ── ResourceSelectField (generic id→name select from any admin resource) ──────
+
+function ResourceSelectField({ resource, value, onChange }: { resource: string; value: string; onChange: (v: string) => void }) {
+  const { data, isLoading } = useQuery({
+    queryKey: ['admin', 'resource-options', resource],
+    queryFn: () => api.get(`/admin/${resource}?page=1&pageSize=1000`).then((r) => r.data.rows as { id: number; name: string; icon?: string }[]),
+  });
+  return (
+    <select value={value} onChange={(e) => onChange(e.target.value)} style={inputStyle}>
+      <option value="">— Select —</option>
+      {isLoading && <option disabled>Loading…</option>}
+      {data?.map((o) => <option key={o.id} value={String(o.id)}>{o.icon ? `${o.icon} ` : ''}{o.name}</option>)}
+    </select>
+  );
+}
+
+// ── UniversitySelectField (businesses that are universities) ───────────────────
+
+function UniversitySelectField({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  const { data, isLoading } = useQuery({
+    queryKey: ['admin', 'universities-meta'],
+    queryFn: () => api.get('/admin/universities/meta').then((r) => r.data.universities as { id: number; name: string }[]),
+  });
+  return (
+    <select value={value} onChange={(e) => onChange(e.target.value)} style={inputStyle}>
+      <option value="">— Select University —</option>
+      {isLoading && <option disabled>Loading…</option>}
+      {data?.map((o) => <option key={o.id} value={String(o.id)}>{o.name}</option>)}
     </select>
   );
 }
@@ -705,7 +788,7 @@ function CrudDialog({ config, row, onClose, onSaved }: {
       for (const f of config.fields) {
         const v = form[f.key];
         if (f.type === 'toggle') payload[f.key] = v === '1' ? 1 : 0;
-        else if (f.type === 'number' || f.type === 'category-search' || f.type === 'business-search' || f.type === 'user-search' || f.type === 'event-category-select') payload[f.key] = v === '' ? null : Number(v);
+        else if (f.type === 'number' || f.type === 'category-search' || f.type === 'business-search' || f.type === 'user-search' || f.type === 'event-category-select' || f.type === 'resource-select' || f.type === 'university-select') payload[f.key] = v === '' ? null : Number(v);
         else payload[f.key] = v;
       }
       if (isEdit && row) await api.put(`/admin/${config.resource}/${String(row.id)}`, payload);
@@ -792,6 +875,12 @@ function CrudDialog({ config, row, onClose, onSaved }: {
                 {f.type === 'event-category-select' && (
                   <EventCategorySelectField value={form[f.key] ?? ''} onChange={(v) => set(f.key, v)} />
                 )}
+                {f.type === 'resource-select' && f.optionsResource && (
+                  <ResourceSelectField resource={f.optionsResource} value={form[f.key] ?? ''} onChange={(v) => set(f.key, v)} />
+                )}
+                {f.type === 'university-select' && (
+                  <UniversitySelectField value={form[f.key] ?? ''} onChange={(v) => set(f.key, v)} />
+                )}
                 {f.type === 'category-search' && (
                   <CategorySearchField
                     value={form[f.key] ?? ''}
@@ -845,6 +934,26 @@ function CrudDialog({ config, row, onClose, onSaved }: {
   );
 }
 
+// ── FilterSelect ──────────────────────────────────────────────────────────────
+
+function FilterSelect({ filter, value, onChange }: { filter: FilterConfig; value: string; onChange: (v: string) => void }) {
+  const { data } = useQuery({
+    queryKey: ['admin', 'filter-options', filter.optionsFrom],
+    queryFn: () => api.get(`/admin/${filter.optionsFrom}?page=1&pageSize=1000`).then((r) => r.data.rows as { id: number; name: string }[]),
+    enabled: filter.optionsFrom !== 'emirates',
+  });
+  const options = filter.optionsFrom === 'emirates'
+    ? EMIRATES.map((e) => ({ value: e, label: e }))
+    : (data ?? []).map((o) => ({ value: String(o.id), label: o.name }));
+
+  return (
+    <select value={value} onChange={(e) => onChange(e.target.value)} style={{ ...inputStyle, width: 'auto', minWidth: 150, maxWidth: 220 }}>
+      <option value="">All {filter.label}</option>
+      {options.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+    </select>
+  );
+}
+
 // ── Main page ─────────────────────────────────────────────────────────────────
 
 export default function AdminCrudPage() {
@@ -856,11 +965,32 @@ export default function AdminCrudPage() {
   const [page, setPage] = useState(1);
   const pageSize = 50;
   const [modalRow, setModalRow] = useState<Record<string, unknown> | null | 'new'>(null);
+  const [searchInput, setSearchInput] = useState('');
+  const [search, setSearch] = useState('');
+  const [filters, setFilters] = useState<Record<string, string>>({});
 
-  const queryKey = ['admin', resourceKey, page];
+  // Reset list state when switching between resources.
+  useEffect(() => { setPage(1); setSearchInput(''); setSearch(''); setFilters({}); }, [resourceKey]);
+
+  // Debounce the search box.
+  useEffect(() => {
+    const t = setTimeout(() => { setSearch(searchInput); setPage(1); }, 350);
+    return () => clearTimeout(t);
+  }, [searchInput]);
+
+  const setFilter = (k: string, v: string) => { setFilters((p) => ({ ...p, [k]: v })); setPage(1); };
+
+  const buildQuery = (pg: number, ps: number) => {
+    const p = new URLSearchParams({ page: String(pg), pageSize: String(ps) });
+    if (search) p.set('search', search);
+    Object.entries(filters).forEach(([k, v]) => { if (v) p.set(k, v); });
+    return p.toString();
+  };
+
+  const queryKey = ['admin', resourceKey, page, search, filters];
   const { data, isLoading, isError } = useQuery({
     queryKey,
-    queryFn: () => api.get(`/admin/${resourceKey}?page=${page}&pageSize=${pageSize}`).then((r) => r.data as { rows: Record<string, unknown>[]; total: number }),
+    queryFn: () => api.get(`/admin/${resourceKey}?${buildQuery(page, pageSize)}`).then((r) => r.data as { rows: Record<string, unknown>[]; total: number }),
     enabled: !!config,
   });
 
@@ -869,7 +999,7 @@ export default function AdminCrudPage() {
   const handleExport = async () => {
     setExporting(true);
     try {
-      const res = await api.get(`/admin/${resourceKey}?page=1&pageSize=10000`);
+      const res = await api.get(`/admin/${resourceKey}?${buildQuery(1, 10000)}`);
       const allRows: Record<string, unknown>[] = res.data.rows;
       if (!allRows.length) { alert('No data to export.'); return; }
       const keys = Object.keys(allRows[0]).filter((k) => k !== 'imageUrl');
@@ -924,6 +1054,39 @@ export default function AdminCrudPage() {
           {total > 0 && <>{total} record{total !== 1 ? 's' : ''}</>}
         </div>
       </div>
+
+      {/* Search & filter bar */}
+      {(config.searchable || config.filters) && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14, background: '#fff', border: '1px solid #E5E5E5', borderRadius: 4, padding: '8px 12px', flexWrap: 'wrap' }}>
+          {config.searchable && (
+            <div style={{ position: 'relative' }}>
+              <span style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: '#999', fontSize: 12, pointerEvents: 'none' }}>🔍</span>
+              <input
+                value={searchInput}
+                onChange={(e) => setSearchInput(e.target.value)}
+                placeholder={`Search ${config.label.toLowerCase()}…`}
+                style={{ ...inputStyle, width: 240, padding: '6px 26px 6px 30px' }}
+              />
+              {searchInput && (
+                <button onClick={() => setSearchInput('')} style={{ position: 'absolute', right: 6, top: '50%', transform: 'translateY(-50%)', border: 'none', background: 'none', cursor: 'pointer', color: '#999', fontSize: 14, lineHeight: 1 }}>✕</button>
+              )}
+            </div>
+          )}
+          {config.filters?.map((f) => (
+            <FilterSelect key={f.key} filter={f} value={filters[f.key] || ''} onChange={(v) => setFilter(f.key, v)} />
+          ))}
+          {(search || Object.values(filters).some(Boolean)) && (
+            <button
+              onClick={() => { setSearchInput(''); setSearch(''); setFilters({}); setPage(1); }}
+              style={{ padding: '5px 12px', background: '#fff', color: '#C42B1C', border: '1px solid #E0BDBD', borderRadius: 3, fontSize: 12, cursor: 'pointer', fontFamily: 'inherit' }}>
+              Clear
+            </button>
+          )}
+          <div style={{ marginLeft: 'auto', fontSize: 12, color: '#888' }}>
+            {(search || Object.values(filters).some(Boolean)) ? `${total} match${total !== 1 ? 'es' : ''}` : ''}
+          </div>
+        </div>
+      )}
 
       {/* Table card */}
       <div style={{ background: '#fff', border: '1px solid #E5E5E5', borderRadius: 4, overflow: 'hidden' }}>

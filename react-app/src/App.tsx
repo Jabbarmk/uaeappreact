@@ -18,6 +18,10 @@ const RealEstateCompanies = lazy(() => import('./pages/RealEstateCompaniesPage')
 const RealEstateCompany   = lazy(() => import('./pages/RealEstateCompanyPage'));
 const RealEstateProjects  = lazy(() => import('./pages/RealEstateProjectsPage'));
 const ProjectDetail    = lazy(() => import('./pages/ProjectDetailPage'));
+const UniversitiesHub  = lazy(() => import('./pages/UniversitiesHubPage'));
+const UniversityDetail = lazy(() => import('./pages/UniversityDetailPage'));
+const CourseList       = lazy(() => import('./pages/CourseListPage'));
+const CourseDetail     = lazy(() => import('./pages/CourseDetailPage'));
 const Jobs             = lazy(() => import('./pages/JobsPage'));
 const JobDetail        = lazy(() => import('./pages/JobDetailPage'));
 const Offers           = lazy(() => import('./pages/OffersPage'));
@@ -55,6 +59,7 @@ const AdminSettingsPage = lazy(() => import('./pages/admin/AdminSettingsPage'));
 const AdminUsersPage    = lazy(() => import('./pages/admin/AdminUsersPage'));
 const AdminApprovalsPage = lazy(() => import('./pages/admin/AdminApprovalsPage'));
 const AdminClassifiedsPage = lazy(() => import('./pages/admin/AdminClassifiedsPage'));
+const AdminUniversitiesPage = lazy(() => import('./pages/admin/AdminUniversitiesPage'));
 
 function PageLoader() {
   return <div style={{ padding: 40, textAlign: 'center', color: '#6C5CE7' }}>Loading…</div>;
@@ -87,6 +92,10 @@ export default function App() {
           <Route path="realestate/companies/:id" element={<RealEstateCompany />} />
           <Route path="realestate/projects" element={<RealEstateProjects />} />
           <Route path="realestate/projects/:id" element={<ProjectDetail />} />
+          <Route path="universities" element={<UniversitiesHub />} />
+          <Route path="universities/courses" element={<CourseList />} />
+          <Route path="universities/courses/:id" element={<CourseDetail />} />
+          <Route path="universities/:id" element={<UniversityDetail />} />
           <Route path="jobs" element={<Jobs />} />
           <Route path="jobs/:id" element={<JobDetail />} />
           <Route path="offers" element={<Offers />} />
@@ -148,6 +157,11 @@ export default function App() {
           <Route path="real-estate-projects"  element={<AdminCrudPage />} />
           <Route path="event-categories"      element={<AdminCrudPage />} />
           <Route path="events"                element={<AdminCrudPage />} />
+          <Route path="institution-types"     element={<AdminCrudPage />} />
+          <Route path="course-categories"     element={<AdminCrudPage />} />
+          <Route path="study-levels"          element={<AdminCrudPage />} />
+          <Route path="universities"          element={<AdminUniversitiesPage />} />
+          <Route path="courses"               element={<AdminCrudPage />} />
           <Route path="jobs"                  element={<AdminCrudPage />} />
           <Route path="profiles"              element={<AdminCrudPage />} />
           <Route path="work-experience"       element={<AdminCrudPage />} />

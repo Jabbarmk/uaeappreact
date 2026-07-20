@@ -133,6 +133,11 @@ export default function HomePage() {
           <h4>Real Estate</h4>
           <p>Rooms, flats, villas &amp; projects</p>
         </Link>
+        <Link to="/universities" className="feature-card teal">
+          <div className="feature-icon"><i className="fas fa-graduation-cap"></i></div>
+          <h4>Universities</h4>
+          <p>Courses, degrees &amp; admissions</p>
+        </Link>
         <Link to="/jobs" className="feature-card pink">
           <div className="feature-icon"><i className="fas fa-briefcase"></i></div>
           <h4>Job Portal</h4>

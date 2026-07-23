@@ -2,6 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import { Link, useParams } from 'react-router-dom';
 import api from '../api';
 import { fmtFee, fmtDate } from '../constants/education';
+import CourseThumb from '../components/CourseThumb';
 
 export default function CourseDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -37,6 +38,9 @@ export default function CourseDetailPage() {
         <h1 style={{ flex: 1, fontSize: 15, overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis' }}>{c.name}</h1>
         <div className="right-actions"><i className="fas fa-share-alt"></i></div>
       </div>
+
+      {/* Course image (or common-icon fallback) */}
+      <CourseThumb url={c.imageUrl} icon={c.category_icon} w="100%" h={200} radius={0} />
 
       {/* Header */}
       <div style={{ background: 'linear-gradient(135deg,var(--primary),var(--accent))', padding: '20px 18px', color: '#fff' }}>

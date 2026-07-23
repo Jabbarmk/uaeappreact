@@ -102,7 +102,7 @@ export default function HomePage() {
             <h2>Featured Categories</h2>
           </div>
           <div className="category-icons home-featured">
-            {homeCats.slice(0, 6).map((cat: any) => (
+            {homeCats.slice(0, 7).map((cat: any) => (
               <Link key={cat.id} to={`/businesses?cat=${cat.category_id}`} className="cat-icon-item">
                 <div className="icon">{cat.icon}</div>
                 <span>{cat.name}</span>
@@ -137,6 +137,11 @@ export default function HomePage() {
           <div className="feature-icon"><i className="fas fa-graduation-cap"></i></div>
           <h4>Universities</h4>
           <p>Courses, degrees &amp; admissions</p>
+        </Link>
+        <Link to="/doctors" className="feature-card pink">
+          <div className="feature-icon"><i className="fas fa-user-md"></i></div>
+          <h4>Doctors</h4>
+          <p>Find &amp; book specialists</p>
         </Link>
         <Link to="/jobs" className="feature-card pink">
           <div className="feature-icon"><i className="fas fa-briefcase"></i></div>

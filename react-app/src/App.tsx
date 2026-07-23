@@ -22,6 +22,7 @@ const UniversitiesHub  = lazy(() => import('./pages/UniversitiesHubPage'));
 const UniversityDetail = lazy(() => import('./pages/UniversityDetailPage'));
 const CourseList       = lazy(() => import('./pages/CourseListPage'));
 const CourseDetail     = lazy(() => import('./pages/CourseDetailPage'));
+const Doctors          = lazy(() => import('./pages/DoctorsPage'));
 const Jobs             = lazy(() => import('./pages/JobsPage'));
 const JobDetail        = lazy(() => import('./pages/JobDetailPage'));
 const Offers           = lazy(() => import('./pages/OffersPage'));
@@ -60,6 +61,8 @@ const AdminUsersPage    = lazy(() => import('./pages/admin/AdminUsersPage'));
 const AdminApprovalsPage = lazy(() => import('./pages/admin/AdminApprovalsPage'));
 const AdminClassifiedsPage = lazy(() => import('./pages/admin/AdminClassifiedsPage'));
 const AdminUniversitiesPage = lazy(() => import('./pages/admin/AdminUniversitiesPage'));
+const AdminVloggersPage = lazy(() => import('./pages/admin/AdminVloggersPage'));
+const AdminHospitalsPage = lazy(() => import('./pages/admin/AdminHospitalsPage'));
 
 function PageLoader() {
   return <div style={{ padding: 40, textAlign: 'center', color: '#6C5CE7' }}>Loading…</div>;
@@ -96,6 +99,7 @@ export default function App() {
           <Route path="universities/courses" element={<CourseList />} />
           <Route path="universities/courses/:id" element={<CourseDetail />} />
           <Route path="universities/:id" element={<UniversityDetail />} />
+          <Route path="doctors" element={<Doctors />} />
           <Route path="jobs" element={<Jobs />} />
           <Route path="jobs/:id" element={<JobDetail />} />
           <Route path="offers" element={<Offers />} />
@@ -162,6 +166,8 @@ export default function App() {
           <Route path="study-levels"          element={<AdminCrudPage />} />
           <Route path="universities"          element={<AdminUniversitiesPage />} />
           <Route path="courses"               element={<AdminCrudPage />} />
+          <Route path="vloggers"              element={<AdminVloggersPage />} />
+          <Route path="hospitals"             element={<AdminHospitalsPage />} />
           <Route path="jobs"                  element={<AdminCrudPage />} />
           <Route path="profiles"              element={<AdminCrudPage />} />
           <Route path="work-experience"       element={<AdminCrudPage />} />

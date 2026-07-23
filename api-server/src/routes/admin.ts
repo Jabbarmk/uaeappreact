@@ -402,12 +402,190 @@ router.delete('/universities/:id', requireAdmin, async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
+// ── University course offerings (per-university fee/details) ──────────────────
+
+// List the catalog courses a university offers (offerings joined with the catalog).
+router.get('/universities/:id/courses', requireAdmin, async (req, res, next) => {
+  try {
+    const rows = await query<any>(
+      `SELECT uc.*, c.name AS course_name, c.specialisation, c.duration,
+              cc.name AS category_name, cc.icon AS category_icon, sl.name AS level_name, sl.icon AS level_icon
+       FROM university_courses uc
+       JOIN courses c ON c.id=uc.course_id
+       LEFT JOIN course_categories cc ON cc.id=c.course_category_id
+       LEFT JOIN study_levels sl ON sl.id=c.study_level_id
+       WHERE uc.business_id=? ORDER BY sl.sort_order, c.name`,
+      [Number(req.params.id)]
+    );
+    res.json({ rows });
+  } catch (err) { next(err); }
+});
+
+const OFFERING_FIELDS = ['course_id', 'total_fee', 'fee_per_year', 'currency', 'study_mode', 'delivery', 'location', 'emirate', 'intake', 'eligibility', 'application_deadline', 'accreditation', 'scholarships', 'is_featured', 'is_active'];
+
+// Add an offering (university offers a catalog course with its own fee/details).
+router.post('/universities/:id/courses', requireAdmin, async (req, res, next) => {
+  try {
+    const body = req.body as Record<string, any>;
+    if (!body.course_id) return res.status(400).json({ error: 'course_id required' });
+    const cols = OFFERING_FIELDS.filter((f) => f in body);
+    const vals = cols.map((f) => {
+      const v = body[f];
+      if (f === 'application_deadline') return v ? String(v).slice(0, 10) : null;
+      if (f === 'is_featured' || f === 'is_active') return v ? 1 : 0;
+      return v === '' || v === undefined ? null : v;
+    });
+    const allCols = ['business_id', ...cols];
+    const allVals = [Number(req.params.id), ...vals];
+    const r = await query<any>(`INSERT INTO university_courses (${allCols.join(',')}) VALUES (${allCols.map(() => '?').join(',')})`, allVals) as any;
+    res.json({ ok: true, id: r.insertId });
+  } catch (err) { next(err); }
+});
+
+// Update an offering's fee/details.
+router.put('/university-courses/:offeringId', requireAdmin, async (req, res, next) => {
+  try {
+    const body = req.body as Record<string, any>;
+    const cols = OFFERING_FIELDS.filter((f) => f in body && f !== 'course_id');
+    if (!cols.length) return res.json({ ok: true });
+    const sets = cols.map((f) => `\`${f}\`=?`).join(',');
+    const vals = cols.map((f) => {
+      const v = body[f];
+      if (f === 'application_deadline') return v ? String(v).slice(0, 10) : null;
+      if (f === 'is_featured' || f === 'is_active') return v ? 1 : 0;
+      return v === '' || v === undefined ? null : v;
+    });
+    await query(`UPDATE university_courses SET ${sets} WHERE id=?`, [...vals, Number(req.params.offeringId)]);
+    res.json({ ok: true });
+  } catch (err) { next(err); }
+});
+
+router.delete('/university-courses/:offeringId', requireAdmin, async (req, res, next) => {
+  try {
+    await query('DELETE FROM university_courses WHERE id=?', [Number(req.params.offeringId)]);
+    res.json({ ok: true });
+  } catch (err) { next(err); }
+});
+
+// ── Vloggers manager (creator stats on a Vloggers-category business) ──────────
+
+router.get('/vloggers', requireAdmin, async (_req, res, next) => {
+  try {
+    const rows = await query<any>(
+      `SELECT b.id, b.name, b.emirate, b.logo,
+              v.youtube_subscribers, v.instagram_followers, v.tiktok_followers, v.total_views,
+              v.content_niche, v.tier, v.awards, v.is_verified,
+              (v.business_id IS NOT NULL) AS has_profile
+       FROM businesses b
+       LEFT JOIN vlogger_profiles v ON v.business_id=b.id
+       WHERE b.category_id = (SELECT id FROM business_categories WHERE name='Vloggers' LIMIT 1)
+       ORDER BY b.name`
+    );
+    res.json({ rows: rows.map((r) => ({ ...r, has_profile: Number(r.has_profile), logoUrl: getImageUrl(r.logo, 'businesses') })) });
+  } catch (err) { next(err); }
+});
+
+router.put('/vloggers/:id', requireAdmin, async (req, res, next) => {
+  try {
+    const b = Number(req.params.id);
+    const { youtube_subscribers, instagram_followers, tiktok_followers, total_views, content_niche, tier, awards, is_verified } = req.body as Record<string, any>;
+    await query(
+      `INSERT INTO vlogger_profiles (business_id, youtube_subscribers, instagram_followers, tiktok_followers, total_views, content_niche, tier, awards, is_verified)
+       VALUES (?,?,?,?,?,?,?,?,?)
+       ON DUPLICATE KEY UPDATE youtube_subscribers=VALUES(youtube_subscribers), instagram_followers=VALUES(instagram_followers),
+         tiktok_followers=VALUES(tiktok_followers), total_views=VALUES(total_views), content_niche=VALUES(content_niche),
+         tier=VALUES(tier), awards=VALUES(awards), is_verified=VALUES(is_verified)`,
+      [b, Number(youtube_subscribers) || 0, Number(instagram_followers) || 0, Number(tiktok_followers) || 0, Number(total_views) || 0,
+       content_niche || null, tier || null, awards || null, is_verified ? 1 : 0]
+    );
+    res.json({ ok: true });
+  } catch (err) { next(err); }
+});
+
+router.delete('/vloggers/:id', requireAdmin, async (req, res, next) => {
+  try {
+    await query('DELETE FROM vlogger_profiles WHERE business_id=?', [Number(req.params.id)]);
+    res.json({ ok: true });
+  } catch (err) { next(err); }
+});
+
+// ── Hospitals & Doctors manager ───────────────────────────────────────────────
+
+// Specialties = sub-categories of the "Doctors & Specialists" main category.
+router.get('/doctors/meta', requireAdmin, async (_req, res, next) => {
+  try {
+    const specialties = await query<any>(
+      `SELECT bc.id, bc.name, bc.icon FROM business_categories bc JOIN main_categories mc ON mc.id=bc.main_category_id
+       WHERE mc.name='Doctors & Specialists' ORDER BY bc.sort_order, bc.id`
+    );
+    res.json({ specialties });
+  } catch (err) { next(err); }
+});
+
+// Hospitals/Clinics businesses (that can hold doctors).
+router.get('/hospitals', requireAdmin, async (_req, res, next) => {
+  try {
+    const rows = await query<any>(
+      `SELECT b.id, b.name, b.emirate, b.logo, bc.name AS category_name,
+              (SELECT COUNT(*) FROM doctors d WHERE d.business_id=b.id) AS doctor_count
+       FROM businesses b JOIN business_categories bc ON bc.id=b.category_id
+       WHERE bc.name IN ('Hospitals','Clinics','Dental Clinics') ORDER BY b.name`
+    );
+    res.json({ rows: rows.map((r) => ({ ...r, doctor_count: Number(r.doctor_count), logoUrl: getImageUrl(r.logo, 'businesses') })) });
+  } catch (err) { next(err); }
+});
+
+router.get('/hospitals/:id/doctors', requireAdmin, async (req, res, next) => {
+  try {
+    const rows = await query<any>(
+      `SELECT d.*, sc.name AS specialty_name, sc.icon AS specialty_icon
+       FROM doctors d LEFT JOIN business_categories sc ON sc.id=d.specialty_id
+       WHERE d.business_id=? ORDER BY d.name`,
+      [Number(req.params.id)]
+    );
+    res.json({ rows: rows.map((d) => ({ ...d, photoUrl: d.photo ? getImageUrl(d.photo, 'doctors') : null })) });
+  } catch (err) { next(err); }
+});
+
+const DOCTOR_FIELDS = ['specialty_id', 'name', 'photo', 'qualification', 'experience_years', 'languages', 'gender', 'rating', 'review_count', 'consultation_fee', 'currency', 'availability', 'distance', 'about', 'is_featured', 'is_active'];
+
+router.post('/hospitals/:id/doctors', requireAdmin, async (req, res, next) => {
+  try {
+    const body = req.body as Record<string, any>;
+    if (!body.name) return res.status(400).json({ error: 'Doctor name required' });
+    const cols = DOCTOR_FIELDS.filter((f) => f in body);
+    const vals = cols.map((f) => (f === 'is_featured' || f === 'is_active') ? (body[f] ? 1 : 0) : (body[f] === '' || body[f] === undefined ? null : body[f]));
+    const allCols = ['business_id', ...cols];
+    const r = await query<any>(`INSERT INTO doctors (${allCols.join(',')}) VALUES (${allCols.map(() => '?').join(',')})`, [Number(req.params.id), ...vals]) as any;
+    res.json({ ok: true, id: r.insertId });
+  } catch (err) { next(err); }
+});
+
+router.put('/doctors/:id', requireAdmin, async (req, res, next) => {
+  try {
+    const body = req.body as Record<string, any>;
+    const cols = DOCTOR_FIELDS.filter((f) => f in body);
+    if (!cols.length) return res.json({ ok: true });
+    const sets = cols.map((f) => `\`${f}\`=?`).join(',');
+    const vals = cols.map((f) => (f === 'is_featured' || f === 'is_active') ? (body[f] ? 1 : 0) : (body[f] === '' || body[f] === undefined ? null : body[f]));
+    await query(`UPDATE doctors SET ${sets} WHERE id=?`, [...vals, Number(req.params.id)]);
+    res.json({ ok: true });
+  } catch (err) { next(err); }
+});
+
+router.delete('/doctors/:id', requireAdmin, async (req, res, next) => {
+  try {
+    await query('DELETE FROM doctors WHERE id=?', [Number(req.params.id)]);
+    res.json({ ok: true });
+  } catch (err) { next(err); }
+});
+
 // ── Resource routes ──────────────────────────────────────────────────────────
 
 router.use('/institution-types', crudRoutes('institution_types', undefined, { searchCols: ['name'] }));
 router.use('/course-categories', crudRoutes('course_categories', undefined, { searchCols: ['name'] }));
 router.use('/study-levels', crudRoutes('study_levels', undefined, { searchCols: ['name'] }));
-router.use('/courses', crudRoutes('courses', undefined, { searchCols: ['name'], filterCols: ['study_level_id', 'course_category_id', 'business_id'] }));
+router.use('/courses', crudRoutes('courses', 'courses', { searchCols: ['name'], filterCols: ['study_level_id', 'course_category_id'] }));
 router.use('/sliders', crudRoutes('sliders', 'slides'));
 router.use('/main-categories', crudRoutes('main_categories', undefined, { searchCols: ['name'] }));
 router.use('/home-categories', crudRoutes('home_categories', undefined, { searchCols: ['name'] }));

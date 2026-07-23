@@ -4,6 +4,7 @@ import { useState } from 'react';
 import api from '../api';
 import { EMIRATES } from '../constants/realestate';
 import { fmtFee } from '../constants/education';
+import CourseThumb from '../components/CourseThumb';
 
 export default function CourseListPage() {
   const [params, setParams] = useSearchParams();
@@ -76,8 +77,9 @@ export default function CourseListPage() {
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10, padding: '0 16px 24px' }}>
           {items.map((c) => (
             <Link key={c.id} to={`/universities/courses/${c.id}`}
-              style={{ display: 'block', background: '#fff', borderRadius: 14, padding: '14px 16px', boxShadow: '0 2px 10px rgba(0,0,0,.06)', textDecoration: 'none' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10 }}>
+              style={{ display: 'flex', gap: 12, background: '#fff', borderRadius: 14, padding: '14px 16px', boxShadow: '0 2px 10px rgba(0,0,0,.06)', textDecoration: 'none' }}>
+              <CourseThumb url={c.imageUrl} icon={c.category_icon} w={62} h={62} radius={12} />
+              <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10, flex: 1, minWidth: 0 }}>
                 <div style={{ minWidth: 0, flex: 1 }}>
                   <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 6 }}>
                     <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--primary)', background: 'rgba(108,92,231,.1)', padding: '2px 8px', borderRadius: 50 }}>{c.level_icon} {c.level_name}</span>

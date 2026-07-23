@@ -30,6 +30,8 @@ const NAV_ITEMS = [
   { label: 'Institution Types',    path: '/admin/institution-types',     icon: '≡' },
   { label: 'Course Categories',    path: '/admin/course-categories',     icon: '≡' },
   { label: 'Study Levels',         path: '/admin/study-levels',          icon: '≡' },
+  { label: 'Vloggers',             path: '/admin/vloggers',              icon: '📹' },
+  { label: 'Hospitals & Doctors',  path: '/admin/hospitals',             icon: '🏥' },
   { label: 'Jobs',                 path: '/admin/jobs',                  icon: '⊕' },
   { label: 'Profiles',             path: '/admin/profiles',              icon: '○' },
   { label: 'Work Experience',      path: '/admin/work-experience',       icon: '⊘' },

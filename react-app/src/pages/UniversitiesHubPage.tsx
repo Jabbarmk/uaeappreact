@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { useState } from 'react';
 import api from '../api';
 import { fmtFee } from '../constants/education';
+import CourseThumb from '../components/CourseThumb';
 
 const UNI_FALLBACK = 'https://images.unsplash.com/photo-1562774053-701939374585?w=400&h=240&fit=crop';
 
@@ -79,6 +80,7 @@ export default function UniversitiesHubPage() {
             {featured.map((c) => (
               <Link key={c.id} to={`/universities/courses/${c.id}`}
                 style={{ flexShrink: 0, width: 230, background: '#fff', borderRadius: 16, overflow: 'hidden', boxShadow: '0 4px 16px rgba(0,0,0,.08)', textDecoration: 'none' }}>
+                <CourseThumb url={c.imageUrl} icon={c.category_icon} w="100%" h={112} radius={0} />
                 <div style={{ padding: '12px 14px' }}>
                   <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--primary)', background: 'rgba(108,92,231,.1)', padding: '2px 8px', borderRadius: 50 }}>{c.level_icon} {c.level_name}</span>
                   <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text)', marginTop: 8, lineHeight: 1.3 }}>{c.name}</div>

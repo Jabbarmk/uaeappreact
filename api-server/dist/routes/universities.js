@@ -13,7 +13,22 @@ const UNI_SELECT = `SELECT b.id, b.name, b.logo, b.image, b.tagline, b.about, b.
   FROM businesses b
   JOIN university_profiles up ON up.business_id=b.id
   LEFT JOIN institution_types it ON it.id=up.institution_type_id`;
-const courseCount = '(SELECT COUNT(*) FROM courses c WHERE c.business_id=b.id AND c.is_active=1) AS course_count';
+const courseCount = `(SELECT COUNT(*) FROM university_courses uc WHERE uc.business_id=b.id AND uc.is_active=1) AS course_count`;
+// An "offering" = university_courses row + its catalog course + its university.
+const OFFERING_SELECT = `SELECT uc.id, uc.business_id, uc.course_id, uc.total_fee, uc.fee_per_year, uc.currency,
+  uc.study_mode, uc.delivery, uc.location, uc.emirate, uc.intake, uc.eligibility, uc.application_deadline,
+  uc.accreditation, uc.scholarships, uc.is_featured, uc.is_active,
+  c.name AS name, c.specialisation, c.duration, c.description, c.image, c.course_category_id, c.study_level_id,
+  cc.name AS category_name, cc.icon AS category_icon, sl.name AS level_name, sl.icon AS level_icon, sl.sort_order AS level_sort,
+  b.id AS university_id, b.name AS university_name, b.logo AS university_logo
+  FROM university_courses uc
+  JOIN courses c ON c.id=uc.course_id
+  JOIN businesses b ON b.id=uc.business_id
+  LEFT JOIN course_categories cc ON cc.id=c.course_category_id
+  LEFT JOIN study_levels sl ON sl.id=c.study_level_id
+  LEFT JOIN university_profiles up ON up.business_id=b.id`;
+// Course image comes from the catalog course; null image → frontend shows the fallback icon.
+const mapOffering = (o) => ({ ...o, imageUrl: o.image ? (0, imageUrl_1.getImageUrl)(o.image, 'courses') : null, universityLogoUrl: (0, imageUrl_1.getImageUrl)(o.university_logo, B) });
 // ── Hub ──────────────────────────────────────────────────────────────────────
 router.get('/', async (_req, res, next) => {
     try {
@@ -23,16 +38,12 @@ router.get('/', async (_req, res, next) => {
             (0, pool_1.query)('SELECT * FROM study_levels WHERE is_active=1 ORDER BY sort_order, id'),
             (0, pool_1.query)(`${UNI_SELECT.replace('b.rating,', `b.rating, ${courseCount},`)}
                   WHERE b.is_active=1 AND b.status='approved' ORDER BY b.rating DESC, b.id`),
-            (0, pool_1.query)(`SELECT c.*, b.name AS university_name, b.logo AS university_logo, cc.name AS category_name, cc.icon AS category_icon, sl.name AS level_name, sl.icon AS level_icon
-                  FROM courses c JOIN businesses b ON b.id=c.business_id
-                  LEFT JOIN course_categories cc ON cc.id=c.course_category_id
-                  LEFT JOIN study_levels sl ON sl.id=c.study_level_id
-                  WHERE c.is_active=1 AND c.is_featured=1 AND b.is_active=1 ORDER BY c.created_at DESC LIMIT 8`),
+            (0, pool_1.query)(`${OFFERING_SELECT} WHERE uc.is_active=1 AND uc.is_featured=1 AND b.is_active=1 ORDER BY uc.created_at DESC LIMIT 8`),
         ]);
         res.json({
             institutionTypes, courseCategories, studyLevels,
             universities: universities.map(mapUni),
-            featuredCourses: featuredCourses.map((c) => ({ ...c, universityLogoUrl: (0, imageUrl_1.getImageUrl)(c.university_logo, B) })),
+            featuredCourses: featuredCourses.map(mapOffering),
         });
     }
     catch (err) {
@@ -63,11 +74,11 @@ router.get('/list', async (req, res, next) => {
         next(err);
     }
 });
-// ── Course browse (global, cross-university) ─────────────────────────────────
+// ── Course browse (global — each result is a university offering) ────────────
 router.get('/courses', async (req, res, next) => {
     try {
         const { course_category, study_level, institution_type, emirate, university, search, page = '1', pageSize = '30' } = req.query;
-        const where = ['c.is_active=1', 'b.is_active=1'];
+        const where = ['uc.is_active=1', 'b.is_active=1'];
         const params = [];
         if (course_category) {
             where.push('c.course_category_id=?');
@@ -82,11 +93,11 @@ router.get('/courses', async (req, res, next) => {
             params.push(institution_type);
         }
         if (emirate) {
-            where.push('c.emirate=?');
+            where.push('uc.emirate=?');
             params.push(emirate);
         }
         if (university) {
-            where.push('c.business_id=?');
+            where.push('uc.business_id=?');
             params.push(university);
         }
         if (search) {
@@ -95,54 +106,40 @@ router.get('/courses', async (req, res, next) => {
         }
         const whereSql = where.join(' AND ');
         const offset = (Number(page) - 1) * Number(pageSize);
-        const totalRow = await (0, pool_1.queryOne)(`SELECT COUNT(*) AS total FROM courses c JOIN businesses b ON b.id=c.business_id LEFT JOIN university_profiles up ON up.business_id=b.id WHERE ${whereSql}`, params);
-        const items = await (0, pool_1.query)(`SELECT c.*, b.name AS university_name, b.logo AS university_logo, cc.name AS category_name, cc.icon AS category_icon, sl.name AS level_name, sl.icon AS level_icon
-       FROM courses c JOIN businesses b ON b.id=c.business_id
-       LEFT JOIN university_profiles up ON up.business_id=b.id
-       LEFT JOIN course_categories cc ON cc.id=c.course_category_id
-       LEFT JOIN study_levels sl ON sl.id=c.study_level_id
-       WHERE ${whereSql} ORDER BY c.is_featured DESC, c.created_at DESC LIMIT ? OFFSET ?`, [...params, Number(pageSize), offset]);
-        res.json({ items: items.map((c) => ({ ...c, universityLogoUrl: (0, imageUrl_1.getImageUrl)(c.university_logo, B) })), total: totalRow?.total ?? 0, page: Number(page), pageSize: Number(pageSize) });
+        const totalRow = await (0, pool_1.queryOne)(`SELECT COUNT(*) AS total FROM university_courses uc JOIN courses c ON c.id=uc.course_id JOIN businesses b ON b.id=uc.business_id LEFT JOIN university_profiles up ON up.business_id=b.id WHERE ${whereSql}`, params);
+        const items = await (0, pool_1.query)(`${OFFERING_SELECT} WHERE ${whereSql} ORDER BY uc.is_featured DESC, uc.created_at DESC LIMIT ? OFFSET ?`, [...params, Number(pageSize), offset]);
+        res.json({ items: items.map(mapOffering), total: totalRow?.total ?? 0, page: Number(page), pageSize: Number(pageSize) });
     }
     catch (err) {
         next(err);
     }
 });
-// ── Course detail ────────────────────────────────────────────────────────────
+// ── Course (offering) detail ─────────────────────────────────────────────────
 router.get('/courses/:id', async (req, res, next) => {
     try {
-        const c = await (0, pool_1.queryOne)(`SELECT c.*, cc.name AS category_name, cc.icon AS category_icon, sl.name AS level_name, sl.icon AS level_icon,
-              b.id AS university_id, b.name AS university_name, b.logo AS university_logo, b.phone, b.whatsapp, b.email, b.website, b.emirate AS university_emirate
-       FROM courses c JOIN businesses b ON b.id=c.business_id
-       LEFT JOIN course_categories cc ON cc.id=c.course_category_id
-       LEFT JOIN study_levels sl ON sl.id=c.study_level_id
-       WHERE c.id=? AND c.is_active=1`, [Number(req.params.id)]);
-        if (!c)
+        const o = await (0, pool_1.queryOne)(`${OFFERING_SELECT.replace('b.id AS university_id, b.name AS university_name, b.logo AS university_logo', 'b.id AS university_id, b.name AS university_name, b.logo AS university_logo, b.phone, b.whatsapp, b.email, b.website, b.emirate AS university_emirate')}
+       WHERE uc.id=? AND uc.is_active=1`, [Number(req.params.id)]);
+        if (!o)
             return res.status(404).json({ error: 'Not found' });
-        res.json({ item: { ...c, universityLogoUrl: (0, imageUrl_1.getImageUrl)(c.university_logo, B) } });
+        res.json({ item: mapOffering(o) });
     }
     catch (err) {
         next(err);
     }
 });
-// ── University detail (info + courses grouped by study level) ────────────────
+// ── University detail (info + offered courses grouped by study level) ────────
 router.get('/:id', async (req, res, next) => {
     try {
         const uni = await (0, pool_1.queryOne)(`${UNI_SELECT} WHERE b.id=? AND b.is_active=1`, [Number(req.params.id)]);
         if (!uni)
             return res.status(404).json({ error: 'Not found' });
-        const courses = await (0, pool_1.query)(`SELECT c.*, cc.name AS category_name, cc.icon AS category_icon, sl.name AS level_name, sl.icon AS level_icon, sl.sort_order AS level_sort
-       FROM courses c
-       LEFT JOIN course_categories cc ON cc.id=c.course_category_id
-       LEFT JOIN study_levels sl ON sl.id=c.study_level_id
-       WHERE c.business_id=? AND c.is_active=1 ORDER BY sl.sort_order, c.name`, [uni.id]);
-        // Group by study level for the hierarchy view.
+        const courses = await (0, pool_1.query)(`${OFFERING_SELECT} WHERE uc.business_id=? AND uc.is_active=1 ORDER BY sl.sort_order, c.name`, [uni.id]);
         const groupsMap = new Map();
         for (const c of courses) {
             const key = c.study_level_id || 0;
             if (!groupsMap.has(String(key)))
                 groupsMap.set(String(key), { levelId: c.study_level_id, level: c.level_name || 'Other', icon: c.level_icon, sort: c.level_sort ?? 999, items: [] });
-            groupsMap.get(String(key)).items.push(c);
+            groupsMap.get(String(key)).items.push(mapOffering(c));
         }
         const levelGroups = [...groupsMap.values()].sort((a, b) => a.sort - b.sort);
         const categories = [...new Map(courses.filter((c) => c.course_category_id).map((c) => [c.course_category_id, { id: c.course_category_id, name: c.category_name, icon: c.category_icon }])).values()];

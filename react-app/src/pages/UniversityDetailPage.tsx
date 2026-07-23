@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { Link, useParams } from 'react-router-dom';
 import api from '../api';
 import { fmtFee } from '../constants/education';
+import CourseThumb from '../components/CourseThumb';
 
 export default function UniversityDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -97,8 +98,9 @@ export default function UniversityDetailPage() {
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
               {g.items.map((c: any) => (
                 <Link key={c.id} to={`/universities/courses/${c.id}`}
-                  style={{ display: 'block', background: '#fff', borderRadius: 14, padding: '14px 16px', boxShadow: '0 2px 10px rgba(0,0,0,.06)', textDecoration: 'none' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10 }}>
+                  style={{ display: 'flex', gap: 12, background: '#fff', borderRadius: 14, padding: '14px 16px', boxShadow: '0 2px 10px rgba(0,0,0,.06)', textDecoration: 'none' }}>
+                  <CourseThumb url={c.imageUrl} icon={c.category_icon} w={52} h={52} radius={11} />
+                  <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10, flex: 1, minWidth: 0 }}>
                     <div style={{ minWidth: 0 }}>
                       <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text)' }}>{c.name}</div>
                       <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 3 }}>{c.category_icon} {c.category_name}{c.specialisation ? ` · ${c.specialisation}` : ''}</div>

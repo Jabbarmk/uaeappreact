@@ -6,7 +6,9 @@ import api from '../../api';
 const FONT = "'Segoe UI','Inter',system-ui,sans-serif";
 const ACCENT = '#0067C0';
 
-const emptyDoc = { specialty_id: '', name: '', photo: '', qualification: '', experience_years: '', languages: '', gender: '', rating: '', review_count: '', consultation_fee: '', currency: 'AED', availability: '', distance: '', about: '', is_featured: '0', is_active: '1' };
+const emptyDoc = { specialty_id: '', name: '', photo: '', qualification: '', experience_years: '', languages: '', gender: '', rating: '', review_count: '', consultation_fee: '', currency: 'AED', availability: '', distance: '', about: '', work_days: '1,2,3,4,5', slots: '10:00,10:30,11:00,11:30,12:00,14:00,14:30,15:00', is_featured: '0', is_active: '1' };
+
+const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
 export default function AdminHospitalsPage() {
   const qc = useQueryClient();
@@ -152,6 +154,23 @@ function ManageDoctorsModal({ hospital, onClose, onChanged }: { hospital: any; o
               <div>{lbl('Rating (0–5)')}<input value={form.rating} onChange={(e) => set('rating', e.target.value)} type="number" step="0.1" style={inp} /></div>
               <div>{lbl('Reviews')}<input value={form.review_count} onChange={(e) => set('review_count', e.target.value)} type="number" style={inp} /></div>
             </div>
+            <div>
+              {lbl('Working Days (for booking)')}
+              <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                {WEEKDAYS.map((wd, i) => {
+                  const days = new Set(String(form.work_days || '').split(',').map((s) => s.trim()).filter(Boolean));
+                  const on = days.has(String(i));
+                  return (
+                    <button key={wd} type="button"
+                      onClick={() => { on ? days.delete(String(i)) : days.add(String(i)); set('work_days', [...days].map(Number).sort((a, b) => a - b).join(',')); }}
+                      style={{ padding: '6px 12px', borderRadius: 20, border: `1px solid ${on ? ACCENT : '#D5D5D5'}`, background: on ? ACCENT : '#fff', color: on ? '#fff' : '#555', fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: FONT }}>
+                      {wd}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+            <div>{lbl('Time Slots (comma-separated, 24h e.g. 10:00, 10:30, 14:00)')}<input value={form.slots} onChange={(e) => set('slots', e.target.value)} placeholder="10:00, 10:30, 11:00, 14:00" style={inp} /></div>
             <div>{lbl('About')}<textarea value={form.about} onChange={(e) => set('about', e.target.value)} rows={2} style={{ ...inp, resize: 'vertical' }} /></div>
             <div style={{ display: 'flex', gap: 18 }}>
               <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, fontWeight: 600, color: '#444', cursor: 'pointer' }}><input type="checkbox" checked={form.is_featured === '1'} onChange={(e) => set('is_featured', e.target.checked ? '1' : '0')} /> Featured</label>

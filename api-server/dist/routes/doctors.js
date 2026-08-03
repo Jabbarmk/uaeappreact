@@ -6,7 +6,7 @@ const imageUrl_1 = require("../services/imageUrl");
 const router = (0, express_1.Router)();
 const DOCTOR_SELECT = `SELECT d.id, d.business_id, d.specialty_id, d.name, d.photo, d.qualification, d.experience_years,
   d.languages, d.gender, d.rating, d.review_count, d.consultation_fee, d.currency, d.availability, d.distance, d.about,
-  d.is_featured, d.is_active,
+  d.work_days, d.slots, d.is_featured, d.is_active,
   b.name AS hospital_name, b.logo AS hospital_logo, b.emirate AS hospital_emirate,
   b.phone AS hospital_phone, b.whatsapp AS hospital_whatsapp, b.website AS hospital_website, b.address AS hospital_address,
   sc.name AS specialty_name, sc.icon AS specialty_icon

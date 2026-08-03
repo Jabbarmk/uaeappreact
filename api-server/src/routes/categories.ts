@@ -30,6 +30,30 @@ router.get('/top', async (_req, res, next) => {
   } catch (err) { next(err); }
 });
 
+// Filter-tag row: default = top-10 clicked categories; q (2+) = categories whose name starts with q.
+router.get('/tags', async (req, res, next) => {
+  try {
+    const q = ((req.query.q as string) || '').trim();
+    if (q.length >= 2) {
+      const rows = await query<any>(
+        `SELECT id, name, icon, group_name FROM business_categories
+         WHERE is_active = 1 AND name LIKE ? ORDER BY name ASC LIMIT 15`,
+        [`${q}%`]
+      );
+      return res.json(rows);
+    }
+    const rows = await query<any>(
+      `SELECT bc.id, bc.name, bc.icon, bc.group_name, COALESCE(cc.count, 0) AS clicks
+       FROM business_categories bc
+       LEFT JOIN category_clicks cc ON bc.id = cc.category_id
+       WHERE bc.is_active = 1
+       ORDER BY clicks DESC, bc.sort_order ASC
+       LIMIT 10`
+    );
+    res.json(rows);
+  } catch (err) { next(err); }
+});
+
 router.get('/', async (req, res, next) => {
   try {
     const search = (req.query.search as string) || '';

@@ -123,6 +123,11 @@ export default function HomePage() {
           <h4>Business Directory</h4>
           <p>Find local shops and services</p>
         </Link>
+        <Link to="/offers" className="feature-card amber">
+          <div className="feature-icon"><i className="fas fa-percent"></i></div>
+          <h4>Offers &amp; Deals</h4>
+          <p>Best discounts &amp; packages</p>
+        </Link>
         <Link to="/classifieds" className="feature-card teal">
           <div className="feature-icon"><i className="fas fa-tags"></i></div>
           <h4>Classifieds</h4>

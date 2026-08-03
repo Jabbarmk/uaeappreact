@@ -5,7 +5,7 @@ import api from '../../api';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
-type FieldType = 'text' | 'textarea' | 'number' | 'select' | 'toggle' | 'date' | 'image' | 'business-search' | 'main-category-select' | 'category-search' | 'time-picker' | 'user-search' | 'event-category-select' | 'resource-select' | 'university-select';
+type FieldType = 'text' | 'textarea' | 'number' | 'select' | 'toggle' | 'date' | 'image' | 'gallery' | 'cover' | 'services' | 'products' | 'business-search' | 'main-category-select' | 'category-search' | 'time-picker' | 'user-search' | 'event-category-select' | 'resource-select' | 'university-select';
 
 interface FieldConfig {
   key: string;
@@ -82,15 +82,21 @@ const RESOURCE_CONFIGS: Record<string, ResourceConfig> = {
     { key: 'sort_order', label: 'Sort Order', type: 'number' },
     { key: 'is_active',  label: 'Active',     type: 'toggle' },
   ]},
-  businesses: { resource: 'businesses', label: 'Businesses', displayCol: 'name', listCols: ['image', 'name', 'emirate', 'phone', 'rating'], searchable: true, filters: [{ key: 'category_id', label: 'Category', optionsFrom: 'business-categories' }, { key: 'emirate', label: 'Emirate', optionsFrom: 'emirates' }], fields: [
+  businesses: { resource: 'businesses', label: 'Businesses', displayCol: 'name', listCols: ['image', 'name', 'category_name', 'emirate', 'phone', 'rating'], searchable: true, filters: [{ key: 'category_id', label: 'Category', optionsFrom: 'business-categories' }, { key: 'emirate', label: 'Emirate', optionsFrom: 'emirates' }], fields: [
     { key: 'user_id',          label: 'Assigned User',    type: 'user-search' },
     { key: 'name',             label: 'Name',             type: 'text',            required: true },
     { key: 'category_id',      label: 'Category',         type: 'category-search' },
     { key: 'tagline',          label: 'Tagline',          type: 'text' },
     { key: 'description',      label: 'Description',      type: 'textarea' },
     { key: 'about',            label: 'About',            type: 'textarea' },
-    { key: 'image',            label: 'Cover Image',      type: 'image',           folder: 'businesses' },
+    { key: 'image',            label: 'Cover Image (fallback)', type: 'image',       folder: 'businesses' },
     { key: 'logo',             label: 'Logo',             type: 'image',           folder: 'businesses' },
+    { key: 'cover',            label: 'Cover Slider (multiple images + video — shown at top of the detail page)', type: 'cover' },
+    { key: 'gallery',          label: 'Gallery Images (multiple — shown in the business photo gallery)', type: 'gallery' },
+    { key: 'services',         label: 'Services Sections (named sections with items — e.g. "Services & Solutions")', type: 'services' },
+    { key: 'template',         label: 'Detail Page Template',  type: 'select', options: ['template1', 'template2'] },
+    { key: 'store_url',        label: 'Online Store URL (Buy Online link)', type: 'text', placeholder: 'https://' },
+    { key: 'products',         label: 'Products (Template 2 storefront — image, name, price)', type: 'products' },
     { key: 'emirate',          label: 'Emirate',          type: 'select',          options: EMIRATES },
     { key: 'address',          label: 'Address',          type: 'text' },
     { key: 'phone',            label: 'Phone',            type: 'text',            placeholder: '+971559164496', syncTo: 'whatsapp', syncTransform: 'strip-plus' },
@@ -101,6 +107,7 @@ const RESOURCE_CONFIGS: Record<string, ResourceConfig> = {
     { key: 'closing_time',     label: 'Closing Time',     type: 'time-picker' },
     { key: 'rating',           label: 'Rating (0–5)',     type: 'number' },
     { key: 'established_year', label: 'Est. Year',        type: 'number' },
+    { key: 'is_online_store',  label: 'Online Store (show product prices + Buy Online)', type: 'toggle' },
     { key: 'is_active',        label: 'Active',           type: 'toggle' },
   ]},
   offers: { resource: 'offers', label: 'Offers', displayCol: 'title', listCols: ['image', 'title', 'price', 'emirate', 'valid_to'], fields: [
@@ -363,6 +370,385 @@ function ImageUploader({ folder, currentValue, onChange }: { folder: string; cur
       {uploading && <div style={{ fontSize: 11, color: '#616161', marginTop: 3 }}>Uploading…</div>}
       {err && <div style={{ fontSize: 11, color: '#C42B1C', marginTop: 3 }}>{err}</div>}
       {currentValue && <div style={{ fontSize: 10, color: '#999', marginTop: 2 }}>{currentValue}</div>}
+    </div>
+  );
+}
+
+// ── GalleryUploader (multi-image; attaches to an existing record) ───────────────
+
+function GalleryUploader({ resource, recordId }: { resource: string; recordId: number | null }) {
+  const [images, setImages] = useState<{ id: number; url: string }[]>([]);
+  const [uploading, setUploading] = useState(false);
+  const [err, setErr] = useState('');
+  const fileInput = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (recordId == null) return;
+    api.get(`/admin/${resource}/${recordId}/gallery`).then((r) => setImages(r.data.images || [])).catch(() => {});
+  }, [resource, recordId]);
+
+  if (recordId == null) {
+    return (
+      <div style={{ fontSize: 12, color: '#888', background: '#F9F9F9', border: '1px dashed #D0D0D0', borderRadius: 4, padding: '10px 12px' }}>
+        💡 Save this record first, then re-open it to add gallery images.
+      </div>
+    );
+  }
+
+  const uploadFiles = async (fl: FileList | null) => {
+    if (!fl || !fl.length) return;
+    setUploading(true); setErr('');
+    try {
+      const fd = new FormData();
+      Array.from(fl).forEach((f) => fd.append('files', f));
+      const r = await api.post(`/admin/${resource}/${recordId}/gallery`, fd, { headers: { 'Content-Type': 'multipart/form-data' } });
+      setImages((prev) => [...prev, ...(r.data.images || [])]);
+    } catch { setErr('Upload failed'); }
+    finally { setUploading(false); if (fileInput.current) fileInput.current.value = ''; }
+  };
+
+  const removeImage = async (imgId: number) => {
+    await api.delete(`/admin/${resource}/${recordId}/gallery/${imgId}`);
+    setImages((prev) => prev.filter((i) => i.id !== imgId));
+  };
+
+  const thumb: React.CSSProperties = { width: 72, height: 72, borderRadius: 5, objectFit: 'cover', border: '1px solid #E0E0E0', display: 'block' };
+
+  return (
+    <div>
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+        {images.map((img) => (
+          <div key={img.id} style={{ position: 'relative' }}>
+            <img src={img.url} alt="" style={thumb} />
+            <button type="button" onClick={() => removeImage(img.id)}
+              style={{ position: 'absolute', top: -6, right: -6, width: 20, height: 20, borderRadius: '50%', background: '#C42B1C', color: '#fff', border: '2px solid #fff', fontSize: 11, cursor: 'pointer', padding: 0, lineHeight: 1 }}>×</button>
+          </div>
+        ))}
+        <button type="button" onClick={() => fileInput.current?.click()}
+          style={{ width: 72, height: 72, borderRadius: 5, border: '1px dashed #BBB', background: '#FAFAFA', color: ACCENT, fontSize: 26, cursor: 'pointer' }}>+</button>
+        <input ref={fileInput} type="file" accept="image/*" multiple onChange={(e) => uploadFiles(e.target.files)} style={{ display: 'none' }} />
+      </div>
+      {uploading && <div style={{ fontSize: 11, color: '#616161', marginTop: 5 }}>Uploading…</div>}
+      {err && <div style={{ fontSize: 11, color: '#C42B1C', marginTop: 5 }}>{err}</div>}
+      {!images.length && !uploading && <div style={{ fontSize: 11, color: '#999', marginTop: 5 }}>No gallery images yet. Click + to upload one or more.</div>}
+    </div>
+  );
+}
+
+// ── CoverMediaManager (multiple images + video for the top slider) ──────────────
+
+function CoverMediaManager({ recordId }: { recordId: number | null }) {
+  const [media, setMedia] = useState<{ id: number; type: string; url: string }[]>([]);
+  const [uploading, setUploading] = useState(false);
+  const [err, setErr] = useState('');
+  const fileInput = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (recordId == null) return;
+    api.get(`/admin/businesses/${recordId}/cover`).then((r) => setMedia(r.data.media || [])).catch(() => {});
+  }, [recordId]);
+
+  if (recordId == null) {
+    return <div style={{ fontSize: 12, color: '#888', background: '#F9F9F9', border: '1px dashed #D0D0D0', borderRadius: 4, padding: '10px 12px' }}>💡 Save this business first, then re-open it to add cover images/videos.</div>;
+  }
+
+  const uploadFiles = async (fl: FileList | null) => {
+    if (!fl || !fl.length) return;
+    setUploading(true); setErr('');
+    try {
+      const fd = new FormData();
+      Array.from(fl).forEach((f) => fd.append('files', f));
+      const r = await api.post(`/admin/businesses/${recordId}/cover`, fd, { headers: { 'Content-Type': 'multipart/form-data' } });
+      setMedia((prev) => [...prev, ...(r.data.media || [])]);
+    } catch (e: any) { setErr(e?.response?.data?.error || 'Upload failed (video max 60MB)'); }
+    finally { setUploading(false); if (fileInput.current) fileInput.current.value = ''; }
+  };
+
+  const removeItem = async (mid: number) => {
+    await api.delete(`/admin/businesses/${recordId}/cover/${mid}`);
+    setMedia((prev) => prev.filter((m) => m.id !== mid));
+  };
+
+  const thumb: React.CSSProperties = { width: 84, height: 84, borderRadius: 6, objectFit: 'cover', border: '1px solid #E0E0E0', display: 'block', background: '#000' };
+
+  return (
+    <div>
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+        {media.map((m) => (
+          <div key={m.id} style={{ position: 'relative' }}>
+            {m.type === 'video'
+              ? <video src={m.url} style={thumb} muted playsInline preload="metadata" />
+              : <img src={m.url} alt="" style={thumb} />}
+            {m.type === 'video' && <span style={{ position: 'absolute', bottom: 4, left: 4, background: 'rgba(0,0,0,.6)', color: '#fff', fontSize: 10, padding: '1px 5px', borderRadius: 4 }}>▶ video</span>}
+            <button type="button" onClick={() => removeItem(m.id)} style={{ position: 'absolute', top: -6, right: -6, width: 20, height: 20, borderRadius: '50%', background: '#C42B1C', color: '#fff', border: '2px solid #fff', fontSize: 11, cursor: 'pointer', padding: 0, lineHeight: 1 }}>×</button>
+          </div>
+        ))}
+        <button type="button" onClick={() => fileInput.current?.click()} style={{ width: 84, height: 84, borderRadius: 6, border: '1px dashed #BBB', background: '#FAFAFA', color: ACCENT, fontSize: 26, cursor: 'pointer' }}>+</button>
+        <input ref={fileInput} type="file" accept="image/*,video/*" multiple onChange={(e) => uploadFiles(e.target.files)} style={{ display: 'none' }} />
+      </div>
+      {uploading && <div style={{ fontSize: 11, color: '#616161', marginTop: 5 }}>Uploading…</div>}
+      {err && <div style={{ fontSize: 11, color: '#C42B1C', marginTop: 5 }}>{err}</div>}
+      <div style={{ fontSize: 11, color: '#999', marginTop: 5 }}>Images &amp; videos allowed. Videos autoplay (muted) when their slide is active. Drag order = upload order.</div>
+    </div>
+  );
+}
+
+// ── ServicesManager (named sections + items; attaches to an existing business) ──
+
+function ServicesManager({ recordId }: { recordId: number | null }) {
+  const [sections, setSections] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [editing, setEditing] = useState<{ sectionId: number; item: any | null } | null>(null);
+
+  const load = () => {
+    if (recordId == null) return;
+    setLoading(true);
+    api.get(`/admin/businesses/${recordId}/services`).then((r) => {
+      const secs: any[] = r.data.sections || [];
+      if ((r.data.ungrouped || []).length) secs.push({ id: 0, title: 'Ungrouped (legacy)', items: r.data.ungrouped, legacy: true });
+      setSections(secs);
+    }).finally(() => setLoading(false));
+  };
+  useEffect(() => { load(); }, [recordId]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  if (recordId == null) {
+    return <div style={{ fontSize: 12, color: '#888', background: '#F9F9F9', border: '1px dashed #D0D0D0', borderRadius: 4, padding: '10px 12px' }}>💡 Save this business first, then re-open it to add service sections.</div>;
+  }
+  if (loading) return <div style={{ fontSize: 12, color: '#888' }}>Loading…</div>;
+
+  const addSection = async () => {
+    const title = window.prompt('Section name', 'Services & Solutions');
+    if (!title) return;
+    const r = await api.post(`/admin/businesses/${recordId}/service-sections`, { title });
+    setSections((p) => [...p, { id: r.data.id, title: r.data.title, items: [] }]);
+  };
+  const renameSection = async (sid: number, title: string) => { await api.put(`/admin/businesses/${recordId}/service-sections/${sid}`, { title }); };
+  const deleteSection = async (sid: number) => {
+    if (!window.confirm('Delete this section and all its items?')) return;
+    await api.delete(`/admin/businesses/${recordId}/service-sections/${sid}`);
+    setSections((p) => p.filter((s) => s.id !== sid));
+  };
+  const deleteItem = async (iid: number, sid: number) => {
+    if (!window.confirm('Delete this item?')) return;
+    await api.delete(`/admin/businesses/${recordId}/service-items/${iid}`);
+    setSections((p) => p.map((s) => (s.id === sid ? { ...s, items: s.items.filter((it: any) => it.id !== iid) } : s)));
+  };
+
+  const miniBtn: React.CSSProperties = { flex: 1, padding: '3px 0', fontSize: 11, border: '1px solid #D5D5D5', background: '#fff', borderRadius: 3, cursor: 'pointer', color: '#333' };
+
+  return (
+    <div>
+      {sections.map((sec) => (
+        <div key={sec.id} style={{ border: '1px solid #E5E5E5', borderRadius: 8, padding: 12, marginBottom: 10, background: '#FBFBFD' }}>
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 10 }}>
+            {sec.legacy
+              ? <span style={{ fontSize: 13, fontWeight: 700, color: '#888', flex: 1 }}>{sec.title}</span>
+              : <input defaultValue={sec.title} onBlur={(e) => renameSection(sec.id, e.target.value)} style={{ ...inputStyle, flex: 1, fontWeight: 600 }} />}
+            {!sec.legacy && <button type="button" onClick={() => deleteSection(sec.id)} style={{ padding: '5px 10px', fontSize: 11, border: '1px solid #F1BBBB', color: '#C42B1C', background: '#FDF3F2', borderRadius: 3, cursor: 'pointer' }}>Delete section</button>}
+          </div>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+            {sec.items.map((it: any) => (
+              <div key={it.id} style={{ width: 124, border: '1px solid #E8E8E8', borderRadius: 8, overflow: 'hidden', background: '#fff' }}>
+                {it.image
+                  ? <img src={it.imageUrl || (String(it.image).startsWith('http') ? it.image : `/assets/uploads/businesses/${it.image}`)} alt="" style={{ width: '100%', height: 64, objectFit: 'cover', display: 'block' }} />
+                  : <div style={{ height: 64, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 26, background: '#F3F3F7' }}>{it.icon || '⚙️'}</div>}
+                <div style={{ padding: '6px 8px' }}>
+                  <div style={{ fontSize: 12, fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{it.title}</div>
+                  <div style={{ display: 'flex', gap: 6, marginTop: 5 }}>
+                    <button type="button" onClick={() => setEditing({ sectionId: sec.id, item: it })} style={miniBtn}>Edit</button>
+                    <button type="button" onClick={() => deleteItem(it.id, sec.id)} style={{ ...miniBtn, color: '#C42B1C' }}>Del</button>
+                  </div>
+                </div>
+              </div>
+            ))}
+            {!sec.legacy && (
+              <button type="button" onClick={() => setEditing({ sectionId: sec.id, item: null })} style={{ width: 124, minHeight: 110, border: '1px dashed #BBB', borderRadius: 8, background: '#FAFAFA', color: ACCENT, fontSize: 13, cursor: 'pointer' }}>+ Add item</button>
+            )}
+          </div>
+        </div>
+      ))}
+      <button type="button" onClick={addSection} style={{ padding: '8px 16px', fontSize: 13, fontWeight: 600, border: `1px solid ${ACCENT}`, color: ACCENT, background: '#fff', borderRadius: 5, cursor: 'pointer' }}>+ Add section</button>
+      {editing && (
+        <ServiceItemForm recordId={recordId} sectionId={editing.sectionId} item={editing.item}
+          onClose={() => setEditing(null)} onSaved={() => { setEditing(null); load(); }} />
+      )}
+    </div>
+  );
+}
+
+function ServiceItemForm({ recordId, sectionId, item, onClose, onSaved }: { recordId: number; sectionId: number; item: any | null; onClose: () => void; onSaved: () => void }) {
+  const [title, setTitle] = useState(item?.title || '');
+  const [description, setDescription] = useState(item?.description || '');
+  const [details, setDetails] = useState(item?.details || '');
+  const [icon, setIcon] = useState(item?.icon || '');
+  const [image, setImage] = useState(item?.image || '');
+  const [uploading, setUploading] = useState(false);
+  const [saving, setSaving] = useState(false);
+
+  const uploadImg = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]; if (!file) return;
+    setUploading(true);
+    try {
+      const fd = new FormData(); fd.append('file', file);
+      const res = await api.post('/admin/upload/businesses', fd, { headers: { 'Content-Type': 'multipart/form-data' } });
+      setImage(res.data.filename as string);
+    } finally { setUploading(false); }
+  };
+
+  const save = async () => {
+    setSaving(true);
+    const payload = { title, description, details, icon, image };
+    try {
+      if (item) await api.put(`/admin/businesses/${recordId}/service-items/${item.id}`, payload);
+      else await api.post(`/admin/businesses/${recordId}/service-sections/${sectionId}/items`, payload);
+      onSaved();
+    } catch { setSaving(false); }
+  };
+
+  const preview = image ? (String(image).startsWith('http') ? image : `/assets/uploads/businesses/${image}`) : '';
+  const lbl = (t: string) => <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: '#666', margin: '10px 0 4px' }}>{t}</label>;
+
+  return (
+    <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.45)', zIndex: 1100, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
+      <div onClick={(e) => e.stopPropagation()} style={{ background: '#fff', borderRadius: 8, width: '100%', maxWidth: 460, maxHeight: '90vh', overflowY: 'auto', padding: 20, fontFamily: FONT }}>
+        <h3 style={{ margin: 0, fontSize: 16, fontWeight: 700 }}>{item ? 'Edit Service' : 'New Service'}</h3>
+        {lbl('Image (optional — falls back to the icon)')}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          {preview && <img src={preview} alt="" style={{ width: 64, height: 48, objectFit: 'cover', borderRadius: 4, border: '1px solid #E0E0E0' }} />}
+          <input type="file" accept="image/*" onChange={uploadImg} style={{ fontSize: 12 }} />
+          {uploading && <span style={{ fontSize: 11, color: '#888' }}>Uploading…</span>}
+          {image && <button type="button" onClick={() => setImage('')} style={{ fontSize: 11, color: '#C42B1C', background: 'none', border: 'none', cursor: 'pointer' }}>remove</button>}
+        </div>
+        {lbl('Icon / Emoji (used if no image)')}
+        <input value={icon} onChange={(e) => setIcon(e.target.value)} placeholder="⚙️" style={inputStyle} />
+        {lbl('Title')}
+        <input value={title} onChange={(e) => setTitle(e.target.value)} style={inputStyle} />
+        {lbl('Short content (≈2 lines, shown on the card)')}
+        <textarea rows={2} value={description} onChange={(e) => setDescription(e.target.value)} style={{ ...inputStyle, resize: 'vertical' }} />
+        {lbl('Full details (shown in the "view more" popup)')}
+        <textarea rows={5} value={details} onChange={(e) => setDetails(e.target.value)} style={{ ...inputStyle, resize: 'vertical' }} />
+        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 16 }}>
+          <button type="button" onClick={onClose} style={{ padding: '7px 16px', border: '1px solid #C8C8C8', background: '#fff', borderRadius: 4, fontSize: 13, cursor: 'pointer' }}>Cancel</button>
+          <button type="button" onClick={save} disabled={saving || !title} style={{ padding: '7px 18px', border: 'none', background: saving || !title ? '#9CB8D8' : ACCENT, color: '#fff', borderRadius: 4, fontSize: 13, fontWeight: 600, cursor: saving || !title ? 'not-allowed' : 'pointer' }}>{saving ? 'Saving…' : 'Save'}</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── ProductsManager (Template-2 storefront products; attaches to an existing business) ──
+
+function ProductsManager({ recordId }: { recordId: number | null }) {
+  const [products, setProducts] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [editing, setEditing] = useState<any | 'new' | null>(null);
+
+  const load = () => {
+    if (recordId == null) return;
+    setLoading(true);
+    api.get(`/admin/businesses/${recordId}/products`).then((r) => setProducts(r.data.products || [])).finally(() => setLoading(false));
+  };
+  useEffect(() => { load(); }, [recordId]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  if (recordId == null) return <div style={{ fontSize: 12, color: '#888', background: '#F9F9F9', border: '1px dashed #D0D0D0', borderRadius: 4, padding: '10px 12px' }}>💡 Save this business first, then re-open it to add products.</div>;
+  if (loading) return <div style={{ fontSize: 12, color: '#888' }}>Loading…</div>;
+
+  const delProduct = async (pid: number) => {
+    if (!window.confirm('Delete this product?')) return;
+    await api.delete(`/admin/businesses/${recordId}/products/${pid}`);
+    setProducts((p) => p.filter((x) => x.id !== pid));
+  };
+  const miniBtn: React.CSSProperties = { flex: 1, padding: '3px 0', fontSize: 11, border: '1px solid #D5D5D5', background: '#fff', borderRadius: 3, cursor: 'pointer', color: '#333' };
+
+  return (
+    <div>
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 10 }}>
+        {products.map((p) => (
+          <div key={p.id} style={{ width: 128, border: '1px solid #E8E8E8', borderRadius: 8, overflow: 'hidden', background: '#fff' }}>
+            {p.image
+              ? <img src={p.imageUrl || (String(p.image).startsWith('http') ? p.image : `/assets/uploads/businesses/${p.image}`)} alt="" style={{ width: '100%', height: 72, objectFit: 'cover', display: 'block' }} />
+              : <div style={{ height: 72, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 24, background: '#F3F3F7' }}>🛍️</div>}
+            <div style={{ padding: '6px 8px' }}>
+              <div style={{ fontSize: 12, fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{p.name}</div>
+              <div style={{ fontSize: 11, color: '#888', marginTop: 1 }}>{p.category || '—'} · {p.currency || 'AED'} {p.price ?? '—'}</div>
+              <div style={{ display: 'flex', gap: 6, marginTop: 5 }}>
+                <button type="button" onClick={() => setEditing(p)} style={miniBtn}>Edit</button>
+                <button type="button" onClick={() => delProduct(p.id)} style={{ ...miniBtn, color: '#C42B1C' }}>Del</button>
+              </div>
+            </div>
+          </div>
+        ))}
+        <button type="button" onClick={() => setEditing('new')} style={{ width: 128, minHeight: 118, border: '1px dashed #BBB', borderRadius: 8, background: '#FAFAFA', color: ACCENT, fontSize: 13, cursor: 'pointer' }}>+ Add product</button>
+      </div>
+      {editing && (
+        <ProductForm recordId={recordId} product={editing === 'new' ? null : editing}
+          onClose={() => setEditing(null)} onSaved={() => { setEditing(null); load(); }} />
+      )}
+    </div>
+  );
+}
+
+function ProductForm({ recordId, product, onClose, onSaved }: { recordId: number; product: any | null; onClose: () => void; onSaved: () => void }) {
+  const [category, setCategory] = useState(product?.category || '');
+  const [name, setName] = useState(product?.name || '');
+  const [price, setPrice] = useState(product?.price != null ? String(product.price) : '');
+  const [originalPrice, setOriginalPrice] = useState(product?.original_price != null ? String(product.original_price) : '');
+  const [currency, setCurrency] = useState(product?.currency || 'AED');
+  const [description, setDescription] = useState(product?.description || '');
+  const [image, setImage] = useState(product?.image || '');
+  const [uploading, setUploading] = useState(false);
+  const [saving, setSaving] = useState(false);
+
+  const uploadImg = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]; if (!file) return;
+    setUploading(true);
+    try {
+      const fd = new FormData(); fd.append('file', file);
+      const res = await api.post('/admin/upload/businesses', fd, { headers: { 'Content-Type': 'multipart/form-data' } });
+      setImage(res.data.filename as string);
+    } finally { setUploading(false); }
+  };
+
+  const save = async () => {
+    setSaving(true);
+    const payload = { category, name, price, original_price: originalPrice, currency, description, image };
+    try {
+      if (product) await api.put(`/admin/businesses/${recordId}/products/${product.id}`, payload);
+      else await api.post(`/admin/businesses/${recordId}/products`, payload);
+      onSaved();
+    } catch { setSaving(false); }
+  };
+
+  const preview = image ? (String(image).startsWith('http') ? image : `/assets/uploads/businesses/${image}`) : '';
+  const lbl = (t: string) => <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: '#666', margin: '10px 0 4px' }}>{t}</label>;
+
+  return (
+    <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.45)', zIndex: 1100, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
+      <div onClick={(e) => e.stopPropagation()} style={{ background: '#fff', borderRadius: 8, width: '100%', maxWidth: 460, maxHeight: '90vh', overflowY: 'auto', padding: 20, fontFamily: FONT }}>
+        <h3 style={{ margin: 0, fontSize: 16, fontWeight: 700 }}>{product ? 'Edit Product' : 'New Product'}</h3>
+        {lbl('Image')}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          {preview && <img src={preview} alt="" style={{ width: 64, height: 64, objectFit: 'cover', borderRadius: 4, border: '1px solid #E0E0E0' }} />}
+          <input type="file" accept="image/*" onChange={uploadImg} style={{ fontSize: 12 }} />
+          {uploading && <span style={{ fontSize: 11, color: '#888' }}>Uploading…</span>}
+          {image && <button type="button" onClick={() => setImage('')} style={{ fontSize: 11, color: '#C42B1C', background: 'none', border: 'none', cursor: 'pointer' }}>remove</button>}
+        </div>
+        {lbl('Category (becomes a filter chip — e.g. "Apparel")')}
+        <input value={category} onChange={(e) => setCategory(e.target.value)} style={inputStyle} />
+        {lbl('Name')}
+        <input value={name} onChange={(e) => setName(e.target.value)} style={inputStyle} />
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 80px', gap: 10 }}>
+          <div>{lbl('Price')}<input type="number" value={price} onChange={(e) => setPrice(e.target.value)} style={inputStyle} /></div>
+          <div>{lbl('Original (strike)')}<input type="number" value={originalPrice} onChange={(e) => setOriginalPrice(e.target.value)} style={inputStyle} /></div>
+          <div>{lbl('Currency')}<input value={currency} onChange={(e) => setCurrency(e.target.value)} style={inputStyle} /></div>
+        </div>
+        {lbl('Description (shown in the product popup)')}
+        <textarea rows={4} value={description} onChange={(e) => setDescription(e.target.value)} style={{ ...inputStyle, resize: 'vertical' }} />
+        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 16 }}>
+          <button type="button" onClick={onClose} style={{ padding: '7px 16px', border: '1px solid #C8C8C8', background: '#fff', borderRadius: 4, fontSize: 13, cursor: 'pointer' }}>Cancel</button>
+          <button type="button" onClick={save} disabled={saving || !name} style={{ padding: '7px 18px', border: 'none', background: saving || !name ? '#9CB8D8' : ACCENT, color: '#fff', borderRadius: 4, fontSize: 13, fontWeight: 600, cursor: saving || !name ? 'not-allowed' : 'pointer' }}>{saving ? 'Saving…' : 'Save'}</button>
+        </div>
+      </div>
     </div>
   );
 }
@@ -775,6 +1161,7 @@ function CrudDialog({ config, row, onClose, onSaved }: {
       const payload: Record<string, unknown> = {};
       for (const f of config.fields) {
         const v = form[f.key];
+        if (f.type === 'gallery' || f.type === 'cover' || f.type === 'services' || f.type === 'products') continue;  // not table columns — managed via their own endpoints
         if (f.type === 'toggle') payload[f.key] = v === '1' ? 1 : 0;
         else if (f.type === 'number' || f.type === 'category-search' || f.type === 'business-search' || f.type === 'user-search' || f.type === 'event-category-select' || f.type === 'resource-select' || f.type === 'university-select') payload[f.key] = v === '' ? null : Number(v);
         else payload[f.key] = v;
@@ -825,7 +1212,7 @@ function CrudDialog({ config, row, onClose, onSaved }: {
           {/* Two-column layout for short fields */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: '10px 16px' }}>
             {textFields.map((f) => (
-              <div key={f.key} style={{ gridColumn: (f.type === 'textarea' || f.type === 'time-picker' || f.type === 'user-search' || f.type === 'business-search' || f.type === 'category-search') ? '1 / -1' : undefined }}>
+              <div key={f.key} style={{ gridColumn: (f.type === 'textarea' || f.type === 'time-picker' || f.type === 'user-search' || f.type === 'business-search' || f.type === 'category-search' || f.type === 'gallery' || f.type === 'cover' || f.type === 'services' || f.type === 'products') ? '1 / -1' : undefined }}>
                 <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: '#444', marginBottom: 4 }}>
                   {f.label}{f.required && <span style={{ color: '#C42B1C', marginLeft: 2 }}>*</span>}
                 </label>
@@ -850,6 +1237,18 @@ function CrudDialog({ config, row, onClose, onSaved }: {
                 )}
                 {f.type === 'image' && f.folder && (
                   <ImageUploader folder={f.folder} currentValue={form[f.key] ?? ''} onChange={(fn) => set(f.key, fn)} />
+                )}
+                {f.type === 'gallery' && (
+                  <GalleryUploader resource={config.resource} recordId={isEdit && row ? Number(row.id) : null} />
+                )}
+                {f.type === 'cover' && (
+                  <CoverMediaManager recordId={isEdit && row ? Number(row.id) : null} />
+                )}
+                {f.type === 'services' && (
+                  <ServicesManager recordId={isEdit && row ? Number(row.id) : null} />
+                )}
+                {f.type === 'products' && (
+                  <ProductsManager recordId={isEdit && row ? Number(row.id) : null} />
                 )}
                 {f.type === 'business-search' && (
                   <BusinessSearchField
@@ -1097,7 +1496,7 @@ export default function AdminCrudPage() {
                   <th style={{ ...thStyle, width: 60 }}>ID</th>
                   {(config.listCols ?? [config.displayCol]).map((col) => (
                     <th key={col} style={thStyle}>
-                      {config.fields.find((f) => f.key === col)?.label ?? col}
+                      {config.fields.find((f) => f.key === col)?.label ?? col.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())}
                     </th>
                   ))}
                   <th style={{ ...thStyle, width: 80, textAlign: 'center' }}>Active</th>

@@ -5,6 +5,9 @@ import api from '../api';
 import DoctorCard, { docColor } from '../components/DoctorCard';
 import DoctorPopup from '../components/DoctorPopup';
 
+const SANS = "-apple-system,'SF Pro Text','SF Pro Display','Segoe UI',Roboto,sans-serif";
+const BLUE = '#007AFF';
+
 export default function DoctorsPage() {
   const [params, setParams] = useSearchParams();
   const [search, setSearch] = useState(params.get('search') || '');
@@ -32,44 +35,45 @@ export default function DoctorsPage() {
 
   const specialties: any[] = hub?.specialties || [];
   const items: any[] = data?.items || [];
+  const activeSpec = specialties.find((s) => String(s.id) === specialty);
 
   return (
-    <>
+    <div style={{ fontFamily: SANS, background: '#F2F2F7', minHeight: '100vh', paddingBottom: 90 }}>
       {popup && <DoctorPopup doctor={popup} onClose={() => setPopup(null)} />}
 
-      {/* Gradient header */}
-      <div style={{ background: 'linear-gradient(135deg,#5B4BD1,#6C5CE7)', padding: '14px 16px 22px', borderRadius: '0 0 26px 26px', color: '#fff' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-          <Link to="/" style={{ width: 38, height: 38, borderRadius: '50%', background: 'rgba(255,255,255,.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', textDecoration: 'none', flexShrink: 0 }}><i className="fas fa-arrow-left"></i></Link>
-          <h1 style={{ flex: 1, margin: 0, fontSize: 24, fontWeight: 800 }}>Doctors</h1>
-          <span style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'rgba(255,255,255,.2)', borderRadius: 50, padding: '7px 12px', fontSize: 13, fontWeight: 600 }}>
-            <i className="fas fa-map-marker-alt"></i> {emirate || 'UAE'}
-          </span>
+      {/* Frosted sticky header */}
+      <div style={{ position: 'sticky', top: 0, zIndex: 20, background: 'rgba(242,242,247,.82)', backdropFilter: 'saturate(180%) blur(20px)', WebkitBackdropFilter: 'saturate(180%) blur(20px)', padding: '10px 16px 12px', borderBottom: '1px solid rgba(0,0,0,.06)' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <Link to="/categories" style={{ color: BLUE, fontSize: 22, textDecoration: 'none', width: 30 }}><i className="fas fa-chevron-left"></i></Link>
+          <h1 style={{ flex: 1, margin: 0, fontSize: 22, fontWeight: 800, color: '#1C1C1E', letterSpacing: '-0.6px' }}>{activeSpec ? activeSpec.name : 'Doctors'}</h1>
+          <span style={{ display: 'flex', alignItems: 'center', gap: 5, color: BLUE, fontSize: 14, fontWeight: 600 }}><i className="fas fa-location-dot" style={{ fontSize: 12 }}></i> {emirate || 'UAE'}</span>
         </div>
         {/* Search */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, background: '#fff', borderRadius: 50, padding: '6px 8px 6px 18px', marginTop: 16, boxShadow: '0 6px 18px rgba(0,0,0,.15)' }}>
-          <i className="fas fa-search" style={{ color: '#9AA0AE' }}></i>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'rgba(118,118,128,.12)', borderRadius: 12, padding: '9px 12px', marginTop: 12 }}>
+          <i className="fas fa-search" style={{ color: '#8E8E93', fontSize: 15 }}></i>
           <input value={search} onChange={(e) => setSearch(e.target.value)} onKeyPress={(e) => { if (e.key === 'Enter') setParam('search', search); }}
-            placeholder="Search doctor, specialty or clinic" style={{ flex: 1, border: 'none', outline: 'none', fontSize: 14, background: 'transparent', color: '#333', fontFamily: 'inherit', minWidth: 0 }} />
-          <button onClick={() => setParam('search', search)} style={{ width: 40, height: 40, borderRadius: '50%', background: 'var(--primary)', border: 'none', color: '#fff', cursor: 'pointer', flexShrink: 0 }}><i className="fas fa-sliders-h"></i></button>
+            placeholder="Search doctor, specialty or clinic" style={{ flex: 1, border: 'none', outline: 'none', background: 'transparent', fontSize: 16, color: '#1C1C1E', fontFamily: SANS, minWidth: 0 }} />
+          {search && <button onClick={() => { setSearch(''); setParam('search', ''); }} style={{ border: 'none', background: 'none', color: '#8E8E93', cursor: 'pointer' }}><i className="fas fa-circle-xmark"></i></button>}
         </div>
       </div>
 
-      {/* Browse by Specialty */}
-      <div style={{ padding: '18px 0 4px' }}>
-        <div className="section-header" style={{ marginBottom: 4 }}><h2>Browse by Specialty</h2>{specialty && <button onClick={() => setParam('specialty', '')} style={{ background: 'none', border: 'none', color: 'var(--primary)', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>Clear</button>}</div>
-        <div style={{ display: 'flex', gap: 16, overflowX: 'auto', padding: '10px 16px', scrollbarWidth: 'none' }}>
+      {/* Browse by specialty */}
+      <div style={{ padding: '16px 0 2px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 16px 2px' }}>
+          <h2 style={{ margin: 0, fontSize: 15, fontWeight: 700, color: '#1C1C1E', letterSpacing: '-0.3px' }}>Browse by Specialty</h2>
+          {specialty && <button onClick={() => setParam('specialty', '')} style={{ border: 'none', background: 'none', color: BLUE, fontSize: 14, fontWeight: 600, cursor: 'pointer' }}>Show all</button>}
+        </div>
+        <div style={{ display: 'flex', gap: 14, overflowX: 'auto', padding: '12px 16px', scrollbarWidth: 'none' }}>
           {specialties.map((s) => {
             const active = String(s.id) === specialty;
             const c = docColor(s.id);
             return (
               <button key={s.id} onClick={() => setParam('specialty', active ? '' : String(s.id))}
-                style={{ flexShrink: 0, width: 74, background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit', padding: 0 }}>
-                <div style={{ width: 64, height: 64, borderRadius: '50%', background: c.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 30, margin: '0 auto', position: 'relative', boxShadow: active ? `0 0 0 3px #fff, 0 0 0 5px ${c.bg}` : '0 4px 12px rgba(0,0,0,.12)' }}>
-                  {s.icon}
-                  {active && <span style={{ position: 'absolute', top: -2, right: -2, width: 20, height: 20, borderRadius: '50%', background: '#0E9F6E', color: '#fff', fontSize: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', border: '2px solid #fff' }}><i className="fas fa-check"></i></span>}
+                style={{ flexShrink: 0, width: 68, background: 'none', border: 'none', cursor: 'pointer', fontFamily: SANS, padding: 0 }}>
+                <div style={{ width: 60, height: 60, borderRadius: 20, background: active ? c.bg : '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 28, margin: '0 auto', boxShadow: active ? `0 6px 16px ${c.bg}55` : '0 1px 4px rgba(0,0,0,.06)', transition: 'all .15s' }}>
+                  <span style={{ filter: active ? 'grayscale(0)' : 'none' }}>{s.icon}</span>
                 </div>
-                <div style={{ fontSize: 11, fontWeight: 600, color: active ? c.bg : 'var(--text-secondary)', marginTop: 7, lineHeight: 1.2, textAlign: 'center' }}>{s.name}</div>
+                <div style={{ fontSize: 11, fontWeight: active ? 700 : 500, color: active ? '#1C1C1E' : '#8E8E93', marginTop: 7, lineHeight: 1.2, textAlign: 'center' }}>{s.name}</div>
               </button>
             );
           })}
@@ -77,35 +81,35 @@ export default function DoctorsPage() {
       </div>
 
       {/* Filter chips */}
-      <div style={{ display: 'flex', gap: 8, overflowX: 'auto', padding: '6px 16px 10px', scrollbarWidth: 'none' }}>
+      <div style={{ display: 'flex', gap: 8, overflowX: 'auto', padding: '4px 16px 10px', scrollbarWidth: 'none' }}>
         <Chip active={available_today === '1'} onClick={() => toggle('available_today')} icon="far fa-calendar-check" label="Available Today" />
-        <Chip active={!!emirate} onClick={() => setParam('emirate', emirate ? '' : 'Dubai')} icon="fas fa-map-marker-alt" label={emirate || 'Nearby'} />
-        <Chip active={top_rated === '1'} onClick={() => toggle('top_rated')} icon="far fa-star" label="Top Rated" />
-        <button onClick={() => setParam('sort', sort === 'fee_low' ? 'fee_high' : sort === 'fee_high' ? '' : 'fee_low')}
-          style={{ flexShrink: 0, width: 42, height: 40, borderRadius: 12, border: '1.5px solid rgba(108,92,231,.25)', background: sort ? 'var(--primary)' : '#fff', color: sort ? '#fff' : 'var(--primary)', cursor: 'pointer' }}>
-          <i className="fas fa-sort"></i>
-        </button>
+        <Chip active={!!emirate} onClick={() => setParam('emirate', emirate ? '' : 'Dubai')} icon="fas fa-location-dot" label={emirate || 'Nearby'} />
+        <Chip active={top_rated === '1'} onClick={() => toggle('top_rated')} icon="fas fa-star" label="Top Rated" />
+        <Chip active={!!sort} onClick={() => setParam('sort', sort === 'fee_low' ? 'fee_high' : sort === 'fee_high' ? '' : 'fee_low')} icon="fas fa-arrow-down-short-wide" label={sort === 'fee_high' ? 'Fee: High' : sort === 'fee_low' ? 'Fee: Low' : 'Sort'} />
       </div>
 
-      {/* Recommended doctors */}
-      <div className="section-header"><h2>{specialty ? (data?.specName || 'Doctors') : 'Recommended Doctors'}</h2><span style={{ color: 'var(--primary)', fontWeight: 700, fontSize: 13 }}>{data?.total ?? 0} doctors</span></div>
+      {/* Doctors list */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '6px 16px 8px' }}>
+        <h2 style={{ margin: 0, fontSize: 17, fontWeight: 800, color: '#1C1C1E', letterSpacing: '-0.4px' }}>{activeSpec ? activeSpec.name : 'Recommended'}</h2>
+        <span style={{ color: '#8E8E93', fontSize: 14, fontWeight: 500 }}>{data?.total ?? 0} doctors</span>
+      </div>
       {isLoading ? (
-        <div style={{ padding: 40, textAlign: 'center' }}>Loading…</div>
+        <div style={{ padding: 40, textAlign: 'center', color: '#8E8E93' }}>Loading…</div>
       ) : items.length === 0 ? (
-        <div style={{ padding: 40, textAlign: 'center', color: 'var(--text-secondary)' }}>No doctors found.</div>
+        <div style={{ padding: 44, textAlign: 'center', color: '#8E8E93' }}>No doctors found.</div>
       ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 14, padding: '4px 16px 28px' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 12, padding: '0 16px' }}>
           {items.map((d) => <DoctorCard key={d.id} d={d} onOpen={setPopup} />)}
         </div>
       )}
-    </>
+    </div>
   );
 }
 
 function Chip({ active, onClick, icon, label }: { active: boolean; onClick: () => void; icon: string; label: string }) {
   return (
-    <button onClick={onClick} style={{ flexShrink: 0, display: 'flex', alignItems: 'center', gap: 7, padding: '9px 15px', borderRadius: 12, border: `1.5px solid ${active ? 'var(--primary)' : 'rgba(108,92,231,.25)'}`, background: active ? 'var(--primary)' : '#fff', color: active ? '#fff' : 'var(--text-secondary)', fontSize: 13, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', whiteSpace: 'nowrap' }}>
-      <i className={icon}></i> {label}
+    <button onClick={onClick} style={{ flexShrink: 0, display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px', borderRadius: 20, border: 'none', background: active ? BLUE : '#fff', color: active ? '#fff' : '#3A3A3C', fontSize: 13.5, fontWeight: 600, cursor: 'pointer', fontFamily: SANS, whiteSpace: 'nowrap', boxShadow: active ? 'none' : '0 1px 3px rgba(0,0,0,.05)' }}>
+      <i className={icon} style={{ fontSize: 12 }}></i> {label}
     </button>
   );
 }

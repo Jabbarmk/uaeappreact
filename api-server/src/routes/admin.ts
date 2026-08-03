@@ -19,6 +19,15 @@ const upload = multer({
   },
 });
 
+// Cover media allows images AND short videos (larger limit).
+const uploadMedia = multer({
+  dest: path.resolve(process.env.UPLOAD_PATH || '../assets/uploads') + '/tmp/',
+  limits: { fileSize: 60 * 1024 * 1024 },
+  fileFilter: (_req, file, cb) => {
+    cb(null, file.mimetype.startsWith('image/') || file.mimetype.startsWith('video/'));
+  },
+});
+
 // ── File upload ───────────────────────────────────────────────────────────────
 
 router.post('/upload/:folder', requireAdmin, upload.single('file'), async (req, res, next) => {
@@ -144,7 +153,7 @@ router.post('/settings/test-email', requireAdmin, async (req: Request, res: Resp
 
 // ── Generic CRUD factory ──────────────────────────────────────────────────────
 
-interface CrudOpts { searchCols?: string[]; filterCols?: string[] }
+interface CrudOpts { searchCols?: string[]; filterCols?: string[]; listSelect?: string; listJoin?: string }
 
 function crudRoutes(table: string, imageFolder?: string, opts: CrudOpts = {}) {
   const r = Router();
@@ -162,19 +171,21 @@ function crudRoutes(table: string, imageFolder?: string, opts: CrudOpts = {}) {
       const where: string[] = [];
       const params: unknown[] = [];
       if (search) {
-        where.push('(' + searchCols.map((c) => `\`${c}\` LIKE ?`).join(' OR ') + ')');
+        where.push('(' + searchCols.map((c) => `t.\`${c}\` LIKE ?`).join(' OR ') + ')');
         searchCols.forEach(() => params.push(`%${search}%`));
       }
       for (const c of filterCols) {
-        if (q[c] !== undefined && q[c] !== '') { where.push(`\`${c}\` = ?`); params.push(q[c]); }
+        if (q[c] !== undefined && q[c] !== '') { where.push(`t.\`${c}\` = ?`); params.push(q[c]); }
       }
       const whereSql = where.length ? `WHERE ${where.join(' AND ')}` : '';
+      const selectExtra = opts.listSelect ? `, ${opts.listSelect}` : '';
+      const joinSql = opts.listJoin ?? '';
 
       const rows = await query<any>(
-        `SELECT * FROM \`${table}\` ${whereSql} ORDER BY id DESC LIMIT ? OFFSET ?`,
+        `SELECT t.*${selectExtra} FROM \`${table}\` t ${joinSql} ${whereSql} ORDER BY t.id DESC LIMIT ? OFFSET ?`,
         [...params, Number(pageSize), offset]
       );
-      const totalRow = await query<{ total: number }>(`SELECT COUNT(*) as total FROM \`${table}\` ${whereSql}`, params);
+      const totalRow = await query<{ total: number }>(`SELECT COUNT(*) as total FROM \`${table}\` t ${joinSql} ${whereSql}`, params);
       const total = totalRow[0]?.total ?? 0;
       res.json({ rows: imageFolder ? rows.map((r) => ({ ...r, imageUrl: getImageUrl(r.image, imageFolder) })) : rows, total });
     } catch (err) { next(err); }
@@ -547,7 +558,7 @@ router.get('/hospitals/:id/doctors', requireAdmin, async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
-const DOCTOR_FIELDS = ['specialty_id', 'name', 'photo', 'qualification', 'experience_years', 'languages', 'gender', 'rating', 'review_count', 'consultation_fee', 'currency', 'availability', 'distance', 'about', 'is_featured', 'is_active'];
+const DOCTOR_FIELDS = ['specialty_id', 'name', 'photo', 'qualification', 'experience_years', 'languages', 'gender', 'rating', 'review_count', 'consultation_fee', 'currency', 'availability', 'distance', 'about', 'work_days', 'slots', 'is_featured', 'is_active'];
 
 router.post('/hospitals/:id/doctors', requireAdmin, async (req, res, next) => {
   try {
@@ -591,7 +602,198 @@ router.use('/main-categories', crudRoutes('main_categories', undefined, { search
 router.use('/home-categories', crudRoutes('home_categories', undefined, { searchCols: ['name'] }));
 router.use('/popular-categories', crudRoutes('popular_categories', 'categories', { searchCols: ['name'] }));
 router.use('/business-categories', crudRoutes('business_categories', undefined, { searchCols: ['name'], filterCols: ['group_name', 'main_category_id'] }));
-router.use('/businesses', crudRoutes('businesses', 'businesses', { searchCols: ['name'], filterCols: ['category_id', 'emirate'] }));
+// ── Business gallery images (multi-image; shown in the detail-page gallery) ──────
+router.get('/businesses/:id/gallery', requireAdmin, async (req, res, next) => {
+  try {
+    const rows = await query<any>('SELECT id, image FROM business_gallery WHERE business_id=? ORDER BY sort_order, id', [req.params.id]);
+    res.json({ images: rows.map((r) => ({ id: r.id, url: getImageUrl(r.image, 'businesses') })) });
+  } catch (err) { next(err); }
+});
+
+router.post('/businesses/:id/gallery', requireAdmin, upload.array('files', 12), async (req, res, next) => {
+  try {
+    const biz = await queryOne<any>('SELECT id, image FROM businesses WHERE id=?', [req.params.id]);
+    if (!biz) return res.status(404).json({ error: 'Business not found' });
+    const files = (req.files as Express.Multer.File[]) || [];
+    if (!files.length) return res.status(400).json({ error: 'No files' });
+    const destDir = path.resolve(process.env.UPLOAD_PATH || '../assets/uploads') + '/businesses/';
+    await fs.mkdir(destDir, { recursive: true });
+    const startOrder = (await queryOne<any>('SELECT COALESCE(MAX(sort_order),-1)+1 AS n FROM business_gallery WHERE business_id=?', [biz.id]))?.n ?? 0;
+    const saved: { id: number; url: string }[] = [];
+    for (let i = 0; i < files.length; i++) {
+      const f = files[i];
+      const ext = path.extname(f.originalname).toLowerCase() || '.jpg';
+      const filename = `biz-${biz.id}-${Date.now()}-${i}${ext}`;
+      await fs.rename(f.path, destDir + filename);
+      const r = await query<any>('INSERT INTO business_gallery (business_id, image, sort_order) VALUES (?,?,?)', [biz.id, filename, startOrder + i]) as any;
+      saved.push({ id: r.insertId, url: getImageUrl(filename, 'businesses') });
+    }
+    // If the business has no cover image yet, use the first uploaded photo.
+    if (!biz.image && saved.length) {
+      const first = await queryOne<any>('SELECT image FROM business_gallery WHERE business_id=? ORDER BY sort_order, id LIMIT 1', [biz.id]);
+      if (first) await query('UPDATE businesses SET image=? WHERE id=?', [first.image, biz.id]);
+    }
+    res.json({ ok: true, images: saved });
+  } catch (err) { next(err); }
+});
+
+router.delete('/businesses/:id/gallery/:imageId', requireAdmin, async (req, res, next) => {
+  try {
+    await query('DELETE FROM business_gallery WHERE id=? AND business_id=?', [req.params.imageId, req.params.id]);
+    res.json({ ok: true });
+  } catch (err) { next(err); }
+});
+
+// ── Business cover media (multiple images + video; independent of the gallery) ───
+router.get('/businesses/:id/cover', requireAdmin, async (req, res, next) => {
+  try {
+    const rows = await query<any>('SELECT id, type, file FROM business_cover_media WHERE business_id=? ORDER BY sort_order, id', [req.params.id]);
+    res.json({ media: rows.map((m) => ({ id: m.id, type: m.type, url: getImageUrl(m.file, 'cover') })) });
+  } catch (err) { next(err); }
+});
+
+router.post('/businesses/:id/cover', requireAdmin, uploadMedia.array('files', 10), async (req, res, next) => {
+  try {
+    const biz = await queryOne<any>('SELECT id FROM businesses WHERE id=?', [req.params.id]);
+    if (!biz) return res.status(404).json({ error: 'Business not found' });
+    const files = (req.files as Express.Multer.File[]) || [];
+    if (!files.length) return res.status(400).json({ error: 'No files' });
+    const destDir = path.resolve(process.env.UPLOAD_PATH || '../assets/uploads') + '/cover/';
+    await fs.mkdir(destDir, { recursive: true });
+    let ord = (await queryOne<any>('SELECT COALESCE(MAX(sort_order),-1)+1 AS n FROM business_cover_media WHERE business_id=?', [biz.id]))?.n ?? 0;
+    const saved: { id: number; type: string; url: string }[] = [];
+    for (let i = 0; i < files.length; i++) {
+      const f = files[i];
+      const type = f.mimetype.startsWith('video/') ? 'video' : 'image';
+      const ext = path.extname(f.originalname).toLowerCase() || (type === 'video' ? '.mp4' : '.jpg');
+      const filename = `cover-${biz.id}-${Date.now()}-${i}${ext}`;
+      await fs.rename(f.path, destDir + filename);
+      const r = await query<any>('INSERT INTO business_cover_media (business_id, type, file, sort_order) VALUES (?,?,?,?)', [biz.id, type, filename, ord++]) as any;
+      saved.push({ id: r.insertId, type, url: getImageUrl(filename, 'cover') });
+    }
+    res.json({ ok: true, media: saved });
+  } catch (err) { next(err); }
+});
+
+router.delete('/businesses/:id/cover/:mediaId', requireAdmin, async (req, res, next) => {
+  try {
+    await query('DELETE FROM business_cover_media WHERE id=? AND business_id=?', [req.params.mediaId, req.params.id]);
+    res.json({ ok: true });
+  } catch (err) { next(err); }
+});
+
+// ── Business services: named sections + items (title, 2-line desc, popup details) ─
+router.get('/businesses/:id/services', requireAdmin, async (req, res, next) => {
+  try {
+    const sections = await query<any>('SELECT id, title, sort_order FROM business_service_sections WHERE business_id=? ORDER BY sort_order, id', [req.params.id]);
+    const items = await query<any>('SELECT * FROM business_services WHERE business_id=? ORDER BY sort_order, id', [req.params.id]);
+    const mapped = items.map((it) => ({ ...it, imageUrl: it.image ? getImageUrl(it.image, 'businesses') : null }));
+    res.json({
+      sections: sections.map((s) => ({ ...s, items: mapped.filter((i) => i.section_id === s.id) })),
+      ungrouped: mapped.filter((i) => !i.section_id),
+    });
+  } catch (err) { next(err); }
+});
+
+router.post('/businesses/:id/service-sections', requireAdmin, async (req, res, next) => {
+  try {
+    const title = String(req.body.title || '').trim() || 'Services';
+    const ord = (await queryOne<any>('SELECT COALESCE(MAX(sort_order),-1)+1 AS n FROM business_service_sections WHERE business_id=?', [req.params.id]))?.n ?? 0;
+    const r = await query<any>('INSERT INTO business_service_sections (business_id, title, sort_order) VALUES (?,?,?)', [req.params.id, title, ord]) as any;
+    res.json({ id: r.insertId, title, items: [] });
+  } catch (err) { next(err); }
+});
+
+router.put('/businesses/:id/service-sections/:sid', requireAdmin, async (req, res, next) => {
+  try {
+    await query('UPDATE business_service_sections SET title=? WHERE id=? AND business_id=?', [String(req.body.title || '').trim(), req.params.sid, req.params.id]);
+    res.json({ ok: true });
+  } catch (err) { next(err); }
+});
+
+router.delete('/businesses/:id/service-sections/:sid', requireAdmin, async (req, res, next) => {
+  try {
+    await query('DELETE FROM business_service_sections WHERE id=? AND business_id=?', [req.params.sid, req.params.id]);
+    res.json({ ok: true });
+  } catch (err) { next(err); }
+});
+
+const SVC_ITEM_FIELDS = ['title', 'description', 'details', 'icon', 'image'];
+router.post('/businesses/:id/service-sections/:sid/items', requireAdmin, async (req, res, next) => {
+  try {
+    const b = req.body as Record<string, any>;
+    const ord = (await queryOne<any>('SELECT COALESCE(MAX(sort_order),-1)+1 AS n FROM business_services WHERE section_id=?', [req.params.sid]))?.n ?? 0;
+    const r = await query<any>(
+      'INSERT INTO business_services (business_id, section_id, title, description, details, icon, image, sort_order) VALUES (?,?,?,?,?,?,?,?)',
+      [req.params.id, req.params.sid, b.title || 'Service', b.description || null, b.details || null, b.icon || null, b.image || null, ord]
+    ) as any;
+    res.json({ id: r.insertId, imageUrl: b.image ? getImageUrl(b.image, 'businesses') : null });
+  } catch (err) { next(err); }
+});
+
+router.put('/businesses/:id/service-items/:iid', requireAdmin, async (req, res, next) => {
+  try {
+    const b = req.body as Record<string, any>;
+    const fields = SVC_ITEM_FIELDS.filter((f) => f in b);
+    if (fields.length) {
+      const sets = fields.map((f) => `\`${f}\` = ?`).join(',');
+      const vals = fields.map((f) => (b[f] === '' ? null : b[f]));
+      await query(`UPDATE business_services SET ${sets} WHERE id=? AND business_id=?`, [...vals, req.params.iid, req.params.id]);
+    }
+    res.json({ ok: true });
+  } catch (err) { next(err); }
+});
+
+router.delete('/businesses/:id/service-items/:iid', requireAdmin, async (req, res, next) => {
+  try {
+    await query('DELETE FROM business_services WHERE id=? AND business_id=?', [req.params.iid, req.params.id]);
+    res.json({ ok: true });
+  } catch (err) { next(err); }
+});
+
+// ── Business products (Template-2 storefront) ───────────────────────────────────
+const PRODUCT_FIELDS = ['category', 'name', 'image', 'price', 'original_price', 'currency', 'description'];
+router.get('/businesses/:id/products', requireAdmin, async (req, res, next) => {
+  try {
+    const rows = await query<any>('SELECT * FROM business_products WHERE business_id=? ORDER BY sort_order, id', [req.params.id]);
+    res.json({ products: rows.map((p) => ({ ...p, imageUrl: p.image ? getImageUrl(p.image, 'businesses') : null })) });
+  } catch (err) { next(err); }
+});
+
+router.post('/businesses/:id/products', requireAdmin, async (req, res, next) => {
+  try {
+    const b = req.body as Record<string, any>;
+    const ord = (await queryOne<any>('SELECT COALESCE(MAX(sort_order),-1)+1 AS n FROM business_products WHERE business_id=?', [req.params.id]))?.n ?? 0;
+    const clean = (v: any) => (v === '' || v === undefined ? null : v);
+    const r = await query<any>(
+      'INSERT INTO business_products (business_id, category, name, image, price, original_price, currency, description, sort_order) VALUES (?,?,?,?,?,?,?,?,?)',
+      [req.params.id, clean(b.category), b.name || 'Product', clean(b.image), clean(b.price), clean(b.original_price), b.currency || 'AED', clean(b.description), ord]
+    ) as any;
+    res.json({ id: r.insertId, imageUrl: b.image ? getImageUrl(b.image, 'businesses') : null });
+  } catch (err) { next(err); }
+});
+
+router.put('/businesses/:id/products/:pid', requireAdmin, async (req, res, next) => {
+  try {
+    const b = req.body as Record<string, any>;
+    const fields = PRODUCT_FIELDS.filter((f) => f in b);
+    if (fields.length) {
+      const sets = fields.map((f) => `\`${f}\` = ?`).join(',');
+      const vals = fields.map((f) => (b[f] === '' ? null : b[f]));
+      await query(`UPDATE business_products SET ${sets} WHERE id=? AND business_id=?`, [...vals, req.params.pid, req.params.id]);
+    }
+    res.json({ ok: true });
+  } catch (err) { next(err); }
+});
+
+router.delete('/businesses/:id/products/:pid', requireAdmin, async (req, res, next) => {
+  try {
+    await query('DELETE FROM business_products WHERE id=? AND business_id=?', [req.params.pid, req.params.id]);
+    res.json({ ok: true });
+  } catch (err) { next(err); }
+});
+
+router.use('/businesses', crudRoutes('businesses', 'businesses', { searchCols: ['name'], filterCols: ['category_id', 'emirate'], listSelect: 'bc.name AS category_name', listJoin: 'LEFT JOIN business_categories bc ON bc.id = t.category_id' }));
 router.use('/offers', crudRoutes('offers', 'offers'));
 router.use('/classified-categories', crudRoutes('classified_categories'));
 router.use('/classified-sections', crudRoutes('classified_sections'));

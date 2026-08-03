@@ -1,4 +1,6 @@
-// Doctor card matching the reference doctors design (photo, specialty, clinic, rating, fee, book).
+import { Link } from 'react-router-dom';
+
+// Subtle per-specialty accent (used for the specialty dot / hub circles).
 const DOC_COLORS = [
   { bg: '#0E9F6E', soft: '#E7F8F1' },
   { bg: '#E14C8B', soft: '#FDEEF3' },
@@ -7,56 +9,58 @@ const DOC_COLORS = [
   { bg: '#6C5CE7', soft: '#F1EEFE' },
   { bg: '#00A5B8', soft: '#E4F6F9' },
 ];
-
 export function docColor(specialtyId?: number) {
   return DOC_COLORS[(Number(specialtyId) || 0) % DOC_COLORS.length];
 }
 
+const BLUE = '#007AFF';
 const AVATAR_FALLBACK = 'https://images.unsplash.com/photo-1612349317150-e413f6a5b16d?w=200&h=200&fit=crop';
 
+// Apple-clean doctor card. Tap the card → details (onOpen). Hospital name + Book → hospital page.
 export default function DoctorCard({ d, onOpen, showHospital = true }: { d: any; onOpen: (d: any) => void; showHospital?: boolean }) {
   const c = docColor(d.specialty_id);
   const avail = String(d.availability || '');
-  const availIsToday = /today/i.test(avail);
+  const availToday = /today/i.test(avail);
+  const stop = (e: React.MouseEvent) => e.stopPropagation();
+
   return (
-    <div style={{ display: 'flex', background: '#fff', borderRadius: 18, overflow: 'hidden', boxShadow: '0 4px 16px rgba(20,30,60,.07)', border: '1px solid #EEF0F6', position: 'relative' }}>
-      {/* Colored photo panel */}
-      <div style={{ width: 112, flexShrink: 0, background: c.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 10 }}>
-        <div style={{ width: 88, height: 88, borderRadius: '50%', overflow: 'hidden', background: '#fff', border: '3px solid rgba(255,255,255,.6)' }}>
+    <div onClick={() => onOpen(d)}
+      style={{ background: '#fff', borderRadius: 20, boxShadow: '0 1px 4px rgba(0,0,0,.05)', cursor: 'pointer', overflow: 'hidden', WebkitTapHighlightColor: 'transparent' }}>
+      <div style={{ display: 'flex', gap: 13, padding: '14px 14px 12px', position: 'relative' }}>
+        <div style={{ width: 66, height: 66, borderRadius: 16, overflow: 'hidden', flexShrink: 0, background: c.soft }}>
           {d.photoUrl
-            ? <img src={d.photoUrl} alt={d.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} loading="lazy"
+            ? <img src={d.photoUrl} alt={d.name} loading="lazy" style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                 onError={(e) => { (e.target as HTMLImageElement).src = AVATAR_FALLBACK; }} />
-            : <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 40, background: c.soft }}>🧑‍⚕️</div>}
+            : <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 32 }}>🧑‍⚕️</div>}
         </div>
-      </div>
-
-      {/* Content */}
-      <div style={{ flex: 1, minWidth: 0, padding: '12px 14px 12px 12px' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8 }}>
-          <div style={{ fontSize: 16, fontWeight: 800, color: 'var(--dark)', lineHeight: 1.2, paddingRight: 22 }}>{d.name}</div>
-        </div>
-        <span style={{ display: 'inline-block', fontSize: 11, fontWeight: 700, color: c.bg, background: c.soft, padding: '3px 9px', borderRadius: 50, marginTop: 5 }}>{d.specialty_name}</span>
-        {showHospital && d.hospital_name && <div style={{ fontSize: 13, fontWeight: 600, color: c.bg, marginTop: 5 }}>{d.hospital_name}</div>}
-
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 6, fontSize: 12, color: 'var(--text-secondary)', flexWrap: 'wrap' }}>
-          <span style={{ fontWeight: 700, color: 'var(--dark)' }}><i className="fas fa-star" style={{ color: '#F6A609' }}></i> {Number(d.rating || 0).toFixed(1)} <span style={{ color: 'var(--text-light)', fontWeight: 500 }}>({d.review_count})</span></span>
-          {d.distance && <><span style={{ color: '#DDD' }}>|</span><span><i className="fas fa-map-marker-alt" style={{ color: c.bg }}></i> {d.distance}</span></>}
-        </div>
-        {avail && (
-          <div style={{ fontSize: 12, fontWeight: 700, color: availIsToday ? '#0E9F6E' : c.bg, marginTop: 6 }}>
-            <i className={availIsToday ? 'far fa-calendar-check' : 'far fa-clock'}></i> {avail}
+        <div style={{ flex: 1, minWidth: 0, paddingRight: 24 }}>
+          <div style={{ fontSize: 17, fontWeight: 600, color: '#1C1C1E', letterSpacing: '-0.2px', lineHeight: 1.2 }}>{d.name}</div>
+          <div style={{ fontSize: 13.5, color: '#8E8E93', marginTop: 2, display: 'flex', alignItems: 'center', gap: 6 }}>
+            <span style={{ width: 7, height: 7, borderRadius: '50%', background: c.bg, flexShrink: 0 }} />{d.specialty_name}
           </div>
-        )}
-
-        <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 10, marginTop: 8 }}>
-          <div style={{ fontSize: 15, fontWeight: 800, color: 'var(--dark)' }}>{d.currency || 'AED'} {Number(d.consultation_fee || 0).toLocaleString()}</div>
-          <button onClick={() => onOpen(d)} style={{ background: '#FF5A5F', color: '#fff', border: 'none', borderRadius: 12, padding: '9px 16px', fontSize: 13, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>Book Appointment</button>
+          {showHospital && d.hospital_name && (
+            <Link to={`/businesses/${d.business_id}`} onClick={stop} style={{ fontSize: 13.5, color: BLUE, fontWeight: 500, textDecoration: 'none', marginTop: 3, display: 'inline-block' }}>
+              {d.hospital_name}
+            </Link>
+          )}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 7, fontSize: 12.5, color: '#8E8E93', flexWrap: 'wrap' }}>
+            <span style={{ color: '#1C1C1E', fontWeight: 600 }}><i className="fas fa-star" style={{ color: '#FFB100' }}></i> {Number(d.rating || 0).toFixed(1)} <span style={{ color: '#8E8E93', fontWeight: 400 }}>({d.review_count})</span></span>
+            {d.distance && <span><i className="fas fa-location-dot" style={{ opacity: .6 }}></i> {d.distance}</span>}
+          </div>
+          {avail && (
+            <div style={{ display: 'inline-flex', alignItems: 'center', gap: 5, marginTop: 8, fontSize: 12, fontWeight: 600, color: availToday ? '#0E9F6E' : c.bg, background: availToday ? '#E7F8F1' : c.soft, padding: '3px 9px', borderRadius: 8 }}>
+              <i className={availToday ? 'far fa-calendar-check' : 'far fa-clock'}></i> {avail}
+            </div>
+          )}
         </div>
+        <button aria-label="favourite" onClick={stop} style={{ position: 'absolute', top: 12, right: 12, width: 30, height: 30, borderRadius: '50%', background: '#F2F2F7', border: 'none', color: '#C7C7CC', fontSize: 14, cursor: 'pointer' }}>
+          <i className="far fa-heart"></i>
+        </button>
       </div>
-
-      <button aria-label="favourite" style={{ position: 'absolute', top: 10, right: 10, width: 30, height: 30, borderRadius: '50%', background: c.soft, border: 'none', color: c.bg, fontSize: 13, cursor: 'pointer' }}>
-        <i className="far fa-heart"></i>
-      </button>
+      <div style={{ borderTop: '1px solid #F0F0F3', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 14px' }}>
+        <div style={{ fontSize: 15, color: '#1C1C1E' }}><span style={{ color: '#8E8E93', fontSize: 12.5 }}>Consultation</span> <strong style={{ fontWeight: 700 }}>{d.currency || 'AED'} {Number(d.consultation_fee || 0).toLocaleString()}</strong></div>
+        <Link to={`/businesses/${d.business_id}`} onClick={stop} style={{ background: BLUE, color: '#fff', borderRadius: 12, padding: '9px 18px', fontSize: 14, fontWeight: 600, textDecoration: 'none', letterSpacing: '-0.2px' }}>Book</Link>
+      </div>
     </div>
   );
 }

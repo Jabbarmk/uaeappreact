@@ -17,18 +17,20 @@ router.post('/view/:id', async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
-// Search endpoint
+// Search endpoint — businesses by name (used by the categories-page live search)
 router.get('/search', async (req, res, next) => {
   try {
     const q = (req.query.q as string) || '';
     const categoryId = req.query.category_id;
-    let sql = 'SELECT id, name, category_id FROM businesses WHERE is_active = 1';
+    let sql = `SELECT b.id, b.name, b.category_id, b.image, b.rating, b.emirate, bc.name AS category_name
+               FROM businesses b LEFT JOIN business_categories bc ON bc.id = b.category_id
+               WHERE b.is_active = 1`;
     const params: unknown[] = [];
-    if (q) { sql += ' AND name LIKE ?'; params.push(`%${q}%`); }
-    if (categoryId) { sql += ' AND category_id = ?'; params.push(categoryId); }
-    sql += ' LIMIT 20';
-    const results = await query(sql, params);
-    res.json(results);
+    if (q) { sql += ' AND b.name LIKE ?'; params.push(`%${q}%`); }
+    if (categoryId) { sql += ' AND b.category_id = ?'; params.push(categoryId); }
+    sql += ' ORDER BY b.rating DESC, b.name ASC LIMIT 30';
+    const results = await query<any>(sql, params);
+    res.json(results.map((b) => ({ ...b, imageUrl: getImageUrl(b.image, 'businesses') })));
   } catch (err) { next(err); }
 });
 
@@ -81,6 +83,23 @@ router.get('/:id', async (req, res, next) => {
       query('SELECT * FROM business_clients WHERE business_id = ? ORDER BY sort_order', [id]),
     ]).catch(() => [[], [], [], [], [], []]);
 
+    // Group service items into named sections (+ a default section for legacy ungrouped items).
+    const svcSectionRows = await query<any>('SELECT id, title FROM business_service_sections WHERE business_id=? ORDER BY sort_order, id', [id]).catch(() => []);
+    const svcItems = (services as any[]).map((s) => ({ ...s, imageUrl: getImageUrl(s.image, 'businesses') }));
+    const serviceSections = (svcSectionRows as any[]).map((sec) => ({
+      id: sec.id, title: sec.title, items: svcItems.filter((it) => it.section_id === sec.id),
+    })).filter((sec) => sec.items.length > 0);
+    const ungrouped = svcItems.filter((it) => !it.section_id);
+    if (ungrouped.length) serviceSections.unshift({ id: 0, title: 'Services & Solutions', items: ungrouped });
+
+    // Dedicated cover media (multiple images + video), independent of the gallery.
+    const coverRows = await query<any>('SELECT type, file FROM business_cover_media WHERE business_id=? ORDER BY sort_order, id', [id]).catch(() => []);
+    const coverMedia = (coverRows as any[]).map((m) => ({ type: m.type, src: getImageUrl(m.file, 'cover') }));
+
+    // Template-2 storefront products.
+    const productRows = await query<any>('SELECT * FROM business_products WHERE business_id=? ORDER BY sort_order, id', [id]).catch(() => []);
+    const products = (productRows as any[]).map((p) => ({ ...p, imageUrl: getImageUrl(p.image, 'businesses') }));
+
     const vlogger = await queryOne<any>('SELECT * FROM vlogger_profiles WHERE business_id=?', [id]).catch(() => null);
     const doctorRows = await query<any>(
       `SELECT d.*, sc.name AS specialty_name, sc.icon AS specialty_icon
@@ -101,6 +120,9 @@ router.get('/:id', async (req, res, next) => {
       videos,
       reels,
       services,
+      serviceSections,
+      coverMedia,
+      products,
       testimonials,
       clients,
       vlogger,

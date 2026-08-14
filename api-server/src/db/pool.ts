@@ -15,7 +15,10 @@ const pool = mysql.createPool({
 export default pool;
 
 export async function query<T = unknown>(sql: string, params?: unknown[]): Promise<T[]> {
-  const [rows] = await pool.execute(sql, params as import('mysql2').ExecuteValues);
+  // pool.query (client-side escaping) instead of pool.execute: MySQL 8 rejects
+  // numeric LIMIT/OFFSET placeholders in prepared statements
+  // ("Incorrect arguments to mysqld_stmt_execute"); MariaDB accepts them.
+  const [rows] = await pool.query(sql, params as import('mysql2').ExecuteValues);
   return rows as T[];
 }
 

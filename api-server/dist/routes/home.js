@@ -23,7 +23,10 @@ router.get('/', async (_req, res, next) => {
             const items = await (0, pool_1.query)('SELECT * FROM classifieds WHERE section_id = ? AND is_active = 1 ORDER BY created_at DESC LIMIT 6', [section.id]);
             return { ...section, items };
         }));
+        // Admin-controlled home slider height (px) from site_settings.
+        const sliderHeightRow = await (0, pool_1.queryOne)("SELECT setting_value FROM site_settings WHERE setting_key = 'home_slider_height'").catch(() => null);
         res.json({
+            sliderHeight: Number(sliderHeightRow?.setting_value) || null,
             sliders: sliders.map((s) => ({
                 ...s,
                 imageUrl: (0, imageUrl_1.getImageUrl)(s.image, 'slides'),

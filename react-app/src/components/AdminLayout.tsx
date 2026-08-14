@@ -14,6 +14,7 @@ const NAV_ITEMS = [
   { label: 'Home Categories',      path: '/admin/home-categories',       icon: '⊞' },
   { label: 'Popular Categories',   path: '/admin/popular-categories',    icon: '★' },
   { label: 'Business Categories',  path: '/admin/business-categories',   icon: '◈' },
+  { label: 'Category Banners',     path: '/admin/category-banners',      icon: '🖼' },
   { label: 'Businesses',           path: '/admin/businesses',            icon: '⬡' },
   { label: 'Offers',               path: '/admin/offers',                icon: '◇' },
   { label: 'Classified Cats',      path: '/admin/classified-categories', icon: '≡' },

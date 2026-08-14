@@ -56,6 +56,8 @@ router.get('/:id', async (req, res, next) => {
         if (!offer)
             return res.status(404).json({ error: 'Not found' });
         const reviews = await (0, pool_1.query)('SELECT * FROM offer_reviews WHERE offer_id = ? ORDER BY created_at DESC', [Number(req.params.id)]);
+        const imgRows = await (0, pool_1.query)('SELECT image FROM offer_images WHERE offer_id=? ORDER BY sort_order, id', [Number(req.params.id)]).catch(() => []);
+        const images = imgRows.map((r) => (0, imageUrl_1.getImageUrl)(r.image, 'offers'));
         const avgRating = reviews.length > 0
             ? reviews.reduce((sum, r) => sum + Number(r.rating), 0) / reviews.length
             : Number(offer.rating);
@@ -67,6 +69,7 @@ router.get('/:id', async (req, res, next) => {
             },
             reviews,
             avgRating,
+            images,
         });
     }
     catch (err) {

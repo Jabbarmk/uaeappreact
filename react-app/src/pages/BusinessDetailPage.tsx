@@ -321,20 +321,28 @@ export default function BusinessDetailPage() {
   const avgRating = biz.rating > 0 ? Number(biz.rating) : 4.5;
 
   // Template 2 (storefront) data
-  const template = biz.template || 'template1';
+  const template = biz.template || 'template2';
   const isStore = Number(biz.is_online_store) === 1;
   const storeBuyUrl = biz.store_url || biz.website || '';
   const products: any[] = data.products || [];
-  const prodCats: string[] = ['All', ...Array.from(new Set(products.map((p) => p.category).filter(Boolean)))];
+  // Managed categories (name + image/icon) first, then any legacy names still on products.
+  const managedCats: any[] = data.productCategories || [];
+  const usedCatNames = new Set(products.map((p) => p.category).filter(Boolean));
+  const prodCats: string[] = ['All',
+    ...managedCats.filter((c) => usedCatNames.has(c.name)).map((c) => c.name),
+    ...Array.from(usedCatNames).filter((n) => !managedCats.some((c) => c.name === n)),
+  ];
   const filteredProducts = prodCat === 'All' ? products : products.filter((p) => p.category === prodCat);
-  const chipImg = (c: string) => products.find((p) => p.category === c && p.image)?.imageUrl || '';
+  const catMeta = (c: string) => managedCats.find((m) => m.name === c);
+  const chipImg = (c: string) =>
+    catMeta(c)?.imageUrl || products.find((p) => p.category === c && p.image)?.imageUrl || '';
   const showStore = template === 'template2' && products.length > 0;
 
   // Cover slider uses its own dedicated media (images + video), not the gallery.
   const coverMedia: any[] = data.coverMedia || [];
   const sliderImgs = coverMedia.length > 0
     ? coverMedia
-    : [{ type: 'image', src: biz.imageUrl, caption: biz.name }, ...GALLERY_FALLBACKS.slice(0, 3)];
+    : [{ type: /\.(mp4|webm|mov|m4v|ogv|ogg)(\?|$)/i.test(biz.imageUrl || '') ? 'video' : 'image', src: biz.imageUrl, caption: biz.name }, ...GALLERY_FALLBACKS.slice(0, 3)];
   const galleryItems = gallery.length > 0 ? gallery : GALLERY_FALLBACKS;
   const serviceSections: any[] = (data.serviceSections && data.serviceSections.length > 0)
     ? data.serviceSections
@@ -432,7 +440,11 @@ export default function BusinessDetailPage() {
                 {prodCats.map((c) => (
                   <button key={c} className={`store-chip${prodCat === c ? ' active' : ''}`} onClick={() => setProdCat(c)}>
                     <div className="store-chip-circle">
-                      {c !== 'All' && chipImg(c) ? <img src={chipImg(c)} alt="" /> : <i className="fas fa-shapes"></i>}
+                      {c !== 'All' && chipImg(c)
+                        ? <img src={chipImg(c)} alt="" />
+                        : c !== 'All' && catMeta(c)?.icon
+                          ? <span style={{ fontSize: 18 }}>{catMeta(c).icon}</span>
+                          : <i className="fas fa-shapes"></i>}
                     </div>
                     <span>{c}</span>
                   </button>
@@ -529,14 +541,18 @@ export default function BusinessDetailPage() {
           </button>
         </div>
 
-        <div className="bs-stats-row">
-          <div className="bs-stat"><div className="bs-stat-num">{avgRating.toFixed(1)}</div><div className="bs-stat-lbl">Rating</div></div>
-          <div className="bs-stat"><div className="bs-stat-num">{biz.established_year || new Date().getFullYear() - 5}</div><div className="bs-stat-lbl">Est. Year</div></div>
-          <div className="bs-stat"><div className="bs-stat-num">{biz.employees || '50+'}</div><div className="bs-stat-lbl">Team Size</div></div>
-          <div className="bs-stat"><div className="bs-stat-num">{revList.length}+</div><div className="bs-stat-lbl">Reviews</div></div>
-        </div>
+        {Number(biz.show_stats ?? 1) !== 0 && (
+          <>
+            <div className="bs-stats-row">
+              <div className="bs-stat"><div className="bs-stat-num">{avgRating.toFixed(1)}</div><div className="bs-stat-lbl">Rating</div></div>
+              <div className="bs-stat"><div className="bs-stat-num">{biz.established_year || new Date().getFullYear() - 5}</div><div className="bs-stat-lbl">Est. Year</div></div>
+              <div className="bs-stat"><div className="bs-stat-num">{biz.employees || '50+'}</div><div className="bs-stat-lbl">Team Size</div></div>
+              <div className="bs-stat"><div className="bs-stat-num">{revList.length}+</div><div className="bs-stat-lbl">Reviews</div></div>
+            </div>
 
-        <div className="bs-divider"></div>
+            <div className="bs-divider"></div>
+          </>
+        )}
 
         {serviceSections.map((sec: any) => {
           const items: any[] = sec.items || [];
@@ -583,23 +599,36 @@ export default function BusinessDetailPage() {
 
         <div className="bs-divider"></div>
 
-        <div className="bs-section">
-          <div className="bs-sh"><span className="bs-title">Clients &amp; Partners</span></div>
-          <div className="bs-clients-scroll">
-            {clientList.map((c: any, ci: number) => (
-              <div className="bs-client-item" key={ci}>
-                {c.logo ? (
-                  <img src={c.logoUrl || c.logo} alt={c.name} className="bs-client-logo" />
-                ) : (
-                  <div className="bs-client-avatar" style={{ background: CLIENT_GRADS[ci % CLIENT_GRADS.length] }}>{c.name[0].toUpperCase()}</div>
-                )}
-                <div className="bs-client-name">{c.name}</div>
+        {Number(biz.show_clients ?? 1) !== 0 && (
+          <>
+            <div className="bs-section">
+              <div className="bs-sh"><span className="bs-title">Clients &amp; Partners</span></div>
+              <div className="bs-clients-scroll">
+                {clientList.map((c: any, ci: number) => {
+                  const logoSize: number = data.clientLogoSize || 58;
+                  const sizeStyle = { width: logoSize, height: logoSize, fontSize: Math.round(logoSize * 0.34) };
+                  const inner = (
+                    <>
+                      {c.logo ? (
+                        <img src={c.logoUrl || c.logo} alt={c.name} className="bs-client-logo" style={sizeStyle} />
+                      ) : (
+                        <div className="bs-client-avatar" style={{ ...sizeStyle, background: CLIENT_GRADS[ci % CLIENT_GRADS.length] }}>{c.name[0].toUpperCase()}</div>
+                      )}
+                      <div className="bs-client-name">{c.name}</div>
+                    </>
+                  );
+                  return c.website ? (
+                    <a href={c.website} target="_blank" rel="noreferrer" className="bs-client-item" key={ci} style={{ width: logoSize + 18 }}>{inner}</a>
+                  ) : (
+                    <div className="bs-client-item" key={ci} style={{ width: logoSize + 18 }}>{inner}</div>
+                  );
+                })}
               </div>
-            ))}
-          </div>
-        </div>
+            </div>
 
-        <div className="bs-divider"></div>
+            <div className="bs-divider"></div>
+          </>
+        )}
 
         <div className="bs-section">
           <div className="bs-sh"><span className="bs-title">What Clients Say</span></div>
@@ -675,18 +704,26 @@ export default function BusinessDetailPage() {
               <i className="fas fa-chevron-right" style={{ marginLeft: 'auto', color: 'var(--text-light)', fontSize: 12 }}></i>
             </a>
           )}
-          {biz.map_embed ? (
-            <iframe src={biz.map_embed} className="bs-map-embed" loading="lazy" title="Map"></iframe>
-          ) : (
-            <a href={`https://maps.google.com/?q=${encodeURIComponent(biz.address || biz.name + ' UAE')}`} target="_blank" rel="noreferrer" className="bs-map-btn">
-              <div className="map-ic-box"><i className="fas fa-map-marker-alt"></i></div>
-              <div>
-                <div style={{ fontSize: 11, color: 'var(--text-light)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '.4px' }}>Location</div>
-                <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--dark)', marginTop: 2 }}>{biz.address || 'Open in Google Maps'}</div>
-              </div>
-              <i className="fas fa-external-link-alt" style={{ marginLeft: 'auto', color: 'var(--text-light)', fontSize: 12 }}></i>
-            </a>
-          )}
+          {(() => {
+            // Share links can't render inside an iframe — build an embeddable URL from coordinates instead.
+            const isEmbeddable = biz.map_embed && /\/maps\/embed|output=embed/i.test(biz.map_embed);
+            const mapSrc = isEmbeddable ? biz.map_embed
+              : (biz.latitude != null && biz.longitude != null)
+                ? `https://www.google.com/maps?q=${biz.latitude},${biz.longitude}&output=embed`
+                : null;
+            return mapSrc ? (
+              <iframe src={mapSrc} className="bs-map-embed" loading="lazy" title="Map"></iframe>
+            ) : (
+              <a href={`https://maps.google.com/?q=${encodeURIComponent(biz.address || biz.name + ' UAE')}`} target="_blank" rel="noreferrer" className="bs-map-btn">
+                <div className="map-ic-box"><i className="fas fa-map-marker-alt"></i></div>
+                <div>
+                  <div style={{ fontSize: 11, color: 'var(--text-light)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '.4px' }}>Location</div>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--dark)', marginTop: 2 }}>{biz.address || 'Open in Google Maps'}</div>
+                </div>
+                <i className="fas fa-external-link-alt" style={{ marginLeft: 'auto', color: 'var(--text-light)', fontSize: 12 }}></i>
+              </a>
+            );
+          })()}
         </div>
       </div>
     </div>

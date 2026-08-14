@@ -5,7 +5,7 @@ import api from '../../api';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
-type FieldType = 'text' | 'textarea' | 'number' | 'select' | 'toggle' | 'date' | 'image' | 'gallery' | 'cover' | 'services' | 'products' | 'business-search' | 'main-category-select' | 'category-search' | 'time-picker' | 'user-search' | 'event-category-select' | 'resource-select' | 'university-select';
+type FieldType = 'text' | 'textarea' | 'number' | 'select' | 'toggle' | 'date' | 'image' | 'video' | 'media' | 'map-link' | 'clients' | 'gallery' | 'cover' | 'services' | 'products' | 'business-search' | 'main-category-select' | 'category-search' | 'time-picker' | 'user-search' | 'event-category-select' | 'resource-select' | 'university-select';
 
 interface FieldConfig {
   key: string;
@@ -18,6 +18,7 @@ interface FieldConfig {
   syncTo?: string;
   syncTransform?: 'strip-plus';
   syncNameTo?: string;
+  defaultOn?: boolean;                            // for 'toggle': new records start ON
   syncIconTo?: string;
   optionsResource?: string;                       // for 'resource-select': the admin CRUD resource to load options from
 }
@@ -82,23 +83,37 @@ const RESOURCE_CONFIGS: Record<string, ResourceConfig> = {
     { key: 'sort_order', label: 'Sort Order', type: 'number' },
     { key: 'is_active',  label: 'Active',     type: 'toggle' },
   ]},
-  businesses: { resource: 'businesses', label: 'Businesses', displayCol: 'name', listCols: ['image', 'name', 'category_name', 'emirate', 'phone', 'rating'], searchable: true, filters: [{ key: 'category_id', label: 'Category', optionsFrom: 'business-categories' }, { key: 'emirate', label: 'Emirate', optionsFrom: 'emirates' }], fields: [
+  'category-banners': { resource: 'category-banners', label: 'Category Banners', displayCol: 'title', listCols: ['image', 'category_name', 'title', 'sort_order'], filters: [{ key: 'category_id', label: 'Category', optionsFrom: 'business-categories' }], fields: [
+    { key: 'category_id', label: 'Business Category (banner shows on this category\'s listing page)', type: 'category-search' },
+    { key: 'image',       label: 'Banner Image (width fills the page; height is auto — use any size)', type: 'image', folder: 'banners' },
+    { key: 'video',       label: 'Banner Video (optional — plays instead of the image)', type: 'video', folder: 'banners' },
+    { key: 'business_id', label: 'Link to Business (optional — tapping the banner opens this business)', type: 'business-search' },
+    { key: 'title',       label: 'Overlay Title (optional)',    type: 'text' },
+    { key: 'subtitle',    label: 'Overlay Subtitle (optional)', type: 'text' },
+    { key: 'link',        label: 'Tap Link (optional — used only if no business is linked)', type: 'text', placeholder: '/offers or https://' },
+    { key: 'sort_order',  label: 'Sort Order',                  type: 'number' },
+    { key: 'is_active',   label: 'Active',                      type: 'toggle' },
+  ]},
+  businesses: { resource: 'businesses', label: 'Businesses', displayCol: 'name', listCols: ['image', 'name', 'category_name', 'emirate', 'phone', 'rating', 'sort_order'], searchable: true, filters: [{ key: 'category_id', label: 'Category', optionsFrom: 'business-categories' }, { key: 'emirate', label: 'Emirate', optionsFrom: 'emirates' }], fields: [
     { key: 'user_id',          label: 'Assigned User',    type: 'user-search' },
     { key: 'name',             label: 'Name',             type: 'text',            required: true },
     { key: 'category_id',      label: 'Category',         type: 'category-search' },
     { key: 'tagline',          label: 'Tagline',          type: 'text' },
     { key: 'description',      label: 'Description',      type: 'textarea' },
     { key: 'about',            label: 'About',            type: 'textarea' },
-    { key: 'image',            label: 'Cover Image (fallback)', type: 'image',       folder: 'businesses' },
+    { key: 'image',            label: 'Cover Image / Video (fallback)', type: 'media', folder: 'businesses' },
     { key: 'logo',             label: 'Logo',             type: 'image',           folder: 'businesses' },
     { key: 'cover',            label: 'Cover Slider (multiple images + video — shown at top of the detail page)', type: 'cover' },
     { key: 'gallery',          label: 'Gallery Images (multiple — shown in the business photo gallery)', type: 'gallery' },
     { key: 'services',         label: 'Services Sections (named sections with items — e.g. "Services & Solutions")', type: 'services' },
-    { key: 'template',         label: 'Detail Page Template',  type: 'select', options: ['template1', 'template2'] },
     { key: 'store_url',        label: 'Online Store URL (Buy Online link)', type: 'text', placeholder: 'https://' },
-    { key: 'products',         label: 'Products (Template 2 storefront — image, name, price)', type: 'products' },
+    { key: 'products',         label: 'Products (storefront — image, name, price, category)', type: 'products' },
+    { key: 'clients',          label: 'Clients & Partners (logos shown on the detail page)', type: 'clients' },
     { key: 'emirate',          label: 'Emirate',          type: 'select',          options: EMIRATES },
     { key: 'address',          label: 'Address',          type: 'text' },
+    { key: 'map_embed',        label: 'Location Map Link (paste a Google Maps embed or share link — Latitude & Longitude below fill in automatically)', type: 'map-link', placeholder: 'https://www.google.com/maps/embed?pb=… or …/@25.2048,55.2708,17z' },
+    { key: 'latitude',         label: 'Latitude (for Near Me distance)',  type: 'number', placeholder: '25.2048493' },
+    { key: 'longitude',        label: 'Longitude (for Near Me distance)', type: 'number', placeholder: '55.2707828' },
     { key: 'phone',            label: 'Phone',            type: 'text',            placeholder: '+971559164496', syncTo: 'whatsapp', syncTransform: 'strip-plus' },
     { key: 'whatsapp',         label: 'WhatsApp',         type: 'text',            placeholder: '971559164496' },
     { key: 'email',            label: 'Email',            type: 'text' },
@@ -106,7 +121,12 @@ const RESOURCE_CONFIGS: Record<string, ResourceConfig> = {
     { key: 'opening_time',     label: 'Opening Time',     type: 'time-picker' },
     { key: 'closing_time',     label: 'Closing Time',     type: 'time-picker' },
     { key: 'rating',           label: 'Rating (0–5)',     type: 'number' },
+    { key: 'featured',         label: 'Featured (big card on listing; off = compact row)', type: 'toggle' },
+    { key: 'sort_order',       label: 'Sort Order',       type: 'number' },
     { key: 'established_year', label: 'Est. Year',        type: 'number' },
+    { key: 'employees',        label: 'Team Size (shown in the stats row, e.g. 50+)', type: 'text', placeholder: '50+' },
+    { key: 'show_stats',       label: 'Show Stats Row (Rating / Est. Year / Team Size / Reviews on the detail page)', type: 'toggle', defaultOn: true },
+    { key: 'show_clients',     label: 'Show Clients & Partners section on the detail page', type: 'toggle', defaultOn: true },
     { key: 'is_online_store',  label: 'Online Store (show product prices + Buy Online)', type: 'toggle' },
     { key: 'is_active',        label: 'Active',           type: 'toggle' },
   ]},
@@ -115,7 +135,8 @@ const RESOURCE_CONFIGS: Record<string, ResourceConfig> = {
     { key: 'title',            label: 'Title',            type: 'text',   required: true },
     { key: 'description',      label: 'Description',      type: 'textarea' },
     { key: 'details',          label: 'Details',          type: 'textarea' },
-    { key: 'image',            label: 'Image',            type: 'image', folder: 'offers' },
+    { key: 'image',            label: 'Cover Image (fallback / thumbnail)', type: 'image', folder: 'offers' },
+    { key: 'gallery',          label: 'Gallery Images (multiple — shown on the offer detail page)', type: 'gallery' },
     { key: 'price',            label: 'Price',            type: 'number' },
     { key: 'original_price',   label: 'Original Price',   type: 'number' },
     { key: 'currency',         label: 'Currency',         type: 'text' },
@@ -225,7 +246,8 @@ const RESOURCE_CONFIGS: Record<string, ResourceConfig> = {
     { key: 'category_id',        label: 'Category',        type: 'event-category-select' },
     { key: 'title',              label: 'Event Title',     type: 'text', required: true },
     { key: 'description',        label: 'Description',     type: 'textarea' },
-    { key: 'poster',             label: 'Event Poster',    type: 'image', folder: 'events' },
+    { key: 'poster',             label: 'Event Poster (cover / thumbnail)', type: 'image', folder: 'events' },
+    { key: 'gallery',            label: 'Gallery Images (multiple — shown on the event detail page)', type: 'gallery' },
     { key: 'location',           label: 'Location',        type: 'text', placeholder: 'Downtown Dubai' },
     { key: 'venue',              label: 'Venue',           type: 'text', placeholder: 'Dubai World Trade Centre' },
     { key: 'emirate',            label: 'Emirate',         type: 'select', options: EMIRATES },
@@ -370,6 +392,232 @@ function ImageUploader({ folder, currentValue, onChange }: { folder: string; cur
       {uploading && <div style={{ fontSize: 11, color: '#616161', marginTop: 3 }}>Uploading…</div>}
       {err && <div style={{ fontSize: 11, color: '#C42B1C', marginTop: 3 }}>{err}</div>}
       {currentValue && <div style={{ fontSize: 10, color: '#999', marginTop: 2 }}>{currentValue}</div>}
+    </div>
+  );
+}
+
+const isVideoFile = (v: string) => /\.(mp4|webm|mov|m4v|ogv|ogg)(\?|$)/i.test(v);
+
+// Extract coordinates from a Google Maps embed/share link (or plain "lat, lng").
+function parseLatLng(input: string): { lat: number; lng: number } | null {
+  if (!input) return null;
+  const pb = input.match(/!2d(-?\d+(?:\.\d+)?)!3d(-?\d+(?:\.\d+)?)/);          // embed pb: !2d<lng>!3d<lat>
+  if (pb) return { lat: Number(pb[2]), lng: Number(pb[1]) };
+  const at = input.match(/@(-?\d+(?:\.\d+)?),(-?\d+(?:\.\d+)?)/);              // share: @lat,lng
+  if (at) return { lat: Number(at[1]), lng: Number(at[2]) };
+  const q = input.match(/[?&](?:q|ll|query)=(-?\d+(?:\.\d+)?)(?:%2C|,)\s*(-?\d+(?:\.\d+)?)/i)
+    || input.match(/^\s*(-?\d+(?:\.\d+)?)\s*,\s*(-?\d+(?:\.\d+)?)\s*$/);       // ?q=lat,lng or bare "lat, lng"
+  if (q) return { lat: Number(q[1]), lng: Number(q[2]) };
+  return null;
+}
+
+// ── MediaUploader (single image OR video; remove option) ────────────────────────
+
+function MediaUploader({ folder, currentValue, onChange }: { folder: string; currentValue: string; onChange: (f: string) => void }) {
+  const [uploading, setUploading] = useState(false);
+  const [err, setErr] = useState('');
+
+  const handleFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploading(true); setErr('');
+    try {
+      const fd = new FormData();
+      fd.append('file', file);
+      const res = await api.post(`/admin/upload-video/${folder}`, fd, { headers: { 'Content-Type': 'multipart/form-data' } });
+      onChange(res.data.filename as string);
+    } catch { setErr('Upload failed (max 60MB, image or video)'); }
+    finally { setUploading(false); }
+  };
+
+  const src = currentValue ? (currentValue.startsWith('http') ? currentValue : `/assets/uploads/${folder}/${currentValue}`) : '';
+
+  return (
+    <div>
+      {currentValue && (
+        isVideoFile(currentValue)
+          ? <video src={src} muted controls preload="metadata"
+              style={{ width: 160, height: 90, objectFit: 'cover', border: '1px solid #E0E0E0', borderRadius: 3, display: 'block', marginBottom: 6, background: '#000' }} />
+          : <img src={src} alt="preview"
+              style={{ width: 80, height: 60, objectFit: 'cover', border: '1px solid #E0E0E0', borderRadius: 3, display: 'block', marginBottom: 6 }} />
+      )}
+      <input type="file" accept="image/*,video/*" onChange={handleFile} style={{ fontSize: 12 }} />
+      {uploading && <div style={{ fontSize: 11, color: '#616161', marginTop: 3 }}>Uploading…</div>}
+      {err && <div style={{ fontSize: 11, color: '#C42B1C', marginTop: 3 }}>{err}</div>}
+      {currentValue && (
+        <div style={{ fontSize: 10, color: '#999', marginTop: 2 }}>
+          {currentValue}
+          <button type="button" onClick={() => onChange('')} style={{ marginLeft: 8, border: 'none', background: 'none', color: '#C42B1C', cursor: 'pointer', fontSize: 10 }}>✕ Remove</button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── VideoUploader (single video file; uses the larger upload-video endpoint) ────
+
+function VideoUploader({ folder, currentValue, onChange }: { folder: string; currentValue: string; onChange: (f: string) => void }) {
+  const [uploading, setUploading] = useState(false);
+  const [err, setErr] = useState('');
+
+  const handleFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploading(true); setErr('');
+    try {
+      const fd = new FormData();
+      fd.append('file', file);
+      const res = await api.post(`/admin/upload-video/${folder}`, fd, { headers: { 'Content-Type': 'multipart/form-data' } });
+      onChange(res.data.filename as string);
+    } catch { setErr('Upload failed (max 60MB, video files only)'); }
+    finally { setUploading(false); }
+  };
+
+  return (
+    <div>
+      {currentValue && (
+        <video src={currentValue.startsWith('http') ? currentValue : `/assets/uploads/${folder}/${currentValue}`}
+          muted controls preload="metadata"
+          style={{ width: 160, height: 90, objectFit: 'cover', border: '1px solid #E0E0E0', borderRadius: 3, display: 'block', marginBottom: 6, background: '#000' }} />
+      )}
+      <input type="file" accept="video/*" onChange={handleFile} style={{ fontSize: 12 }} />
+      {uploading && <div style={{ fontSize: 11, color: '#616161', marginTop: 3 }}>Uploading…</div>}
+      {err && <div style={{ fontSize: 11, color: '#C42B1C', marginTop: 3 }}>{err}</div>}
+      {currentValue && (
+        <div style={{ fontSize: 10, color: '#999', marginTop: 2 }}>
+          {currentValue}
+          <button type="button" onClick={() => onChange('')} style={{ marginLeft: 8, border: 'none', background: 'none', color: '#C42B1C', cursor: 'pointer', fontSize: 10 }}>✕ Remove</button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── ClientsManager (Clients & Partners: name, logo, website, ordering) ──────────
+
+function ClientsManager({ recordId }: { recordId: number | null }) {
+  const [rows, setRows] = useState<any[]>([]);
+  const [editing, setEditing] = useState<any | null>(null); // null = closed, {} = new, row = edit
+
+  const load = useCallback(() => {
+    if (recordId == null) return;
+    api.get(`/admin/businesses/${recordId}/clients`).then((r) => setRows(r.data.clients || [])).catch(() => {});
+  }, [recordId]);
+  useEffect(load, [load]);
+
+  if (recordId == null) {
+    return (
+      <div style={{ fontSize: 12, color: '#888', background: '#F9F9F9', border: '1px dashed #D0D0D0', borderRadius: 4, padding: '10px 12px' }}>
+        💡 Save this record first, then re-open it to add clients & partners.
+      </div>
+    );
+  }
+
+  const remove = async (cid: number) => {
+    if (!confirm('Remove this client?')) return;
+    await api.delete(`/admin/businesses/${recordId}/clients/${cid}`);
+    load();
+  };
+
+  return (
+    <div>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(110px, 1fr))', gap: 8, marginBottom: 8 }}>
+        {rows.map((c) => (
+          <div key={c.id} style={{ border: '1px solid #E0E0E0', borderRadius: 6, overflow: 'hidden', background: '#fff' }}>
+            {c.logo
+              ? <img src={c.logoUrl || c.logo} alt="" style={{ width: '100%', height: 56, objectFit: 'contain', display: 'block', background: '#FAFAFA', padding: 4, boxSizing: 'border-box' }} />
+              : <div style={{ height: 56, display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#F0EEFB', color: '#6C5CE7', fontWeight: 800, fontSize: 20 }}>{String(c.name)[0]?.toUpperCase()}</div>}
+            <div style={{ padding: '6px 8px' }}>
+              <div style={{ fontSize: 11, fontWeight: 700, color: '#333', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.name}</div>
+              <div style={{ fontSize: 10, color: '#999', marginTop: 1 }}>#{c.sort_order ?? 0}{c.website ? ' · 🔗' : ''}</div>
+              <div style={{ display: 'flex', gap: 6, marginTop: 5 }}>
+                <button type="button" onClick={() => setEditing(c)} style={{ flex: 1, fontSize: 10.5, padding: '3px 0', border: '1px solid #C8C8C8', background: '#fff', borderRadius: 3, cursor: 'pointer', color: '#333' }}>Edit</button>
+                <button type="button" onClick={() => remove(c.id)} style={{ fontSize: 10.5, padding: '3px 8px', border: '1px solid #E8B4B4', background: '#fff', borderRadius: 3, cursor: 'pointer', color: '#C42B1C' }}>✕</button>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+      {rows.length === 0 && <div style={{ fontSize: 12, color: '#999', marginBottom: 8 }}>No clients yet — the public page shows sample names until you add real ones.</div>}
+      <button type="button" onClick={() => setEditing({})}
+        style={{ fontSize: 12, fontWeight: 600, padding: '6px 14px', border: '1px solid #C8C8C8', background: '#fff', borderRadius: 4, cursor: 'pointer', color: '#0067C0' }}>
+        + Add Client
+      </button>
+      {editing !== null && (
+        <ClientForm recordId={recordId} client={editing.id ? editing : null}
+          onClose={() => setEditing(null)} onSaved={() => { setEditing(null); load(); }} />
+      )}
+    </div>
+  );
+}
+
+function ClientForm({ recordId, client, onClose, onSaved }: { recordId: number; client: any | null; onClose: () => void; onSaved: () => void }) {
+  const [name, setName] = useState(client?.name ?? '');
+  const [website, setWebsite] = useState(client?.website ?? '');
+  const [sortOrder, setSortOrder] = useState(String(client?.sort_order ?? 0));
+  const [logo, setLogo] = useState(client?.logo ?? '');
+  const [uploading, setUploading] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [err, setErr] = useState('');
+
+  const uploadLogo = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploading(true); setErr('');
+    try {
+      const fd = new FormData();
+      fd.append('file', file);
+      const res = await api.post('/admin/upload/businesses', fd, { headers: { 'Content-Type': 'multipart/form-data' } });
+      setLogo(res.data.filename as string);
+    } catch { setErr('Logo upload failed'); }
+    finally { setUploading(false); }
+  };
+
+  const save = async () => {
+    if (!name.trim()) { setErr('Name is required'); return; }
+    setSaving(true); setErr('');
+    try {
+      const payload = { name: name.trim(), website: website.trim(), logo, sort_order: Number(sortOrder) || 0 };
+      if (client) await api.put(`/admin/businesses/${recordId}/clients/${client.id}`, payload);
+      else await api.post(`/admin/businesses/${recordId}/clients`, payload);
+      onSaved();
+    } catch { setErr('Save failed'); setSaving(false); }
+  };
+
+  const preview = logo ? (String(logo).startsWith('http') ? logo : `/assets/uploads/businesses/${logo}`) : '';
+  const inp: React.CSSProperties = { width: '100%', padding: '7px 9px', border: '1px solid #C8C8C8', borderRadius: 4, fontSize: 13, fontFamily: 'inherit', boxSizing: 'border-box', color: '#1a1a1a' };
+
+  return (
+    <div style={{ marginTop: 10, border: '1px solid #B3D1F0', borderRadius: 6, background: '#F7FAFE', padding: 12 }}>
+      <div style={{ fontSize: 13, fontWeight: 700, color: '#1a1a1a', marginBottom: 10 }}>{client ? 'Edit Client' : 'New Client'}</div>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+        <div style={{ gridColumn: '1 / -1' }}>
+          <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: '#555', marginBottom: 3 }}>Name *</label>
+          <input value={name} onChange={(e) => setName(e.target.value)} style={inp} placeholder="Emaar Properties" />
+        </div>
+        <div style={{ gridColumn: '1 / -1' }}>
+          <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: '#555', marginBottom: 3 }}>Website (optional)</label>
+          <input value={website} onChange={(e) => setWebsite(e.target.value)} style={inp} placeholder="https://" />
+        </div>
+        <div>
+          <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: '#555', marginBottom: 3 }}>Sort Order</label>
+          <input type="number" value={sortOrder} onChange={(e) => setSortOrder(e.target.value)} style={inp} />
+        </div>
+        <div>
+          <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: '#555', marginBottom: 3 }}>Logo</label>
+          {preview && <img src={preview} alt="" style={{ width: 46, height: 46, objectFit: 'contain', border: '1px solid #E0E0E0', borderRadius: 4, background: '#fff', display: 'block', marginBottom: 4 }} />}
+          <input type="file" accept="image/*" onChange={uploadLogo} style={{ fontSize: 11 }} />
+          {uploading && <div style={{ fontSize: 10.5, color: '#616161' }}>Uploading…</div>}
+        </div>
+      </div>
+      {err && <div style={{ fontSize: 11.5, color: '#C42B1C', marginTop: 8 }}>{err}</div>}
+      <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
+        <button type="button" onClick={save} disabled={saving || uploading}
+          style={{ padding: '6px 18px', background: saving ? '#7CA3CC' : '#0067C0', color: '#fff', border: 'none', borderRadius: 4, fontSize: 12.5, fontWeight: 600, cursor: 'pointer' }}>
+          {saving ? 'Saving…' : 'Save Client'}
+        </button>
+        <button type="button" onClick={onClose} style={{ padding: '6px 14px', background: '#fff', border: '1px solid #C8C8C8', borderRadius: 4, fontSize: 12.5, cursor: 'pointer', color: '#333' }}>Cancel</button>
+      </div>
     </div>
   );
 }
@@ -662,6 +910,7 @@ function ProductsManager({ recordId }: { recordId: number | null }) {
 
   return (
     <div>
+      <ProductCategoriesManager recordId={recordId} />
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 10 }}>
         {products.map((p) => (
           <div key={p.id} style={{ width: 128, border: '1px solid #E8E8E8', borderRadius: 8, overflow: 'hidden', background: '#fff' }}>
@@ -688,8 +937,122 @@ function ProductsManager({ recordId }: { recordId: number | null }) {
   );
 }
 
+// ── ProductCategoriesManager (shop filter chips: name + image/icon, editable) ───
+
+function ProductCategoriesManager({ recordId }: { recordId: number }) {
+  const [cats, setCats] = useState<any[]>([]);
+  const [editing, setEditing] = useState<any | 'new' | null>(null);
+
+  const load = useCallback(() => {
+    api.get(`/admin/businesses/${recordId}/product-categories`).then((r) => setCats(r.data.categories || [])).catch(() => {});
+  }, [recordId]);
+  useEffect(load, [load]);
+
+  const remove = async (cid: number) => {
+    if (!confirm('Delete this category? Its products stay but lose the category.')) return;
+    await api.delete(`/admin/businesses/${recordId}/product-categories/${cid}`);
+    load();
+  };
+
+  return (
+    <div style={{ marginBottom: 12, padding: '10px 12px', background: '#F8F9FC', border: '1px solid #E8EAF2', borderRadius: 6 }}>
+      <div style={{ fontSize: 11.5, fontWeight: 700, color: '#555', marginBottom: 8 }}>PRODUCT CATEGORIES (shop filter chips)</div>
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+        {cats.map((c) => (
+          <div key={c.id} style={{ display: 'flex', alignItems: 'center', gap: 6, background: '#fff', border: '1px solid #DDD', borderRadius: 999, padding: '3px 8px 3px 4px' }}>
+            {c.image
+              ? <img src={c.imageUrl || c.image} alt="" style={{ width: 22, height: 22, borderRadius: '50%', objectFit: 'cover' }} />
+              : <span style={{ width: 22, height: 22, borderRadius: '50%', background: '#F0EEFB', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: 12 }}>{c.icon || '🏷️'}</span>}
+            <span style={{ fontSize: 12, fontWeight: 600, color: '#333' }}>{c.name}</span>
+            <button type="button" onClick={() => setEditing(c)} title="Edit" style={{ border: 'none', background: 'none', cursor: 'pointer', color: '#0067C0', fontSize: 11, padding: '0 2px' }}>✎</button>
+            <button type="button" onClick={() => remove(c.id)} title="Delete" style={{ border: 'none', background: 'none', cursor: 'pointer', color: '#C42B1C', fontSize: 11, padding: '0 2px' }}>✕</button>
+          </div>
+        ))}
+        <button type="button" onClick={() => setEditing('new')}
+          style={{ fontSize: 12, fontWeight: 600, padding: '4px 12px', border: '1px dashed #BBB', background: '#fff', borderRadius: 999, cursor: 'pointer', color: ACCENT }}>
+          + Category
+        </button>
+      </div>
+      {editing && (
+        <ProductCategoryForm recordId={recordId} cat={editing === 'new' ? null : editing}
+          onClose={() => setEditing(null)} onSaved={() => { setEditing(null); load(); }} />
+      )}
+    </div>
+  );
+}
+
+function ProductCategoryForm({ recordId, cat, onClose, onSaved }: { recordId: number; cat: any | null; onClose: () => void; onSaved: () => void }) {
+  const [name, setName] = useState(cat?.name ?? '');
+  const [icon, setIcon] = useState(cat?.icon ?? '');
+  const [image, setImage] = useState(cat?.image ?? '');
+  const [sortOrder, setSortOrder] = useState(String(cat?.sort_order ?? 0));
+  const [uploading, setUploading] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [err, setErr] = useState('');
+
+  const uploadImg = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]; if (!file) return;
+    setUploading(true); setErr('');
+    try {
+      const fd = new FormData(); fd.append('file', file);
+      const res = await api.post('/admin/upload/businesses', fd, { headers: { 'Content-Type': 'multipart/form-data' } });
+      setImage(res.data.filename as string);
+    } catch { setErr('Upload failed'); }
+    finally { setUploading(false); }
+  };
+
+  const save = async () => {
+    if (!name.trim()) { setErr('Name is required'); return; }
+    setSaving(true); setErr('');
+    try {
+      const payload = { name: name.trim(), icon: icon.trim(), image, sort_order: Number(sortOrder) || 0 };
+      if (cat) await api.put(`/admin/businesses/${recordId}/product-categories/${cat.id}`, payload);
+      else await api.post(`/admin/businesses/${recordId}/product-categories`, payload);
+      onSaved();
+    } catch { setErr('Save failed'); setSaving(false); }
+  };
+
+  const preview = image ? (String(image).startsWith('http') ? image : `/assets/uploads/businesses/${image}`) : '';
+
+  return (
+    <div style={{ marginTop: 10, border: '1px solid #B3D1F0', borderRadius: 6, background: '#F7FAFE', padding: 12 }}>
+      <div style={{ fontSize: 13, fontWeight: 700, color: '#1a1a1a', marginBottom: 10 }}>{cat ? `Edit Category — ${cat.name}` : 'New Category'}</div>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 90px 90px', gap: 10 }}>
+        <div>
+          <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: '#555', marginBottom: 3 }}>Name * {cat ? '(renaming updates its products too)' : ''}</label>
+          <input value={name} onChange={(e) => setName(e.target.value)} style={inputStyle} placeholder="Apparel" />
+        </div>
+        <div>
+          <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: '#555', marginBottom: 3 }}>Icon (emoji)</label>
+          <input value={icon} onChange={(e) => setIcon(e.target.value)} style={inputStyle} placeholder="👗" />
+        </div>
+        <div>
+          <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: '#555', marginBottom: 3 }}>Sort Order</label>
+          <input type="number" value={sortOrder} onChange={(e) => setSortOrder(e.target.value)} style={inputStyle} />
+        </div>
+      </div>
+      <div style={{ marginTop: 8, display: 'flex', alignItems: 'center', gap: 10 }}>
+        {preview && <img src={preview} alt="" style={{ width: 36, height: 36, borderRadius: '50%', objectFit: 'cover', border: '1px solid #E0E0E0' }} />}
+        <input type="file" accept="image/*" onChange={uploadImg} style={{ fontSize: 11 }} />
+        {uploading && <span style={{ fontSize: 10.5, color: '#616161' }}>Uploading…</span>}
+        {image && <button type="button" onClick={() => setImage('')} style={{ fontSize: 11, color: '#C42B1C', background: 'none', border: 'none', cursor: 'pointer' }}>remove image</button>}
+      </div>
+      {err && <div style={{ fontSize: 11.5, color: '#C42B1C', marginTop: 8 }}>{err}</div>}
+      <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
+        <button type="button" onClick={save} disabled={saving || uploading}
+          style={{ padding: '6px 18px', background: saving ? '#7CA3CC' : '#0067C0', color: '#fff', border: 'none', borderRadius: 4, fontSize: 12.5, fontWeight: 600, cursor: 'pointer' }}>
+          {saving ? 'Saving…' : 'Save Category'}
+        </button>
+        <button type="button" onClick={onClose} style={{ padding: '6px 14px', background: '#fff', border: '1px solid #C8C8C8', borderRadius: 4, fontSize: 12.5, cursor: 'pointer', color: '#333' }}>Cancel</button>
+      </div>
+    </div>
+  );
+}
+
 function ProductForm({ recordId, product, onClose, onSaved }: { recordId: number; product: any | null; onClose: () => void; onSaved: () => void }) {
   const [category, setCategory] = useState(product?.category || '');
+  const [cats, setCats] = useState<any[]>([]);
+  const [newCat, setNewCat] = useState(false);
   const [name, setName] = useState(product?.name || '');
   const [price, setPrice] = useState(product?.price != null ? String(product.price) : '');
   const [originalPrice, setOriginalPrice] = useState(product?.original_price != null ? String(product.original_price) : '');
@@ -698,6 +1061,17 @@ function ProductForm({ recordId, product, onClose, onSaved }: { recordId: number
   const [image, setImage] = useState(product?.image || '');
   const [uploading, setUploading] = useState(false);
   const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    api.get(`/admin/businesses/${recordId}/product-categories`)
+      .then((r) => {
+        const list = r.data.categories || [];
+        setCats(list);
+        // Editing a product whose category isn't managed yet → treat as free text.
+        if (product?.category && !list.some((c: any) => c.name === product.category)) setNewCat(true);
+      })
+      .catch(() => {});
+  }, [recordId, product]);
 
   const uploadImg = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]; if (!file) return;
@@ -711,8 +1085,13 @@ function ProductForm({ recordId, product, onClose, onSaved }: { recordId: number
 
   const save = async () => {
     setSaving(true);
-    const payload = { category, name, price, original_price: originalPrice, currency, description, image };
+    const cat = category.trim();
+    const payload = { category: cat, name, price, original_price: originalPrice, currency, description, image };
     try {
+      // A category typed in rather than picked gets created so it appears in future dropdowns.
+      if (cat && !cats.some((c) => c.name === cat)) {
+        await api.post(`/admin/businesses/${recordId}/product-categories`, { name: cat }).catch(() => {});
+      }
       if (product) await api.put(`/admin/businesses/${recordId}/products/${product.id}`, payload);
       else await api.post(`/admin/businesses/${recordId}/products`, payload);
       onSaved();
@@ -734,7 +1113,25 @@ function ProductForm({ recordId, product, onClose, onSaved }: { recordId: number
           {image && <button type="button" onClick={() => setImage('')} style={{ fontSize: 11, color: '#C42B1C', background: 'none', border: 'none', cursor: 'pointer' }}>remove</button>}
         </div>
         {lbl('Category (becomes a filter chip — e.g. "Apparel")')}
-        <input value={category} onChange={(e) => setCategory(e.target.value)} style={inputStyle} />
+        {!newCat ? (
+          <select value={category}
+            onChange={(e) => {
+              if (e.target.value === '__new__') { setNewCat(true); setCategory(''); }
+              else setCategory(e.target.value);
+            }} style={inputStyle}>
+            <option value="">— No category —</option>
+            {cats.map((c) => <option key={c.id} value={c.name}>{c.icon ? `${c.icon} ` : ''}{c.name}</option>)}
+            <option value="__new__">＋ New category…</option>
+          </select>
+        ) : (
+          <div style={{ display: 'flex', gap: 8 }}>
+            <input value={category} onChange={(e) => setCategory(e.target.value)} style={inputStyle} placeholder="Type new category name" autoFocus />
+            <button type="button" onClick={() => { setNewCat(false); setCategory(''); }}
+              style={{ fontSize: 12, padding: '0 10px', border: '1px solid #C8C8C8', background: '#fff', borderRadius: 4, cursor: 'pointer', color: '#555', whiteSpace: 'nowrap' }}>
+              pick existing
+            </button>
+          </div>
+        )}
         {lbl('Name')}
         <input value={name} onChange={(e) => setName(e.target.value)} style={inputStyle} />
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 80px', gap: 10 }}>
@@ -1135,7 +1532,7 @@ function CrudDialog({ config, row, onClose, onSaved }: {
         const v = row[f.key];
         init[f.key] = f.type === 'toggle' ? (v ? '1' : '0') : (v === null || v === undefined ? '' : String(v));
       } else {
-        init[f.key] = f.type === 'toggle' ? '0' : '';
+        init[f.key] = f.type === 'toggle' ? (f.defaultOn ? '1' : '0') : '';
       }
     }
     return init;
@@ -1161,7 +1558,7 @@ function CrudDialog({ config, row, onClose, onSaved }: {
       const payload: Record<string, unknown> = {};
       for (const f of config.fields) {
         const v = form[f.key];
-        if (f.type === 'gallery' || f.type === 'cover' || f.type === 'services' || f.type === 'products') continue;  // not table columns — managed via their own endpoints
+        if (f.type === 'gallery' || f.type === 'cover' || f.type === 'services' || f.type === 'products' || f.type === 'clients') continue;  // not table columns — managed via their own endpoints
         if (f.type === 'toggle') payload[f.key] = v === '1' ? 1 : 0;
         else if (f.type === 'number' || f.type === 'category-search' || f.type === 'business-search' || f.type === 'user-search' || f.type === 'event-category-select' || f.type === 'resource-select' || f.type === 'university-select') payload[f.key] = v === '' ? null : Number(v);
         else payload[f.key] = v;
@@ -1238,6 +1635,31 @@ function CrudDialog({ config, row, onClose, onSaved }: {
                 {f.type === 'image' && f.folder && (
                   <ImageUploader folder={f.folder} currentValue={form[f.key] ?? ''} onChange={(fn) => set(f.key, fn)} />
                 )}
+                {f.type === 'video' && f.folder && (
+                  <VideoUploader folder={f.folder} currentValue={form[f.key] ?? ''} onChange={(fn) => set(f.key, fn)} />
+                )}
+                {f.type === 'media' && f.folder && (
+                  <MediaUploader folder={f.folder} currentValue={form[f.key] ?? ''} onChange={(fn) => set(f.key, fn)} />
+                )}
+                {f.type === 'map-link' && (
+                  <div>
+                    <input type="text" value={form[f.key] ?? ''} placeholder={f.placeholder} style={inputStyle}
+                      onChange={(e) => {
+                        let v = e.target.value;
+                        const iframeSrc = v.match(/<iframe[^>]*src=["']([^"']+)["']/i);
+                        if (iframeSrc) v = iframeSrc[1]; // pasted full <iframe> code → keep just the URL
+                        set(f.key, v);
+                        const c = parseLatLng(v);
+                        if (c) { set('latitude', String(c.lat)); set('longitude', String(c.lng)); }
+                      }} />
+                    {(form[f.key] ?? '') !== '' && (() => {
+                      const c = parseLatLng(form[f.key] ?? '');
+                      return c
+                        ? <div style={{ fontSize: 11, color: '#107C10', marginTop: 3 }}>✓ Coordinates detected: {c.lat}, {c.lng} — applied below</div>
+                        : <div style={{ fontSize: 11, color: '#C42B1C', marginTop: 3 }}>✕ No coordinates in this link. Use Google Maps → Share → Embed a map, or a link containing @lat,lng</div>;
+                    })()}
+                  </div>
+                )}
                 {f.type === 'gallery' && (
                   <GalleryUploader resource={config.resource} recordId={isEdit && row ? Number(row.id) : null} />
                 )}
@@ -1249,6 +1671,9 @@ function CrudDialog({ config, row, onClose, onSaved }: {
                 )}
                 {f.type === 'products' && (
                   <ProductsManager recordId={isEdit && row ? Number(row.id) : null} />
+                )}
+                {f.type === 'clients' && (
+                  <ClientsManager recordId={isEdit && row ? Number(row.id) : null} />
                 )}
                 {f.type === 'business-search' && (
                   <BusinessSearchField
@@ -1424,7 +1849,7 @@ export default function AdminCrudPage() {
   const tdStyle: React.CSSProperties = { padding: '7px 12px', fontSize: 13, borderBottom: '1px solid #EBEBEB', verticalAlign: 'middle' };
 
   return (
-    <div style={{ fontFamily: FONT, maxWidth: 1100 }}>
+    <div style={{ fontFamily: FONT }}>
 
       {/* Command bar */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14, background: '#fff', border: '1px solid #E5E5E5', borderRadius: 4, padding: '8px 12px' }}>
@@ -1521,14 +1946,17 @@ export default function AdminCrudPage() {
                       {cols.map((col) => {
                         const fieldCfg = config.fields.find((f) => f.key === col);
                         const val = row[col];
-                        if (fieldCfg?.type === 'image' && fieldCfg.folder && val) {
+                        if ((fieldCfg?.type === 'image' || fieldCfg?.type === 'media') && fieldCfg.folder && val) {
                           const imgSrc = String(val).startsWith('http')
                             ? String(val)
                             : `/assets/uploads/${fieldCfg.folder}/${String(val)}`;
                           return (
                             <td key={col} style={tdStyle}>
-                              <img src={imgSrc} alt=""
-                                style={{ width: 40, height: 32, objectFit: 'cover', borderRadius: 3, border: '1px solid #E0E0E0' }} />
+                              {isVideoFile(String(val))
+                                ? <video src={imgSrc} muted preload="metadata"
+                                    style={{ width: 40, height: 32, objectFit: 'cover', borderRadius: 3, border: '1px solid #E0E0E0', background: '#000' }} />
+                                : <img src={imgSrc} alt=""
+                                    style={{ width: 40, height: 32, objectFit: 'cover', borderRadius: 3, border: '1px solid #E0E0E0' }} />}
                             </td>
                           );
                         }
@@ -1539,11 +1967,11 @@ export default function AdminCrudPage() {
                           </td>
                         );
                       })}
-                      <td style={{ ...tdStyle, textAlign: 'center' }}>
+                      <td style={{ ...tdStyle, textAlign: 'center', whiteSpace: 'nowrap' }}>
                         <span style={{ display: 'inline-block', width: 8, height: 8, borderRadius: '50%', background: isActive ? '#107C10' : '#C8C8C8', marginRight: 4 }} />
                         <span style={{ fontSize: 11, color: isActive ? '#107C10' : '#888' }}>{isActive ? 'Yes' : 'No'}</span>
                       </td>
-                      <td style={{ ...tdStyle, textAlign: 'right' }}>
+                      <td style={{ ...tdStyle, textAlign: 'right', whiteSpace: 'nowrap' }}>
                         <button onClick={() => setModalRow(row)} style={{ padding: '3px 10px', marginRight: 4, background: '#fff', border: '1px solid #C8C8C8', borderRadius: 2, fontSize: 12, cursor: 'pointer', color: '#333', fontFamily: 'inherit' }}
                           onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.background = '#EBF3FB'; (e.currentTarget as HTMLButtonElement).style.borderColor = ACCENT; }}
                           onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.background = '#fff'; (e.currentTarget as HTMLButtonElement).style.borderColor = '#C8C8C8'; }}>

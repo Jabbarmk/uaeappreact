@@ -71,7 +71,9 @@ router.get('/:id', async (req, res, next) => {
        WHERE e.id=? AND ${LIVE.join(' AND ')}`, [Number(req.params.id)]);
         if (!item)
             return res.status(404).json({ error: 'Not found' });
-        res.json({ item: mapEvent(item) });
+        const imgRows = await (0, pool_1.query)('SELECT image FROM event_images WHERE event_id=? ORDER BY sort_order, id', [item.id]).catch(() => []);
+        const images = imgRows.map((r) => (0, imageUrl_1.getImageUrl)(r.image, F));
+        res.json({ item: mapEvent(item), images });
     }
     catch (err) {
         next(err);

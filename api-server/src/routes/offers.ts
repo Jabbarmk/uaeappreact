@@ -70,6 +70,8 @@ router.get('/:id', async (req, res, next) => {
       'SELECT * FROM offer_reviews WHERE offer_id = ? ORDER BY created_at DESC',
       [Number(req.params.id)]
     );
+    const imgRows = await query<any>('SELECT image FROM offer_images WHERE offer_id=? ORDER BY sort_order, id', [Number(req.params.id)]).catch(() => []);
+    const images = (imgRows as any[]).map((r) => getImageUrl(r.image, 'offers'));
     const avgRating =
       reviews.length > 0
         ? reviews.reduce((sum: number, r: any) => sum + Number(r.rating), 0) / reviews.length
@@ -83,6 +85,7 @@ router.get('/:id', async (req, res, next) => {
       },
       reviews,
       avgRating,
+      images,
     });
   } catch (err) { next(err); }
 });

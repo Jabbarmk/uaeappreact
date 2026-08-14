@@ -1,0 +1,15 @@
+{
+  "name": "smartuae-android",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Android test shell for the SmartUAE app (loads the dev server over LAN)",
+  "scripts": {
+    "sync": "cap sync android",
+    "build:apk": "cd android && gradlew assembleDebug"
+  },
+  "dependencies": {
+    "@capacitor/android": "^8.5.0",
+    "@capacitor/cli": "^8.5.0",
+    "@capacitor/core": "^8.5.0"
+  }
+}

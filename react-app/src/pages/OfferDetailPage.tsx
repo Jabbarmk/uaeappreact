@@ -13,6 +13,7 @@ export default function OfferDetailPage() {
   if (!data?.offer) return <div style={{ padding: 40 }}>Not found. <Link to="/offers">Back</Link></div>;
 
   const { offer, reviews, avgRating } = data;
+  const images: string[] = data.images || [];
   const waLink = offer.business_whatsapp
     ? `https://wa.me/${offer.business_whatsapp.replace(/\D/g, '')}?text=${encodeURIComponent(`Hi, I want to order: ${offer.title} (${offer.currency} ${Math.round(offer.price)})`)}`
     : null;
@@ -95,6 +96,20 @@ export default function OfferDetailPage() {
           )}
         </div>
       </div>
+
+      {images.length > 0 && (
+        <div style={{ background: '#fff', margin: '0 16px 16px', borderRadius: 20, padding: '18px 16px', boxShadow: '0 2px 8px rgba(13,27,42,0.05)' }}>
+          <h3 style={{ fontSize: 15, fontWeight: 800, margin: '0 0 14px', color: '#1A1A2E' }}>Photos</h3>
+          <div style={{ display: 'flex', gap: 10, overflowX: 'auto', margin: '0 -16px', padding: '0 16px 4px', scrollbarWidth: 'none' } as any}>
+            {images.map((src, i) => (
+              <a key={i} href={src} target="_blank" rel="noreferrer" style={{ flex: '0 0 auto', display: 'block', borderRadius: 14, overflow: 'hidden', background: '#F7F8FB' }}>
+                <img src={src} alt={`${offer.title} photo ${i + 1}`} loading="lazy" decoding="async"
+                  style={{ height: 172, width: 'auto', maxWidth: 280, objectFit: 'cover', display: 'block' }} />
+              </a>
+            ))}
+          </div>
+        </div>
+      )}
 
       {offer.details && (
         <div style={{ background: '#fff', margin: '0 16px 16px', borderRadius: 20, padding: '18px 16px', boxShadow: '0 2px 8px rgba(13,27,42,0.05)' }}>

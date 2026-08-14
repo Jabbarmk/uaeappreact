@@ -42,6 +42,19 @@ router.post('/upload/:folder', requireAdmin, upload.single('file'), async (req, 
   } catch (err) { next(err); }
 });
 
+// Video upload (images also accepted) — larger 60MB limit.
+router.post('/upload-video/:folder', requireAdmin, uploadMedia.single('file'), async (req, res, next) => {
+  try {
+    if (!req.file) return res.status(400).json({ error: 'No file' });
+    const ext = path.extname(req.file.originalname).toLowerCase() || '.mp4';
+    const filename = `${Date.now()}${ext}`;
+    const destDir = path.resolve(process.env.UPLOAD_PATH || '../assets/uploads') + `/${req.params.folder}/`;
+    await fs.mkdir(destDir, { recursive: true });
+    await fs.rename(req.file.path, destDir + filename);
+    res.json({ filename });
+  } catch (err) { next(err); }
+});
+
 // ── Auth ──────────────────────────────────────────────────────────────────────
 
 router.post('/login', async (req: Request, res: Response, next: NextFunction) => {
@@ -602,6 +615,8 @@ router.use('/main-categories', crudRoutes('main_categories', undefined, { search
 router.use('/home-categories', crudRoutes('home_categories', undefined, { searchCols: ['name'] }));
 router.use('/popular-categories', crudRoutes('popular_categories', 'categories', { searchCols: ['name'] }));
 router.use('/business-categories', crudRoutes('business_categories', undefined, { searchCols: ['name'], filterCols: ['group_name', 'main_category_id'] }));
+// Category listing-page top banners (one per business category; shown on /businesses?cat=ID).
+router.use('/category-banners', crudRoutes('category_banners', 'banners', { filterCols: ['category_id'], listSelect: 'bc.name AS category_name', listJoin: 'LEFT JOIN business_categories bc ON bc.id = t.category_id' }));
 // ── Business gallery images (multi-image; shown in the detail-page gallery) ──────
 router.get('/businesses/:id/gallery', requireAdmin, async (req, res, next) => {
   try {
@@ -793,7 +808,149 @@ router.delete('/businesses/:id/products/:pid', requireAdmin, async (req, res, ne
   } catch (err) { next(err); }
 });
 
+// ── Business clients & partners ──────────────────────────────────────────────
+
+router.get('/businesses/:id/clients', requireAdmin, async (req, res, next) => {
+  try {
+    const rows = await query<any>('SELECT * FROM business_clients WHERE business_id=? ORDER BY sort_order, id', [req.params.id]);
+    res.json({ clients: rows.map((c) => ({ ...c, logoUrl: getImageUrl(c.logo, 'businesses') })) });
+  } catch (err) { next(err); }
+});
+
+router.post('/businesses/:id/clients', requireAdmin, async (req, res, next) => {
+  try {
+    const { name, logo, website, sort_order } = req.body as Record<string, unknown>;
+    if (!name) return res.status(400).json({ error: 'Name required' });
+    const r = await query<any>(
+      'INSERT INTO business_clients (business_id, name, logo, website, sort_order) VALUES (?, ?, ?, ?, ?)',
+      [req.params.id, name, logo || null, website || null, Number(sort_order) || 0]
+    ) as any;
+    res.json({ ok: true, id: r.insertId });
+  } catch (err) { next(err); }
+});
+
+router.put('/businesses/:id/clients/:cid', requireAdmin, async (req, res, next) => {
+  try {
+    const b = req.body as Record<string, unknown>;
+    const fields = ['name', 'logo', 'website', 'sort_order'].filter((f) => f in b);
+    if (fields.length) {
+      const sets = fields.map((f) => `\`${f}\` = ?`).join(',');
+      const vals = fields.map((f) => (b[f] === '' ? null : b[f]));
+      await query(`UPDATE business_clients SET ${sets} WHERE id=? AND business_id=?`, [...vals, req.params.cid, req.params.id]);
+    }
+    res.json({ ok: true });
+  } catch (err) { next(err); }
+});
+
+router.delete('/businesses/:id/clients/:cid', requireAdmin, async (req, res, next) => {
+  try {
+    await query('DELETE FROM business_clients WHERE id=? AND business_id=?', [req.params.cid, req.params.id]);
+    res.json({ ok: true });
+  } catch (err) { next(err); }
+});
+
+// ── Business product categories (shop filter chips: name + image/icon) ────────
+
+router.get('/businesses/:id/product-categories', requireAdmin, async (req, res, next) => {
+  try {
+    const rows = await query<any>('SELECT * FROM business_product_categories WHERE business_id=? ORDER BY sort_order, name', [req.params.id]);
+    res.json({ categories: rows.map((c) => ({ ...c, imageUrl: getImageUrl(c.image, 'businesses') })) });
+  } catch (err) { next(err); }
+});
+
+router.post('/businesses/:id/product-categories', requireAdmin, async (req, res, next) => {
+  try {
+    const { name, image, icon, sort_order } = req.body as Record<string, unknown>;
+    if (!name || !String(name).trim()) return res.status(400).json({ error: 'Name required' });
+    const existing = await queryOne<any>('SELECT id FROM business_product_categories WHERE business_id=? AND name=?', [req.params.id, String(name).trim()]);
+    if (existing) return res.json({ ok: true, id: existing.id, existed: true });
+    const r = await query<any>(
+      'INSERT INTO business_product_categories (business_id, name, image, icon, sort_order) VALUES (?, ?, ?, ?, ?)',
+      [req.params.id, String(name).trim(), image || null, icon || null, Number(sort_order) || 0]
+    ) as any;
+    res.json({ ok: true, id: r.insertId });
+  } catch (err) { next(err); }
+});
+
+router.put('/businesses/:id/product-categories/:cid', requireAdmin, async (req, res, next) => {
+  try {
+    const b = req.body as Record<string, unknown>;
+    const old = await queryOne<any>('SELECT name FROM business_product_categories WHERE id=? AND business_id=?', [req.params.cid, req.params.id]);
+    if (!old) return res.status(404).json({ error: 'Category not found' });
+    const fields = ['name', 'image', 'icon', 'sort_order'].filter((f) => f in b);
+    if (fields.length) {
+      const sets = fields.map((f) => `\`${f}\` = ?`).join(',');
+      const vals = fields.map((f) => (b[f] === '' ? null : b[f]));
+      await query(`UPDATE business_product_categories SET ${sets} WHERE id=? AND business_id=?`, [...vals, req.params.cid, req.params.id]);
+    }
+    // Renaming cascades to the products using the old name.
+    if ('name' in b && b.name && b.name !== old.name) {
+      await query('UPDATE business_products SET category=? WHERE business_id=? AND category=?', [b.name, req.params.id, old.name]);
+    }
+    res.json({ ok: true });
+  } catch (err) { next(err); }
+});
+
+router.delete('/businesses/:id/product-categories/:cid', requireAdmin, async (req, res, next) => {
+  try {
+    const old = await queryOne<any>('SELECT name FROM business_product_categories WHERE id=? AND business_id=?', [req.params.cid, req.params.id]);
+    if (old) {
+      await query('UPDATE business_products SET category=NULL WHERE business_id=? AND category=?', [req.params.id, old.name]);
+      await query('DELETE FROM business_product_categories WHERE id=? AND business_id=?', [req.params.cid, req.params.id]);
+    }
+    res.json({ ok: true });
+  } catch (err) { next(err); }
+});
+
 router.use('/businesses', crudRoutes('businesses', 'businesses', { searchCols: ['name'], filterCols: ['category_id', 'emirate'], listSelect: 'bc.name AS category_name', listJoin: 'LEFT JOIN business_categories bc ON bc.id = t.category_id' }));
+// Generic image-gallery endpoints for a parent resource (offers, events, …).
+// Registered before the resource's crudRoutes mount so the specific paths win.
+function registerGallery(base: string, imageTable: string, fkCol: string, folder: string, parentTable: string, mainCol: string) {
+  router.get(`/${base}/:id/gallery`, requireAdmin, async (req, res, next) => {
+    try {
+      const rows = await query<any>(`SELECT id, image FROM \`${imageTable}\` WHERE \`${fkCol}\`=? ORDER BY sort_order, id`, [req.params.id]);
+      res.json({ images: rows.map((r) => ({ id: r.id, url: getImageUrl(r.image, folder) })) });
+    } catch (err) { next(err); }
+  });
+
+  router.post(`/${base}/:id/gallery`, requireAdmin, upload.array('files', 12), async (req, res, next) => {
+    try {
+      const parent = await queryOne<any>(`SELECT id, \`${mainCol}\` AS main FROM \`${parentTable}\` WHERE id=?`, [req.params.id]);
+      if (!parent) return res.status(404).json({ error: 'Not found' });
+      const files = (req.files as Express.Multer.File[]) || [];
+      if (!files.length) return res.status(400).json({ error: 'No files' });
+      const destDir = path.resolve(process.env.UPLOAD_PATH || '../assets/uploads') + `/${folder}/`;
+      await fs.mkdir(destDir, { recursive: true });
+      const startOrder = (await queryOne<any>(`SELECT COALESCE(MAX(sort_order),-1)+1 AS n FROM \`${imageTable}\` WHERE \`${fkCol}\`=?`, [parent.id]))?.n ?? 0;
+      const saved: { id: number; url: string }[] = [];
+      for (let i = 0; i < files.length; i++) {
+        const f = files[i];
+        const ext = path.extname(f.originalname).toLowerCase() || '.jpg';
+        const filename = `${base}-${parent.id}-${Date.now()}-${i}${ext}`;
+        await fs.rename(f.path, destDir + filename);
+        const r = await query<any>(`INSERT INTO \`${imageTable}\` (\`${fkCol}\`, image, sort_order) VALUES (?,?,?)`, [parent.id, filename, startOrder + i]) as any;
+        saved.push({ id: r.insertId, url: getImageUrl(filename, folder) });
+      }
+      // If the parent has no main image/poster yet, use the first uploaded one.
+      if (!parent.main && saved.length) {
+        const first = await queryOne<any>(`SELECT image FROM \`${imageTable}\` WHERE \`${fkCol}\`=? ORDER BY sort_order, id LIMIT 1`, [parent.id]);
+        if (first) await query(`UPDATE \`${parentTable}\` SET \`${mainCol}\`=? WHERE id=?`, [first.image, parent.id]);
+      }
+      res.json({ ok: true, images: saved });
+    } catch (err) { next(err); }
+  });
+
+  router.delete(`/${base}/:id/gallery/:imageId`, requireAdmin, async (req, res, next) => {
+    try {
+      await query(`DELETE FROM \`${imageTable}\` WHERE id=? AND \`${fkCol}\`=?`, [req.params.imageId, req.params.id]);
+      res.json({ ok: true });
+    } catch (err) { next(err); }
+  });
+}
+
+registerGallery('offers', 'offer_images', 'offer_id', 'offers', 'offers', 'image');
+registerGallery('events', 'event_images', 'event_id', 'events', 'events', 'poster');
+
 router.use('/offers', crudRoutes('offers', 'offers'));
 router.use('/classified-categories', crudRoutes('classified_categories'));
 router.use('/classified-sections', crudRoutes('classified_sections'));

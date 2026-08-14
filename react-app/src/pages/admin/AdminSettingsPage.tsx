@@ -7,6 +7,15 @@ const FONT = "'Segoe UI', 'Inter', system-ui, sans-serif";
 
 const SMTP_KEYS = ['smtp_host', 'smtp_port', 'smtp_user', 'smtp_pass'];
 
+const BIZ_LIST_KEYS = ['biz_featured_img_height', 'biz_row_img_height', 'home_slider_height', 'biz_client_logo_size'];
+
+const BIZ_LIST_FIELDS = [
+  { key: 'home_slider_height', label: 'Home Slider Height (px)', placeholder: 'blank = default (650)' },
+  { key: 'biz_featured_img_height', label: 'Featured Card Image Height (px)', placeholder: 'blank = auto (16:9)' },
+  { key: 'biz_row_img_height', label: 'Compact Row Image Height (px)', placeholder: 'blank = default (118)' },
+  { key: 'biz_client_logo_size', label: 'Clients & Partners Logo Size (px)', placeholder: 'blank = default (58)' },
+];
+
 const SMTP_FIELDS = [
   { key: 'smtp_host', label: 'SMTP Host', placeholder: 'smtp.gmail.com', type: 'text' },
   { key: 'smtp_port', label: 'SMTP Port', placeholder: '587', type: 'number' },
@@ -73,7 +82,7 @@ export default function AdminSettingsPage() {
     } finally { setTesting(false); }
   };
 
-  const otherEntries = Object.entries(form).filter(([k]) => !SMTP_KEYS.includes(k));
+  const otherEntries = Object.entries(form).filter(([k]) => !SMTP_KEYS.includes(k) && !BIZ_LIST_KEYS.includes(k));
 
   return (
     <div style={{ fontFamily: FONT, maxWidth: 760 }}>
@@ -150,6 +159,29 @@ export default function AdminSettingsPage() {
               </button>
               {testResult?.ok && <span style={{ fontSize: 12, color: '#107C10', fontWeight: 600 }}>✓ Test email sent!</span>}
               {testResult?.error && <span style={{ fontSize: 12, color: '#C42B1C' }}>✕ {testResult.error}</span>}
+            </div>
+          </div>
+
+          {/* ── Business Listing Section ─────────────────────────────────── */}
+          <div style={{ background: '#fff', border: '1px solid #E5E5E5', borderRadius: 8, marginBottom: 20, overflow: 'hidden' }}>
+            <div style={{ padding: '14px 18px', borderBottom: '1px solid #E5E5E5', background: '#F9F9F9', display: 'flex', alignItems: 'center', gap: 10 }}>
+              <span style={{ fontSize: 18 }}>🏢</span>
+              <div>
+                <div style={{ fontWeight: 700, fontSize: 14, color: '#1a1a1a' }}>Layout Sizes</div>
+                <div style={{ fontSize: 12, color: '#888', marginTop: 2 }}>Home slider height and businesses-list image heights (featured big card / compact row)</div>
+              </div>
+            </div>
+            <div style={{ padding: '18px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+              {BIZ_LIST_FIELDS.map((f) => (
+                <div key={f.key}>
+                  <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: '#555', marginBottom: 5 }}>{f.label}</label>
+                  <input type="number" min={40} max={800}
+                    value={form[f.key] ?? ''}
+                    onChange={(e) => set(f.key, e.target.value)}
+                    placeholder={f.placeholder}
+                    style={inputStyle} />
+                </div>
+              ))}
             </div>
           </div>
 

@@ -32,7 +32,13 @@ router.get('/', async (_req, res, next) => {
       })
     );
 
+    // Admin-controlled home slider height (px) from site_settings.
+    const sliderHeightRow = await queryOne<any>(
+      "SELECT setting_value FROM site_settings WHERE setting_key = 'home_slider_height'"
+    ).catch(() => null);
+
     res.json({
+      sliderHeight: Number(sliderHeightRow?.setting_value) || null,
       sliders: (sliders as any[]).map((s) => ({
         ...s,
         imageUrl: getImageUrl(s.image, 'slides'),

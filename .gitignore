@@ -7,3 +7,9 @@ build/
 
 # local mail credentials (never commit)
 react-app/src/mailsettings.env
+
+# android build artifacts (machine-specific / generated)
+.gradle/
+*.apk
+android-app/android/local.properties
+android-app/android/app/release/

@@ -1,0 +1,12 @@
+{
+  "appId": "com.smartuae.test",
+  "appName": "SmartUAE",
+  "webDir": "www",
+  "server": {
+    "url": "http://192.168.1.53:5173",
+    "cleartext": true
+  },
+  "android": {
+    "allowMixedContent": true
+  }
+}

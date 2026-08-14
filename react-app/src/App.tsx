@@ -27,6 +27,8 @@ const Jobs             = lazy(() => import('./pages/JobsPage'));
 const JobDetail        = lazy(() => import('./pages/JobDetailPage'));
 const Offers           = lazy(() => import('./pages/OffersPage'));
 const OfferDetail      = lazy(() => import('./pages/OfferDetailPage'));
+const Events           = lazy(() => import('./pages/EventsPage'));
+const EventDetail      = lazy(() => import('./pages/EventDetailPage'));
 const Profile          = lazy(() => import('./pages/ProfilePage'));
 const DynamicPage      = lazy(() => import('./pages/DynamicPage'));
 const Search           = lazy(() => import('./pages/SearchPage'));
@@ -104,6 +106,8 @@ export default function App() {
           <Route path="jobs/:id" element={<JobDetail />} />
           <Route path="offers" element={<Offers />} />
           <Route path="offers/:id" element={<OfferDetail />} />
+          <Route path="events" element={<Events />} />
+          <Route path="events/:id" element={<EventDetail />} />
           <Route path="profile" element={<Profile />} />
           <Route path="profile/:id" element={<Profile />} />
           <Route path="page/:slug" element={<DynamicPage />} />
@@ -150,6 +154,7 @@ export default function App() {
           <Route path="home-categories"       element={<AdminCrudPage />} />
           <Route path="popular-categories"    element={<AdminCrudPage />} />
           <Route path="business-categories"   element={<AdminCrudPage />} />
+          <Route path="category-banners"      element={<AdminCrudPage />} />
           <Route path="businesses"            element={<AdminCrudPage />} />
           <Route path="offers"                element={<AdminCrudPage />} />
           <Route path="classified-categories" element={<AdminCrudPage />} />

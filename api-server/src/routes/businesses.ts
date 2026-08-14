@@ -38,24 +38,50 @@ router.get('/search', async (req, res, next) => {
 router.get('/', async (req, res, next) => {
   try {
     const catId = req.query.cat;
-    let sql = `SELECT b.id, b.name, b.description, b.image, b.address, b.phone, b.whatsapp,
-               b.rating, b.distance, bc.name as category_name
+    let sql = `SELECT b.id, b.name, b.tagline, b.description, b.image, b.address, b.phone, b.whatsapp,
+               b.rating, b.distance, b.emirate, b.featured, b.sort_order, b.latitude, b.longitude,
+               bc.name as category_name
                FROM businesses b
                LEFT JOIN business_categories bc ON b.category_id = bc.id
                WHERE b.is_active = 1`;
     const params: unknown[] = [];
     if (catId) { sql += ' AND b.category_id = ?'; params.push(catId); }
-    sql += ' ORDER BY b.created_at DESC';
+    sql += ' ORDER BY b.featured DESC, b.sort_order ASC, b.rating DESC, b.created_at DESC';
     const businesses = await query<any>(sql, params);
 
     let catName = 'All Businesses';
+    let banner: any = null;
     if (catId) {
       const cat = await queryOne<{ name: string }>('SELECT name FROM business_categories WHERE id = ?', [catId]);
       if (cat) catName = cat.name;
+      // Admin-managed top banner for this category (if any).
+      const b = await queryOne<any>(
+        'SELECT image, video, title, subtitle, link, business_id FROM category_banners WHERE category_id = ? AND is_active = 1 ORDER BY sort_order, id LIMIT 1',
+        [catId]
+      ).catch(() => null);
+      if (b && (b.image || b.video)) {
+        banner = {
+          ...b,
+          imageUrl: b.image ? getImageUrl(b.image, 'banners') : null,
+          videoUrl: b.video ? getImageUrl(b.video, 'banners') : null,
+        };
+      }
     }
+
+    // Admin-controlled listing image heights (px) from site_settings.
+    const hRows = await query<any>(
+      "SELECT setting_key, setting_value FROM site_settings WHERE setting_key IN ('biz_featured_img_height', 'biz_row_img_height')"
+    ).catch(() => []);
+    const hMap: Record<string, string> = {};
+    hRows.forEach((r: any) => { hMap[r.setting_key] = r.setting_value; });
 
     res.json({
       catName,
+      banner,
+      imgHeights: {
+        featured: Number(hMap.biz_featured_img_height) || null,
+        row: Number(hMap.biz_row_img_height) || null,
+      },
       businesses: businesses.map((b) => ({ ...b, imageUrl: getImageUrl(b.image, 'businesses') })),
     });
   } catch (err) { next(err); }
@@ -124,7 +150,13 @@ router.get('/:id', async (req, res, next) => {
       coverMedia,
       products,
       testimonials,
-      clients,
+      productCategories: (await query<any>(
+        'SELECT * FROM business_product_categories WHERE business_id=? ORDER BY sort_order, name', [id]
+      ).catch(() => [])).map((c: any) => ({ ...c, imageUrl: getImageUrl(c.image, 'businesses') })),
+      clients: (clients as any[]).map((c) => ({ ...c, logoUrl: getImageUrl(c.logo, 'businesses') })),
+      clientLogoSize: Number((await queryOne<any>(
+        "SELECT setting_value FROM site_settings WHERE setting_key = 'biz_client_logo_size'"
+      ).catch(() => null))?.setting_value) || null,
       vlogger,
       doctors,
     });

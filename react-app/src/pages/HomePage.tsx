@@ -2,6 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import { Link, useNavigate } from 'react-router-dom';
 import { useEffect, useRef, useState } from 'react';
 import api from '../api';
+import { ProfileButton } from '../components/Header';
 
 const SLIDER_FALLBACKS = [
   { img: 'https://images.unsplash.com/photo-1512453979798-5ea266f8880c?w=800&fit=crop', title: 'Discover Dubai', sub: 'Find the best businesses near you', btn: 'Explore' },
@@ -122,7 +123,44 @@ export default function HomePage() {
 
   return (
     <>
-      {/* ── Hero: brand + search ─────────────────────────────────────── */}
+      {/* ── Top app bar: logo + quick actions ────────────────────────── */}
+      <header className="hm-topbar">
+        <Link to="/" className="hm-topbar-logo" aria-label="SmartUAE home">
+          <img src="/assets/images/smatuae.png" alt="SmartUAE" />
+        </Link>
+        <div className="hm-topbar-actions">
+          <button type="button" className="hm-iconbtn" aria-label="Search"
+            onClick={() => navigate('/search')}>
+            <i className="fas fa-search"></i>
+          </button>
+          <ProfileButton />
+        </div>
+      </header>
+
+      {/* ── Admin promo slider: right under the logo bar ─────────────── */}
+      <div className="hm-slider-wrap">
+        <Slider slides={sliders} />
+      </div>
+
+      {/* ── Featured categories: horizontal scroll ───────────────────── */}
+      {homeCats.length > 0 && (
+        <>
+          <div className="hm-section-head">
+            <h2>Featured Categories</h2>
+            <Link to="/categories">See all <i className="fas fa-chevron-right"></i></Link>
+          </div>
+          <div className="hm-cats">
+            {homeCats.map((cat: any) => (
+              <Link key={cat.id} to={`/businesses?cat=${cat.category_id}`} className="hm-cat">
+                <div className="hm-cat-icon">{cat.icon}</div>
+                <span>{cat.name}</span>
+              </Link>
+            ))}
+          </div>
+        </>
+      )}
+
+      {/* ── Hero: greeting + search ──────────────────────────────────── */}
       <div className="hm-hero">
         <div className="hm-greet">{greeting()} 👋</div>
         <h1 className="hm-title">Find anything in <span>UAE</span></h1>
@@ -152,27 +190,6 @@ export default function HomePage() {
           </Link>
         ))}
       </div>
-
-      {/* ── Admin promo slider (height now constrained) ──────────────── */}
-      <Slider slides={sliders} />
-
-      {/* ── Featured categories: horizontal scroll ───────────────────── */}
-      {homeCats.length > 0 && (
-        <>
-          <div className="hm-section-head">
-            <h2>Featured Categories</h2>
-            <Link to="/categories">See all <i className="fas fa-chevron-right"></i></Link>
-          </div>
-          <div className="hm-cats">
-            {homeCats.map((cat: any) => (
-              <Link key={cat.id} to={`/businesses?cat=${cat.category_id}`} className="hm-cat">
-                <div className="hm-cat-icon">{cat.icon}</div>
-                <span>{cat.name}</span>
-              </Link>
-            ))}
-          </div>
-        </>
-      )}
 
       {/* ── Popular categories: image cards ──────────────────────────── */}
       <div className="hm-section-head">
@@ -221,8 +238,20 @@ export default function HomePage() {
       </div>
 
       <style>{`
+        /* ── Top app bar ── */
+        .hm-topbar{position:sticky;top:0;z-index:300;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 16px;background:transparent;border-bottom:none}
+        .hm-topbar-logo{display:flex;align-items:center;flex-shrink:0}
+        .hm-topbar-logo img{height:26px;width:auto;display:block}
+        .hm-topbar-actions{display:flex;align-items:center;gap:8px}
+        .hm-iconbtn{width:38px;height:38px;border-radius:50%;background:#fff;border:1px solid #E5E8F0;box-shadow:0 2px 8px rgba(13,27,42,0.06);display:flex;align-items:center;justify-content:center;color:var(--dark);font-size:14px;cursor:pointer;transition:transform .12s ease,background .12s ease;padding:0}
+        .hm-iconbtn:hover{background:#F7F6FC}
+        .hm-iconbtn:active{transform:scale(0.92)}
+
+        /* ── Slider wrap: spacing under the sticky bar ── */
+        .hm-slider-wrap{margin-top:12px}
+
         /* ── Hero ── */
-        .hm-hero{background:linear-gradient(150deg,var(--primary) 0%,var(--primary-dark) 55%,#3E3277 100%);padding:26px 16px 22px;border-radius:0 0 26px 26px;position:relative;overflow:hidden}
+        .hm-hero{background:linear-gradient(150deg,var(--primary) 0%,var(--primary-dark) 55%,#3E3277 100%);padding:24px 16px 20px;border-radius:26px;margin:20px 12px 0;position:relative;overflow:hidden}
         .hm-hero::after{content:'';position:absolute;top:-70px;right:-70px;width:200px;height:200px;border-radius:50%;background:rgba(255,255,255,0.07);pointer-events:none}
         .hm-hero::before{content:'';position:absolute;bottom:-90px;left:-50px;width:180px;height:180px;border-radius:50%;background:rgba(0,206,201,0.13);pointer-events:none}
         .hm-greet{color:rgba(255,255,255,.75);font-size:13px;font-weight:600;margin-bottom:4px}
@@ -245,8 +274,8 @@ export default function HomePage() {
 
         /* ── Services grid ── */
         .hm-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:6px 2px;padding:0 12px}
-        .hm-tile{display:flex;flex-direction:column;align-items:center;gap:6px;text-decoration:none;padding:8px 2px;border-radius:14px;min-height:44px}
-        .hm-tile-icon{width:50px;height:50px;border-radius:16px;display:flex;align-items:center;justify-content:center;font-size:18px;transition:transform .15s ease}
+        .hm-tile{display:flex;flex-direction:column;align-items:center;gap:6px;text-decoration:none;padding:0;border-radius:14px;min-height:44px}
+        .hm-tile-icon{width:50px;height:63px;border-radius:16px;display:flex;align-items:center;justify-content:center;padding:0;margin:0;font-size:27px;transition:transform .15s ease}
         .hm-tile:active .hm-tile-icon{transform:scale(0.92)}
         .hm-tile span{font-size:10.5px;font-weight:700;color:var(--dark);text-align:center;line-height:1.2}
         .hm-tile.purple .hm-tile-icon{background:rgba(108,92,231,0.12);color:var(--primary)}
@@ -255,14 +284,14 @@ export default function HomePage() {
         .hm-tile.pink .hm-tile-icon{background:rgba(232,67,147,0.11);color:#E84393}
 
         /* ── Constrain admin slider height regardless of image size ── */
-        .slide{height:${sliderH}px}
+        .slide{height:${sliderH}px;background:transparent;box-shadow:none}
         .slide img{width:100%;height:100%;object-fit:cover}
 
         /* ── Featured categories: horizontal snap row ── */
         .hm-cats{display:flex;gap:10px;padding:0 16px 4px;overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch}
         .hm-cats::-webkit-scrollbar{display:none}
-        .hm-cat{display:flex;flex-direction:column;align-items:center;gap:7px;text-decoration:none;flex-shrink:0;width:74px;padding:4px 0}
-        .hm-cat-icon{width:60px;height:60px;border-radius:20px;background:#fff;border:1px solid #EEEDF5;box-shadow:0 3px 12px rgba(13,27,42,0.06);display:flex;align-items:center;justify-content:center;font-size:26px}
+        .hm-cat{display:flex;flex-direction:column;align-items:center;gap:7px;text-decoration:none;flex-shrink:0;width:84px;padding:4px 0}
+        .hm-cat-icon{width:75px;height:75px;border-radius:25px;background:#fff;border:1px solid #EEEDF5;box-shadow:0 3px 12px rgba(13,27,42,0.06);display:flex;align-items:center;justify-content:center;font-size:33px}
         .hm-cat span{font-size:11px;font-weight:600;color:var(--dark);text-align:center;line-height:1.25;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
 
         /* ── Stats strip ── */

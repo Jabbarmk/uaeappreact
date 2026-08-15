@@ -32,6 +32,8 @@ const EventDetail      = lazy(() => import('./pages/EventDetailPage'));
 const Profile          = lazy(() => import('./pages/ProfilePage'));
 const DynamicPage      = lazy(() => import('./pages/DynamicPage'));
 const Search           = lazy(() => import('./pages/SearchPage'));
+const Collections      = lazy(() => import('./pages/CollectionsPage'));
+const CollectionDetail = lazy(() => import('./pages/CollectionDetailPage'));
 
 // Auth pages
 const LoginPage  = lazy(() => import('./pages/auth/LoginPage'));
@@ -65,6 +67,7 @@ const AdminClassifiedsPage = lazy(() => import('./pages/admin/AdminClassifiedsPa
 const AdminUniversitiesPage = lazy(() => import('./pages/admin/AdminUniversitiesPage'));
 const AdminVloggersPage = lazy(() => import('./pages/admin/AdminVloggersPage'));
 const AdminHospitalsPage = lazy(() => import('./pages/admin/AdminHospitalsPage'));
+const AdminHomeLayoutPage = lazy(() => import('./pages/admin/AdminHomeLayoutPage'));
 
 function PageLoader() {
   return <div style={{ padding: 40, textAlign: 'center', color: '#6C5CE7' }}>Loading…</div>;
@@ -112,6 +115,8 @@ export default function App() {
           <Route path="profile/:id" element={<Profile />} />
           <Route path="page/:slug" element={<DynamicPage />} />
           <Route path="search" element={<Search />} />
+          <Route path="collections" element={<Collections />} />
+          <Route path="collections/:id" element={<CollectionDetail />} />
 
           {/* Protected user routes */}
           <Route element={<RequireAuth />}>
@@ -149,6 +154,7 @@ export default function App() {
         {/* Admin routes (guarded by AdminLayout) */}
         <Route path="admin" element={<AdminLayout />}>
           <Route index element={<AdminDashboard />} />
+          <Route path="home-layout"           element={<AdminHomeLayoutPage />} />
           <Route path="sliders"               element={<AdminCrudPage />} />
           <Route path="main-categories"       element={<AdminCrudPage />} />
           <Route path="home-categories"       element={<AdminCrudPage />} />

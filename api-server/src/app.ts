@@ -23,6 +23,8 @@ import profilesRouter from './routes/profiles';
 import taxonomyRouter from './routes/taxonomy';
 import pagesRouter from './routes/pages';
 import adminRouter from './routes/admin';
+import homeLayoutRouter from './routes/homeLayout';
+import collectionsRouter from './routes/collections';
 import { errorHandler } from './middleware/errorHandler';
 
 const app = express();
@@ -49,6 +51,7 @@ app.use('/assets/images', express.static(path.resolve('../assets/images')));
 
 // API routes
 app.use('/api/home', homeRouter);
+app.use('/api/collections', collectionsRouter);
 app.use('/api/search', searchRouter);
 app.use('/api/categories', categoriesRouter);
 app.use('/api/businesses', businessesRouter);
@@ -62,6 +65,7 @@ app.use('/api/offers', offersRouter);
 app.use('/api/profiles', profilesRouter);
 app.use('/api', taxonomyRouter);
 app.use('/api/pages', pagesRouter);
+app.use('/api/admin/home-layout', homeLayoutRouter);
 app.use('/api/admin', adminRouter);
 app.use('/api/admin/users', adminUsersRouter);
 app.use('/api/auth', authRouter);

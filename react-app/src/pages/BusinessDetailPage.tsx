@@ -348,7 +348,6 @@ export default function BusinessDetailPage() {
   // Template 2 (storefront) data
   const template = biz.template || 'template2';
   const isStore = Number(biz.is_online_store) === 1;
-  const storeBuyUrl = biz.store_url || biz.website || '';
   const products: any[] = data.products || [];
   // Managed categories (name + image/icon) first, then any legacy names still on products.
   const managedCats: any[] = data.productCategories || [];

@@ -8,6 +8,24 @@ function safeParse(s: unknown) {
   try { return JSON.parse(String(s || '{}')); } catch { return {}; }
 }
 
+// Admin-set theme colors; null = use the CSS defaults.
+router.get('/theme', async (_req, res, next) => {
+  try {
+    const rows = await query<any>(
+      "SELECT setting_key, setting_value FROM site_settings WHERE setting_key LIKE 'theme_%'"
+    ).catch(() => []);
+    const t: Record<string, string> = {};
+    (rows as any[]).forEach((r) => { t[r.setting_key] = r.setting_value; });
+    res.json({
+      primary: t.theme_primary || null,
+      primaryDark: t.theme_primary_dark || null,
+      primaryLight: t.theme_primary_light || null,
+      secondary: t.theme_secondary || null,
+      accent: t.theme_accent || null,
+    });
+  } catch (err) { next(err); }
+});
+
 router.get('/', async (_req, res, next) => {
   try {
     const [sliders, mainCats, popCats, homeCats, sections, layoutRows, menuRows, collectionRows, collectionItems] = await Promise.all([
@@ -42,10 +60,11 @@ router.get('/', async (_req, res, next) => {
       })
     );
 
-    // Admin-controlled home slider height (px) from site_settings.
-    const sliderHeightRow = await queryOne<any>(
-      "SELECT setting_value FROM site_settings WHERE setting_key = 'home_slider_height'"
-    ).catch(() => null);
+    // Admin-controlled home slider height/width (px) from site_settings.
+    const [sliderHeightRow, sliderWidthRow] = await Promise.all([
+      queryOne<any>("SELECT setting_value FROM site_settings WHERE setting_key = 'home_slider_height'").catch(() => null),
+      queryOne<any>("SELECT setting_value FROM site_settings WHERE setting_key = 'home_slider_width'").catch(() => null),
+    ]);
 
     res.json({
       layout: (layoutRows as any[]).map((s) => ({
@@ -72,6 +91,7 @@ router.get('/', async (_req, res, next) => {
         })),
       })).filter((c) => c.items.length > 0),
       sliderHeight: Number(sliderHeightRow?.setting_value) || null,
+      sliderWidth: Number(sliderWidthRow?.setting_value) || null,
       sliders: (sliders as any[]).map((s) => ({
         ...s,
         imageUrl: getImageUrl(s.image, 'slides'),

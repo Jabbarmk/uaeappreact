@@ -29,7 +29,7 @@ export function ProfileButton() {
   return (
     <div ref={ref} style={{ position: 'relative' }}>
       <div onClick={() => setOpen((o) => !o)} role="button" aria-label="Account menu"
-        style={{ width: 38, height: 38, borderRadius: '50%', cursor: 'pointer', overflow: 'hidden', border: '2px solid var(--primary)', boxShadow: '0 2px 8px rgba(108,92,231,0.25)', background: 'linear-gradient(135deg, var(--primary), var(--primary-dark))', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 700, fontSize: 15 }}>
+        style={{ width: 38, height: 38, borderRadius: '50%', cursor: 'pointer', overflow: 'hidden', border: '2px solid var(--primary)', boxShadow: '0 2px 8px rgba(var(--primary-rgb),0.25)', background: 'linear-gradient(135deg, var(--primary), var(--primary-dark))', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 700, fontSize: 15 }}>
         {user.avatar ? <img src={user.avatar} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : initial}
       </div>
 

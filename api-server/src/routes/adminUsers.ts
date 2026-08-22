@@ -139,9 +139,16 @@ router.get('/approvals/pending', requireAdmin, async (_req, res, next) => {
                   FROM events e LEFT JOIN users u ON e.user_id=u.id LEFT JOIN event_categories ec ON e.category_id=ec.id
                   WHERE e.status='pending' ORDER BY e.created_at DESC`),
     ]);
+    const reviews = await query<any>(`
+      SELECT t.id, t.client_name AS name, b.name AS category_name, t.created_at, t.rating, t.review,
+             u.name AS user_name, u.email AS user_email, 'review' AS type
+      FROM business_testimonials t
+      LEFT JOIN businesses b ON b.id = t.business_id
+      LEFT JOIN users u ON u.id = t.user_id
+      WHERE t.status='pending' ORDER BY t.created_at DESC`).catch(() => []);
     res.json({
-      businesses, jobs, classifieds, properties, companies, projects, events,
-      total: businesses.length + jobs.length + classifieds.length + properties.length + companies.length + projects.length + events.length,
+      businesses, jobs, classifieds, properties, companies, projects, events, reviews,
+      total: businesses.length + jobs.length + classifieds.length + properties.length + companies.length + projects.length + events.length + reviews.length,
     });
   } catch (err) { next(err); }
 });
@@ -158,6 +165,13 @@ router.post('/approvals/:type/:id', requireAdmin, async (req: Request, res: Resp
   try {
     const { type, id } = req.params;
     const { action, category_id, new_category_name } = req.body as { action: 'approve' | 'reject'; category_id?: number | string; new_category_name?: string };
+
+    // Reviews have no is_active column — status alone controls visibility.
+    if (type === 'review') {
+      await query('UPDATE business_testimonials SET status=? WHERE id=?', [action === 'approve' ? 'approved' : 'rejected', id]);
+      return res.json({ ok: true });
+    }
+
     const mapping = APPROVAL_TABLES[type];
     if (!mapping) return res.status(400).json({ error: 'Unknown approval type' });
     const table = mapping.table;

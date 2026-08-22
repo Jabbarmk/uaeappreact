@@ -6,7 +6,7 @@ export default function CourseThumb({
   if (url) return <img src={url} alt="" loading="lazy" style={{ ...base, objectFit: 'cover', display: 'block' }} />;
   const fontSize = typeof h === 'number' ? Math.round(h * 0.46) : 30;
   return (
-    <div style={{ ...base, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize, background: 'linear-gradient(135deg,rgba(108,92,231,.16),rgba(0,206,201,.16))', color: 'var(--primary)' }}>
+    <div style={{ ...base, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize, background: 'linear-gradient(135deg,rgba(var(--primary-rgb),.16),rgba(0,206,201,.16))', color: 'var(--primary)' }}>
       {icon || '🎓'}
     </div>
   );

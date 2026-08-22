@@ -146,26 +146,26 @@ export default function EventDetailPage() {
         .ev-poster{position:relative;margin:0 16px 18px;border-radius:20px;overflow:hidden;box-shadow:0 10px 34px rgba(13,27,42,0.14)}
         .ev-poster img{width:100%;aspect-ratio:16/10;object-fit:cover;display:block;background:#F7F8FB}
         .ev-poster-cat{position:absolute;top:14px;left:14px;background:rgba(0,0,0,0.55);color:#fff;font-size:12px;font-weight:700;padding:6px 13px;border-radius:999px;backdrop-filter:blur(6px);max-width:calc(100% - 28px);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-        .ev-poster-price{position:absolute;bottom:14px;left:14px;background:#6C5CE7;color:#fff;font-size:13px;font-weight:800;padding:6px 15px;border-radius:999px;box-shadow:0 4px 14px rgba(108,92,231,0.4)}
+        .ev-poster-price{position:absolute;bottom:14px;left:14px;background:var(--primary);color:#fff;font-size:13px;font-weight:800;padding:6px 15px;border-radius:999px;box-shadow:0 4px 14px rgba(var(--primary-rgb),0.4)}
         .ev-poster-price.free{background:#00B894;box-shadow:0 4px 14px rgba(0,184,148,0.4)}
 
         /* Cards — consistent gutter + even vertical rhythm */
         .ev-card{background:#fff;margin:0 16px 14px;border-radius:20px;padding:22px 18px;box-shadow:0 2px 14px rgba(13,27,42,0.05);border:1px solid #F0F1F5}
 
         /* Hero typography */
-        .ev-eyebrow{font-size:12px;font-weight:700;letter-spacing:0.7px;text-transform:uppercase;color:#6C5CE7;margin-bottom:9px}
+        .ev-eyebrow{font-size:12px;font-weight:700;letter-spacing:0.7px;text-transform:uppercase;color:var(--primary);margin-bottom:9px}
         .ev-title{font-size:24px;font-weight:800;color:#1A1A2E;letter-spacing:-0.5px;line-height:1.22;margin:0 0 16px}
         .ev-subrow{display:flex;align-items:flex-start;gap:9px;font-size:13.5px;color:#636E8A;line-height:1.45;margin-bottom:8px}
         .ev-subrow:last-of-type{margin-bottom:0}
         .ev-subrow i{width:16px;text-align:center;color:#9BA4B5;margin-top:1px;flex-shrink:0}
-        .ev-subrow.accent{color:#6C5CE7;font-weight:700}
-        .ev-subrow.accent i{color:#6C5CE7}
+        .ev-subrow.accent{color:var(--primary);font-weight:700}
+        .ev-subrow.accent i{color:var(--primary)}
 
         /* CTA */
         .ev-cta{display:flex;gap:12px;margin-top:20px}
         .ev-btn{flex:1;padding:14px 0;border-radius:14px;font-size:14.5px;font-weight:700;text-decoration:none;display:flex;align-items:center;justify-content:center;gap:9px;transition:transform .12s;-webkit-tap-highlight-color:transparent}
         .ev-btn:active{transform:scale(0.98)}
-        .ev-btn.primary{background:#6C5CE7;color:#fff;box-shadow:0 6px 18px rgba(108,92,231,0.32)}
+        .ev-btn.primary{background:var(--primary);color:#fff;box-shadow:0 6px 18px rgba(var(--primary-rgb),0.32)}
         .ev-btn.whatsapp{background:#25D366;color:#fff;box-shadow:0 6px 18px rgba(37,211,102,0.3)}
 
         /* Section label (Apple-style eyebrow) */
@@ -184,11 +184,11 @@ export default function EventDetailPage() {
         .ev-info-list{margin:-4px 0 0}
         .ev-info-row{display:flex;align-items:center;gap:13px;padding:13px 0}
         .ev-info-row + .ev-info-row{border-top:1px solid #F1F2F6}
-        .ev-info-icon{width:36px;height:36px;background:#F4F3FF;border-radius:10px;display:flex;align-items:center;justify-content:center;color:#6C5CE7;font-size:14px;flex-shrink:0}
+        .ev-info-icon{width:36px;height:36px;background:#F4F3FF;border-radius:10px;display:flex;align-items:center;justify-content:center;color:var(--primary);font-size:14px;flex-shrink:0}
         .ev-info-text{min-width:0}
         .ev-info-label{font-size:11.5px;color:#9BA4B5;font-weight:600;letter-spacing:0.2px;margin-bottom:2px}
         .ev-info-val{font-size:14.5px;color:#1A1A2E;font-weight:600;line-height:1.35;word-break:break-word}
-        .ev-maps{display:flex;align-items:center;justify-content:center;gap:9px;margin-top:16px;padding:13px 0;background:#F4F3FF;color:#6C5CE7;border-radius:13px;font-size:14px;font-weight:700;text-decoration:none;transition:background .15s}
+        .ev-maps{display:flex;align-items:center;justify-content:center;gap:9px;margin-top:16px;padding:13px 0;background:#F4F3FF;color:var(--primary);border-radius:13px;font-size:14px;font-weight:700;text-decoration:none;transition:background .15s}
         .ev-maps:active{background:#E9E7FD}
       `}</style>
     </>

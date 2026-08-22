@@ -73,9 +73,9 @@ export default function JobDetailPage() {
 
       <div style={{ position: 'relative', overflow: 'hidden', height: 160 }}>
         <img src={heroBg} alt="Job" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} loading="lazy" decoding="async" />
-        <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(135deg,rgba(108,92,231,.75),rgba(13,27,42,.55))' }}></div>
+        <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(135deg,rgba(var(--primary-rgb),.75),rgba(13,27,42,.55))' }}></div>
         <div style={{ position: 'absolute', bottom: 16, left: 16, display: 'flex', alignItems: 'center', gap: 12 }}>
-          <div style={{ width: 52, height: 52, borderRadius: 16, background: 'linear-gradient(135deg,var(--primary),#8B5CF6)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: 22, boxShadow: '0 4px 14px rgba(0,0,0,.25)', border: '2px solid rgba(255,255,255,.3)' }}>
+          <div style={{ width: 52, height: 52, borderRadius: 16, background: 'linear-gradient(135deg,var(--primary),var(--secondary))', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: 22, boxShadow: '0 4px 14px rgba(0,0,0,.25)', border: '2px solid rgba(255,255,255,.3)' }}>
             <i className="fas fa-building"></i>
           </div>
           <div>

@@ -132,7 +132,7 @@ export default function OffersPage() {
                     <Link to={`/offers/${offer.id}`} className="offer-btn" style={{ background: '#f0f2f8', color: '#1A1A2E' }}>
                       <i className="fas fa-book-open"></i> <span className="offer-btn-label">Read More</span>
                     </Link>
-                    <a href={orderHref} target={waLink ? '_blank' : undefined} rel="noreferrer" className="offer-btn" style={{ background: '#6C5CE7', color: '#fff' }}>
+                    <a href={orderHref} target={waLink ? '_blank' : undefined} rel="noreferrer" className="offer-btn" style={{ background: 'var(--primary)', color: '#fff' }}>
                       <i className={`fas ${orderIcon}`}></i> <span className="offer-btn-label">{orderLabel}</span>
                     </a>
                   </div>
@@ -149,12 +149,12 @@ export default function OffersPage() {
         .cat-tabs::-webkit-scrollbar{display:none}
         .cat-tab{padding:8px 15px;border-radius:999px;background:#fff;color:#1A1A2E;font-size:13px;font-weight:700;white-space:nowrap;text-decoration:none;display:inline-flex;align-items:center;gap:6px;flex-shrink:0;border:1px solid #ECECF3;box-shadow:0 1px 4px rgba(13,27,42,0.04);transition:background .15s,color .15s,box-shadow .15s}
         .cat-tab i{font-size:11px}
-        .cat-tab.active{background:#6C5CE7;color:#fff;border-color:#6C5CE7;box-shadow:0 5px 14px rgba(108,92,231,0.28)}
+        .cat-tab.active{background:var(--primary);color:#fff;border-color:var(--primary);box-shadow:0 5px 14px rgba(var(--primary-rgb),0.28)}
 
         /* ── Section heading + grid toggle ── */
         .offers-head{padding:0 16px 15px;display:flex;align-items:flex-end;justify-content:space-between;gap:12px}
         .offers-head-title{font-size:20px;font-weight:800;color:#1A1A2E;margin:0 0 3px;letter-spacing:-0.4px;line-height:1.2}
-        .offers-head-title span{color:#6C5CE7}
+        .offers-head-title span{color:var(--primary)}
         .offers-head-count{font-size:12px;color:#9BA4B5;font-weight:600}
 
         /* ── Grid containers (unified 16px gutter) ── */
@@ -175,7 +175,7 @@ export default function OffersPage() {
         .offer-title{font-size:16px;font-weight:800;color:#1A1A2E;margin:0 0 7px;line-height:1.32;letter-spacing:-0.2px}
         .offer-desc{font-size:13px;color:#636E8A;line-height:1.55;margin:0 0 12px}
         .offer-price-row{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:14px}
-        .offer-price{font-size:20px;font-weight:800;color:#6C5CE7;letter-spacing:-0.3px}
+        .offer-price{font-size:20px;font-weight:800;color:var(--primary);letter-spacing:-0.3px}
         .offer-original{font-size:13px;color:#9BA4B5;text-decoration:line-through}
         .offer-rating{display:flex;align-items:center;gap:5px;background:#FFF5E7;border-radius:10px;padding:5px 11px}
         .offer-rating i{color:#FDCB6E;font-size:12px}
@@ -221,7 +221,7 @@ export default function OffersPage() {
         /* ── Top-right location pill ── */
         .loc-pill{display:inline-flex;align-items:center;gap:7px;background:#fff;border:1px solid #ECECF3;border-radius:999px;padding:8px 13px;box-shadow:0 2px 10px rgba(13,27,42,0.07);cursor:pointer;transition:box-shadow .15s}
         .loc-pill:hover{box-shadow:0 4px 14px rgba(13,27,42,0.11)}
-        .loc-pill .loc-pin{color:#6C5CE7;font-size:13px}
+        .loc-pill .loc-pin{color:var(--primary);font-size:13px}
         .loc-pill select{border:none;background:transparent;font-size:13px;font-weight:700;color:#1A1A2E;outline:none;cursor:pointer;-webkit-appearance:none;appearance:none;width:auto;padding:2px 6px}
         .loc-pill select option{padding:6px 10px}
         .loc-pill .loc-chev{color:#9BA4B5;font-size:10px;pointer-events:none}
@@ -229,7 +229,7 @@ export default function OffersPage() {
         /* ── Grid toggle ── */
         .grid-toggle{display:flex;gap:5px;align-items:center;background:#EEF0F6;padding:4px;border-radius:11px}
         .grid-btn{width:30px;height:30px;border:none;border-radius:8px;cursor:pointer;display:flex;align-items:center;justify-content:center;background:transparent;transition:background .15s}
-        .grid-btn.active{background:#6C5CE7;box-shadow:0 3px 8px rgba(108,92,231,0.3)}
+        .grid-btn.active{background:var(--primary);box-shadow:0 3px 8px rgba(var(--primary-rgb),0.3)}
         .grid-btn svg rect{fill:#9BA4B5;transition:fill .15s}
         .grid-btn.active svg rect{fill:#fff}
       `}</style>

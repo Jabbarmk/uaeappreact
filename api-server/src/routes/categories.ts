@@ -74,7 +74,21 @@ router.get('/', async (req, res, next) => {
       groups[g].push(cat);
     }
 
-    res.json({ groups });
+    // Admin-set category button sizing (Categories & Search pages).
+    const styleRows = await query<any>(
+      "SELECT setting_key, setting_value FROM site_settings WHERE setting_key IN ('cat_item_width','cat_item_height','cat_item_radius')"
+    ).catch(() => []);
+    const s: Record<string, string> = {};
+    (styleRows as any[]).forEach((r) => { s[r.setting_key] = r.setting_value; });
+
+    res.json({
+      groups,
+      itemStyle: {
+        width: Number(s.cat_item_width) || null,
+        height: Number(s.cat_item_height) || null,
+        radius: s.cat_item_radius !== undefined && s.cat_item_radius !== '' ? Number(s.cat_item_radius) : null,
+      },
+    });
   } catch (err) {
     next(err);
   }

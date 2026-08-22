@@ -5,7 +5,145 @@ import api from '../../api';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
-type FieldType = 'text' | 'textarea' | 'number' | 'select' | 'toggle' | 'date' | 'image' | 'video' | 'media' | 'map-link' | 'clients' | 'gallery' | 'cover' | 'services' | 'products' | 'business-search' | 'main-category-select' | 'category-search' | 'time-picker' | 'user-search' | 'event-category-select' | 'resource-select' | 'university-select';
+type FieldType = 'text' | 'textarea' | 'number' | 'select' | 'toggle' | 'date' | 'image' | 'video' | 'media' | 'map-link' | 'clients' | 'gallery' | 'cover' | 'services' | 'products' | 'business-search' | 'main-category-select' | 'category-search' | 'time-picker' | 'user-search' | 'event-category-select' | 'resource-select' | 'university-select' | 'color-picker' | 'page-sections' | 'keywords-input';
+
+// Business detail page sections (top bar + cover slider stay fixed).
+export const BIZ_PAGE_SECTIONS: { key: string; label: string }[] = [
+  { key: 'header',   label: 'Business Info (name, badges, address)' },
+  { key: 'actions',  label: 'Action Buttons (Call / WhatsApp / Website…)' },
+  { key: 'store',    label: 'Shop / Products' },
+  { key: 'creator',  label: 'Creator Stats (vloggers)' },
+  { key: 'doctors',  label: 'Doctors' },
+  { key: 'courses',  label: 'Courses' },
+  { key: 'about',    label: 'About Us' },
+  { key: 'stats',    label: 'Stats Row (Rating / Est. / Team / Reviews)' },
+  { key: 'services', label: 'Services Sections' },
+  { key: 'gallery',  label: 'Gallery' },
+  { key: 'clients',  label: 'Clients & Partners' },
+  { key: 'reviews',  label: 'What Clients Say (Reviews)' },
+  { key: 'contact',  label: 'Contact & Location' },
+];
+
+// Comma-separated keywords as removable chips; typing suggests keywords already
+// used on other businesses (click to select) or press Enter/comma to add new.
+function KeywordsInput({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  const [typing, setTyping] = useState('');
+  const [allKeywords, setAllKeywords] = useState<string[]>([]);
+  const [open, setOpen] = useState(false);
+  useEffect(() => { api.get('/admin/business-keywords').then((r) => setAllKeywords(r.data || [])).catch(() => {}); }, []);
+
+  const current = value.split(',').map((k) => k.trim()).filter(Boolean);
+  const emit = (list: string[]) => onChange(list.join(', '));
+  const add = (k: string) => {
+    const v = k.trim().toLowerCase();
+    if (v && !current.includes(v)) emit([...current, v]);
+    setTyping(''); setOpen(false);
+  };
+  const suggestions = typing.trim()
+    ? allKeywords.filter((k) => k.includes(typing.trim().toLowerCase()) && !current.includes(k)).slice(0, 8)
+    : [];
+
+  return (
+    <div>
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, alignItems: 'center', border: '1px solid #C8C8C8', borderRadius: 4, padding: 6, background: '#fff' }}>
+        {current.map((k) => (
+          <span key={k} style={{ display: 'inline-flex', alignItems: 'center', gap: 5, background: '#EBF3FB', color: ACCENT, borderRadius: 999, padding: '3px 5px 3px 11px', fontSize: 12, fontWeight: 600 }}>
+            {k}
+            <button type="button" onClick={() => emit(current.filter((x) => x !== k))}
+              style={{ border: 'none', background: 'none', cursor: 'pointer', color: ACCENT, fontSize: 11, padding: '0 4px', lineHeight: 1 }}>✕</button>
+          </span>
+        ))}
+        <div style={{ position: 'relative', flex: 1, minWidth: 140 }}>
+          <input value={typing}
+            onChange={(e) => { setTyping(e.target.value); setOpen(true); }}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ',') { e.preventDefault(); add(typing); }
+              else if (e.key === 'Backspace' && !typing && current.length) emit(current.slice(0, -1));
+            }}
+            onBlur={() => setTimeout(() => setOpen(false), 200)}
+            placeholder={current.length ? 'Add another…' : 'e.g. ac repair, hvac, maintenance'}
+            style={{ width: '100%', border: 'none', outline: 'none', fontSize: 13, padding: '5px 4px', fontFamily: 'inherit', boxSizing: 'border-box' }} />
+          {open && suggestions.length > 0 && (
+            <div style={{ position: 'absolute', top: '100%', left: 0, minWidth: 220, background: '#fff', border: '1px solid #C8C8C8', borderRadius: 4, zIndex: 60, boxShadow: '0 6px 18px rgba(0,0,0,.12)', maxHeight: 180, overflowY: 'auto' }}>
+              {suggestions.map((s) => (
+                <div key={s} onMouseDown={() => add(s)}
+                  style={{ padding: '7px 12px', fontSize: 13, cursor: 'pointer', borderBottom: '1px solid #F3F3F3' }}>
+                  🔎 {s}
+                </div>
+              ))}
+              {!allKeywords.includes(typing.trim().toLowerCase()) && typing.trim() && (
+                <div onMouseDown={() => add(typing)} style={{ padding: '7px 12px', fontSize: 13, cursor: 'pointer', color: ACCENT, fontWeight: 600 }}>
+                  ＋ Add “{typing.trim().toLowerCase()}”
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+      <div style={{ fontSize: 11, color: '#888', marginTop: 4 }}>Customers find this business when searching any of these words. Type to see keywords already used elsewhere.</div>
+    </div>
+  );
+}
+
+function Toggle({ on, onChange }: { on: boolean; onChange: (v: boolean) => void }) {
+  return (
+    <div onClick={() => onChange(!on)} role="switch" aria-checked={on}
+      style={{ width: 38, height: 20, borderRadius: 20, background: on ? ACCENT : '#CCC', position: 'relative', cursor: 'pointer', flexShrink: 0, transition: 'background .15s' }}>
+      <div style={{ position: 'absolute', top: 2, left: on ? 20 : 2, width: 16, height: 16, borderRadius: '50%', background: '#fff', transition: 'left .15s', boxShadow: '0 1px 3px rgba(0,0,0,.3)' }} />
+    </div>
+  );
+}
+
+// Visibility + order editor for the business detail page sections.
+function PageSectionsEditor({ value, seedRow, onChange }: { value: string; seedRow: Record<string, unknown> | null; onChange: (v: string) => void }) {
+  const parse = (): { key: string; on: number; order: number }[] => {
+    try {
+      const arr = JSON.parse(value || '[]');
+      if (Array.isArray(arr) && arr.length) {
+        // Append any newly introduced sections at the end.
+        const known = new Set(arr.map((s: any) => s.key));
+        BIZ_PAGE_SECTIONS.forEach((s, i) => { if (!known.has(s.key)) arr.push({ key: s.key, on: 1, order: arr.length + i + 1 }); });
+        return arr;
+      }
+    } catch { /* fall through to defaults */ }
+    return BIZ_PAGE_SECTIONS.map((s, i) => ({
+      key: s.key,
+      on: s.key === 'stats' ? (Number(seedRow?.show_stats ?? 1) ? 1 : 0)
+        : s.key === 'clients' ? (Number(seedRow?.show_clients ?? 1) ? 1 : 0) : 1,
+      order: i + 1,
+    }));
+  };
+  const items = parse().sort((a, b) => a.order - b.order);
+  const emit = (next: typeof items) => onChange(JSON.stringify(next.map((s, i) => ({ ...s, order: i + 1 }))));
+  const move = (i: number, d: -1 | 1) => {
+    const j = i + d;
+    if (j < 0 || j >= items.length) return;
+    const next = [...items];
+    [next[i], next[j]] = [next[j], next[i]];
+    emit(next);
+  };
+  return (
+    <div style={{ border: '1px solid #E8EAF2', borderRadius: 6, background: '#F8F9FC', padding: '8px 10px' }}>
+      {items.map((s, i) => {
+        const meta = BIZ_PAGE_SECTIONS.find((m) => m.key === s.key);
+        return (
+          <div key={s.key} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '4px 0', opacity: s.on ? 1 : 0.5 }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+              <button type="button" onClick={() => move(i, -1)} disabled={i === 0} style={{ padding: '0 5px', fontSize: 9, lineHeight: '13px', border: '1px solid #D5D5D5', background: '#fff', borderRadius: 3, cursor: 'pointer' }}>▲</button>
+              <button type="button" onClick={() => move(i, 1)} disabled={i === items.length - 1} style={{ padding: '0 5px', fontSize: 9, lineHeight: '13px', border: '1px solid #D5D5D5', background: '#fff', borderRadius: 3, cursor: 'pointer' }}>▼</button>
+            </div>
+            <span style={{ flex: 1, fontSize: 12.5, fontWeight: 600, color: '#333' }}>{meta?.label || s.key}</span>
+            <div onClick={() => emit(items.map((x, xi) => (xi === i ? { ...x, on: x.on ? 0 : 1 } : x)))} role="switch" aria-checked={!!s.on}
+              style={{ width: 34, height: 18, borderRadius: 18, background: s.on ? ACCENT : '#CCC', position: 'relative', cursor: 'pointer', flexShrink: 0 }}>
+              <div style={{ position: 'absolute', top: 2, left: s.on ? 18 : 2, width: 14, height: 14, borderRadius: '50%', background: '#fff', transition: 'left .15s' }} />
+            </div>
+          </div>
+        );
+      })}
+      <div style={{ fontSize: 11, color: '#888', marginTop: 6 }}>Sections only appear when they have content (e.g. Doctors shows only if doctors exist). Top bar and cover slider always stay at top.</div>
+    </div>
+  );
+}
 
 interface FieldConfig {
   key: string;
@@ -100,6 +238,7 @@ const RESOURCE_CONFIGS: Record<string, ResourceConfig> = {
     { key: 'category_id',      label: 'Category',         type: 'category-search' },
     { key: 'tagline',          label: 'Tagline',          type: 'text' },
     { key: 'description',      label: 'Description',      type: 'textarea' },
+    { key: 'keywords',         label: 'Search Keywords (customers find this business by these words)', type: 'keywords-input' },
     { key: 'about',            label: 'About',            type: 'textarea' },
     { key: 'image',            label: 'Cover Image / Video (fallback)', type: 'media', folder: 'businesses' },
     { key: 'logo',             label: 'Logo',             type: 'image',           folder: 'businesses' },
@@ -109,6 +248,7 @@ const RESOURCE_CONFIGS: Record<string, ResourceConfig> = {
     { key: 'store_url',        label: 'Online Store URL (Buy Online link)', type: 'text', placeholder: 'https://' },
     { key: 'products',         label: 'Products (storefront — image, name, price, category)', type: 'products' },
     { key: 'clients',          label: 'Clients & Partners (logos shown on the detail page)', type: 'clients' },
+    { key: 'clients_size',     label: 'Clients & Partners Size (logo image + title)', type: 'select', options: ['small', 'medium'] },
     { key: 'emirate',          label: 'Emirate',          type: 'select',          options: EMIRATES },
     { key: 'address',          label: 'Address',          type: 'text' },
     { key: 'map_embed',        label: 'Location Map Link (paste a Google Maps embed or share link — Latitude & Longitude below fill in automatically)', type: 'map-link', placeholder: 'https://www.google.com/maps/embed?pb=… or …/@25.2048,55.2708,17z' },
@@ -122,11 +262,12 @@ const RESOURCE_CONFIGS: Record<string, ResourceConfig> = {
     { key: 'closing_time',     label: 'Closing Time',     type: 'time-picker' },
     { key: 'rating',           label: 'Rating (0–5)',     type: 'number' },
     { key: 'featured',         label: 'Featured (big card on listing; off = compact row)', type: 'toggle' },
+    { key: 'is_verified',      label: 'Verified (✓ badge on listing & detail page)', type: 'toggle' },
+    { key: 'color',            label: 'Business Color (blank = default theme; if set, this business uses it as its theme color)', type: 'color-picker' },
     { key: 'sort_order',       label: 'Sort Order',       type: 'number' },
     { key: 'established_year', label: 'Est. Year',        type: 'number' },
     { key: 'employees',        label: 'Team Size (shown in the stats row, e.g. 50+)', type: 'text', placeholder: '50+' },
-    { key: 'show_stats',       label: 'Show Stats Row (Rating / Est. Year / Team Size / Reviews on the detail page)', type: 'toggle', defaultOn: true },
-    { key: 'show_clients',     label: 'Show Clients & Partners section on the detail page', type: 'toggle', defaultOn: true },
+    { key: 'sections_config',  label: 'Page Sections (show/hide + order on the detail page)', type: 'page-sections' },
     { key: 'is_online_store',  label: 'Online Store (show product prices + Buy Online)', type: 'toggle' },
     { key: 'is_active',        label: 'Active',           type: 'toggle' },
   ]},
@@ -184,6 +325,7 @@ const RESOURCE_CONFIGS: Record<string, ResourceConfig> = {
     { key: 'name',        label: 'Name',           type: 'text', required: true },
     { key: 'logo',        label: 'Logo',           type: 'image', folder: 'realestate' },
     { key: 'banner',      label: 'Banner',         type: 'image', folder: 'realestate' },
+    { key: 'card_media',  label: 'Listing Card Image / Video (vertical card on the Developers page)', type: 'media', folder: 'realestate' },
     { key: 'about',       label: 'About',          type: 'textarea' },
     { key: 'phone',       label: 'Phone',          type: 'text', placeholder: '+9714...', syncTo: 'whatsapp', syncTransform: 'strip-plus' },
     { key: 'whatsapp',    label: 'WhatsApp',       type: 'text' },
@@ -526,7 +668,7 @@ function ClientsManager({ recordId }: { recordId: number | null }) {
           <div key={c.id} style={{ border: '1px solid #E0E0E0', borderRadius: 6, overflow: 'hidden', background: '#fff' }}>
             {c.logo
               ? <img src={c.logoUrl || c.logo} alt="" style={{ width: '100%', height: 56, objectFit: 'contain', display: 'block', background: '#FAFAFA', padding: 4, boxSizing: 'border-box' }} />
-              : <div style={{ height: 56, display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#F0EEFB', color: '#6C5CE7', fontWeight: 800, fontSize: 20 }}>{String(c.name)[0]?.toUpperCase()}</div>}
+              : <div style={{ height: 56, display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#F0EEFB', color: 'var(--primary)', fontWeight: 800, fontSize: 20 }}>{String(c.name)[0]?.toUpperCase()}</div>}
             <div style={{ padding: '6px 8px' }}>
               <div style={{ fontSize: 11, fontWeight: 700, color: '#333', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.name}</div>
               <div style={{ fontSize: 10, color: '#999', marginTop: 1 }}>#{c.sort_order ?? 0}{c.website ? ' · 🔗' : ''}</div>
@@ -920,6 +1062,11 @@ function ProductsManager({ recordId }: { recordId: number | null }) {
             <div style={{ padding: '6px 8px' }}>
               <div style={{ fontSize: 12, fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{p.name}</div>
               <div style={{ fontSize: 11, color: '#888', marginTop: 1 }}>{p.category || '—'} · {p.currency || 'AED'} {p.price ?? '—'}</div>
+              <span style={{ fontSize: 9, fontWeight: 700, textTransform: 'capitalize', padding: '1px 7px', borderRadius: 8, display: 'inline-block', marginTop: 3,
+                background: p.status === 'active' ? '#E8F5E9' : p.status === 'inactive' ? '#FDECEA' : '#FFF8E1',
+                color: p.status === 'active' ? '#2E7D32' : p.status === 'inactive' ? '#C62828' : '#B26A00' }}>
+                {p.status || 'active'}
+              </span>
               <div style={{ display: 'flex', gap: 6, marginTop: 5 }}>
                 <button type="button" onClick={() => setEditing(p)} style={miniBtn}>Edit</button>
                 <button type="button" onClick={() => delProduct(p.id)} style={{ ...miniBtn, color: '#C42B1C' }}>Del</button>
@@ -1049,18 +1196,83 @@ function ProductCategoryForm({ recordId, cat, onClose, onSaved }: { recordId: nu
   );
 }
 
+// ── Product form helpers ──────────────────────────────────────────────────────
+
+const safeArr = (s: any): any[] => { try { const v = JSON.parse(s || '[]'); return Array.isArray(v) ? v : []; } catch { return []; } };
+const safeObj = (s: any): any => { try { return JSON.parse(s || '{}') || {}; } catch { return {}; } };
+const ytId = (url: string) => /(?:youtube\.com\/(?:watch\?.*v=|shorts\/|embed\/)|youtu\.be\/)([\w-]{6,})/i.exec(url || '')?.[1] || null;
+const upUrl = (f: string) => (String(f).startsWith('http') ? f : `/assets/uploads/businesses/${f}`);
+
+// Multi-select chips with type-to-add (adds to the shared common list).
+function VariantChips({ label, type, options, selected, onChange }:
+  { label: string; type: string; options: string[]; selected: string[]; onChange: (v: string[]) => void }) {
+  const [adding, setAdding] = useState('');
+  const toggle = (v: string) => onChange(selected.includes(v) ? selected.filter((x) => x !== v) : [...selected, v]);
+  const addNew = async () => {
+    const v = adding.trim();
+    if (!v) return;
+    if (!options.includes(v)) await api.post('/admin/variant-options', { type, value: v }).catch(() => {});
+    if (!selected.includes(v)) onChange([...selected, v]);
+    setAdding('');
+  };
+  const all = [...options, ...selected.filter((s) => !options.includes(s))];
+  return (
+    <div>
+      <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: '#666', margin: '10px 0 5px' }}>{label}</label>
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, alignItems: 'center' }}>
+        {all.map((v) => (
+          <button key={v} type="button" onClick={() => toggle(v)}
+            style={{ padding: '4px 11px', borderRadius: 999, fontSize: 12, cursor: 'pointer', fontFamily: 'inherit',
+              border: selected.includes(v) ? `1px solid ${ACCENT}` : '1px solid #D5D5D5',
+              background: selected.includes(v) ? '#EBF3FB' : '#fff',
+              color: selected.includes(v) ? ACCENT : '#444', fontWeight: selected.includes(v) ? 700 : 500 }}>
+            {v}
+          </button>
+        ))}
+        <input value={adding} onChange={(e) => setAdding(e.target.value)}
+          onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addNew(); } }}
+          placeholder="+ add" style={{ ...inputStyle, width: 90, padding: '4px 8px', fontSize: 12 }} />
+        {adding.trim() && <button type="button" onClick={addNew} style={{ fontSize: 11, padding: '4px 10px', border: '1px solid #C8C8C8', background: '#fff', borderRadius: 4, cursor: 'pointer' }}>Add</button>}
+      </div>
+    </div>
+  );
+}
+
 function ProductForm({ recordId, product, onClose, onSaved }: { recordId: number; product: any | null; onClose: () => void; onSaved: () => void }) {
   const [category, setCategory] = useState(product?.category || '');
   const [cats, setCats] = useState<any[]>([]);
   const [newCat, setNewCat] = useState(false);
+  const [subcats, setSubcats] = useState<any[]>([]);
+  const [subcategory, setSubcategory] = useState(product?.subcategory || '');
+  const [newSub, setNewSub] = useState(false);
   const [name, setName] = useState(product?.name || '');
+  const [shortDesc, setShortDesc] = useState(product?.short_description || '');
+  const [brand, setBrand] = useState(product?.brand || '');
+  const [tags, setTags] = useState(product?.tags || '');
+  const [sku, setSku] = useState(product?.sku || '');
   const [price, setPrice] = useState(product?.price != null ? String(product.price) : '');
   const [originalPrice, setOriginalPrice] = useState(product?.original_price != null ? String(product.original_price) : '');
+  const [costPrice, setCostPrice] = useState(product?.cost_price != null ? String(product.cost_price) : '');
+  const [discountPct, setDiscountPct] = useState(product?.discount_percent != null ? String(product.discount_percent) : '');
   const [currency, setCurrency] = useState(product?.currency || 'AED');
   const [description, setDescription] = useState(product?.description || '');
-  const [image, setImage] = useState(product?.image || '');
+  const [status, setStatus] = useState(product?.status || 'draft');
+  const [featured, setFeatured] = useState(!!Number(product?.featured || 0));
+  const [images, setImages] = useState<string[]>(() => {
+    const arr = safeArr(product?.images);
+    if (arr.length) return arr;
+    return product?.image ? [product.image] : [];
+  });
+  const [videos, setVideos] = useState<{ type: 'file' | 'youtube'; src: string }[]>(() => safeArr(product?.videos));
+  const [variants, setVariants] = useState<any>(() => ({
+    sizes: [], colors: [], materials: [], dimensions: [], style: '', weight: '',
+    ...safeObj(product?.variants),
+  }));
+  const [options, setOptions] = useState<Record<string, string[]>>({});
+  const [ytUrl, setYtUrl] = useState('');
   const [uploading, setUploading] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [err, setErr] = useState('');
 
   useEffect(() => {
     api.get(`/admin/businesses/${recordId}/product-categories`)
@@ -1071,79 +1283,239 @@ function ProductForm({ recordId, product, onClose, onSaved }: { recordId: number
         if (product?.category && !list.some((c: any) => c.name === product.category)) setNewCat(true);
       })
       .catch(() => {});
+    api.get(`/admin/businesses/${recordId}/product-subcategories`).then((r) => setSubcats(r.data.subcategories || [])).catch(() => {});
+    api.get('/admin/variant-options').then((r) => setOptions(r.data || {})).catch(() => {});
   }, [recordId, product]);
 
-  const uploadImg = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  // Original price + discount % → selling price auto-fills (still editable).
+  const recalc = (op: string, d: string) => {
+    const o = Number(op), pct = Number(d);
+    if (o > 0 && pct > 0 && pct < 100) setPrice(String(Math.round(o * (1 - pct / 100) * 100) / 100));
+  };
+
+  const uploadImgs = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    if (!files.length) return;
+    setUploading(true);
+    try {
+      for (const file of files) {
+        const fd = new FormData(); fd.append('file', file);
+        const res = await api.post('/admin/upload/businesses', fd, { headers: { 'Content-Type': 'multipart/form-data' } });
+        setImages((prev) => [...prev, res.data.filename as string]);
+      }
+    } finally { setUploading(false); e.target.value = ''; }
+  };
+
+  const uploadVideo = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]; if (!file) return;
     setUploading(true);
     try {
       const fd = new FormData(); fd.append('file', file);
-      const res = await api.post('/admin/upload/businesses', fd, { headers: { 'Content-Type': 'multipart/form-data' } });
-      setImage(res.data.filename as string);
-    } finally { setUploading(false); }
+      const res = await api.post('/admin/upload-video/businesses', fd, { headers: { 'Content-Type': 'multipart/form-data' } });
+      setVideos((prev) => [...prev, { type: 'file', src: res.data.filename as string }]);
+    } finally { setUploading(false); e.target.value = ''; }
   };
 
+  const addYt = () => {
+    if (!ytId(ytUrl)) { setErr('Not a valid YouTube link'); return; }
+    setErr('');
+    setVideos((prev) => [...prev, { type: 'youtube', src: ytUrl.trim() }]);
+    setYtUrl('');
+  };
+
+  const subcatsForCat = subcats.filter((s) => s.category === category.trim());
+
   const save = async () => {
-    setSaving(true);
+    if (!name.trim()) { setErr('Name is required'); return; }
+    setSaving(true); setErr('');
     const cat = category.trim();
-    const payload = { category: cat, name, price, original_price: originalPrice, currency, description, image };
+    const sub = subcategory.trim();
+    const payload = {
+      category: cat, subcategory: sub, name, short_description: shortDesc, brand, tags, sku,
+      price, original_price: originalPrice, cost_price: costPrice, discount_percent: discountPct,
+      currency, description, status, featured: featured ? 1 : 0,
+      image: images[0] || '',
+      images: JSON.stringify(images),
+      videos: JSON.stringify(videos),
+      variants: JSON.stringify(variants),
+    };
     try {
-      // A category typed in rather than picked gets created so it appears in future dropdowns.
+      // Typed-in category/subcategory get created so they appear in future dropdowns.
       if (cat && !cats.some((c) => c.name === cat)) {
         await api.post(`/admin/businesses/${recordId}/product-categories`, { name: cat }).catch(() => {});
+      }
+      if (cat && sub && !subcatsForCat.some((s) => s.name === sub)) {
+        await api.post(`/admin/businesses/${recordId}/product-subcategories`, { category: cat, name: sub }).catch(() => {});
       }
       if (product) await api.put(`/admin/businesses/${recordId}/products/${product.id}`, payload);
       else await api.post(`/admin/businesses/${recordId}/products`, payload);
       onSaved();
-    } catch { setSaving(false); }
+    } catch { setErr('Save failed'); setSaving(false); }
   };
 
-  const preview = image ? (String(image).startsWith('http') ? image : `/assets/uploads/businesses/${image}`) : '';
   const lbl = (t: string) => <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: '#666', margin: '10px 0 4px' }}>{t}</label>;
+  const sectionHead = (t: string) => <div style={{ fontSize: 12, fontWeight: 800, color: '#333', margin: '20px 0 2px', paddingBottom: 5, borderBottom: '1px solid #EEE', textTransform: 'uppercase', letterSpacing: 0.4 }}>{t}</div>;
 
   return (
-    <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.45)', zIndex: 1100, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
-      <div onClick={(e) => e.stopPropagation()} style={{ background: '#fff', borderRadius: 8, width: '100%', maxWidth: 460, maxHeight: '90vh', overflowY: 'auto', padding: 20, fontFamily: FONT }}>
-        <h3 style={{ margin: 0, fontSize: 16, fontWeight: 700 }}>{product ? 'Edit Product' : 'New Product'}</h3>
-        {lbl('Image')}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          {preview && <img src={preview} alt="" style={{ width: 64, height: 64, objectFit: 'cover', borderRadius: 4, border: '1px solid #E0E0E0' }} />}
-          <input type="file" accept="image/*" onChange={uploadImg} style={{ fontSize: 12 }} />
-          {uploading && <span style={{ fontSize: 11, color: '#888' }}>Uploading…</span>}
-          {image && <button type="button" onClick={() => setImage('')} style={{ fontSize: 11, color: '#C42B1C', background: 'none', border: 'none', cursor: 'pointer' }}>remove</button>}
-        </div>
-        {lbl('Category (becomes a filter chip — e.g. "Apparel")')}
-        {!newCat ? (
-          <select value={category}
-            onChange={(e) => {
-              if (e.target.value === '__new__') { setNewCat(true); setCategory(''); }
-              else setCategory(e.target.value);
-            }} style={inputStyle}>
-            <option value="">— No category —</option>
-            {cats.map((c) => <option key={c.id} value={c.name}>{c.icon ? `${c.icon} ` : ''}{c.name}</option>)}
-            <option value="__new__">＋ New category…</option>
-          </select>
-        ) : (
-          <div style={{ display: 'flex', gap: 8 }}>
-            <input value={category} onChange={(e) => setCategory(e.target.value)} style={inputStyle} placeholder="Type new category name" autoFocus />
-            <button type="button" onClick={() => { setNewCat(false); setCategory(''); }}
-              style={{ fontSize: 12, padding: '0 10px', border: '1px solid #C8C8C8', background: '#fff', borderRadius: 4, cursor: 'pointer', color: '#555', whiteSpace: 'nowrap' }}>
-              pick existing
-            </button>
-          </div>
-        )}
-        {lbl('Name')}
-        <input value={name} onChange={(e) => setName(e.target.value)} style={inputStyle} />
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 80px', gap: 10 }}>
-          <div>{lbl('Price')}<input type="number" value={price} onChange={(e) => setPrice(e.target.value)} style={inputStyle} /></div>
-          <div>{lbl('Original (strike)')}<input type="number" value={originalPrice} onChange={(e) => setOriginalPrice(e.target.value)} style={inputStyle} /></div>
-          <div>{lbl('Currency')}<input value={currency} onChange={(e) => setCurrency(e.target.value)} style={inputStyle} /></div>
-        </div>
-        {lbl('Description (shown in the product popup)')}
-        <textarea rows={4} value={description} onChange={(e) => setDescription(e.target.value)} style={{ ...inputStyle, resize: 'vertical' }} />
-        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 16 }}>
+    <div style={{ position: 'fixed', inset: 0, background: '#fff', zIndex: 1100, display: 'flex', flexDirection: 'column', fontFamily: FONT }}>
+      {/* Header */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 16px', borderBottom: '1px solid #E5E5E5', background: '#F9F9F9', flexShrink: 0 }}>
+        <button type="button" onClick={onClose} aria-label="Back"
+          style={{ width: 34, height: 34, background: '#fff', border: '1px solid #DCDCDC', borderRadius: 6, cursor: 'pointer', fontSize: 15, color: '#333' }}>←</button>
+        <span style={{ fontSize: 15, fontWeight: 700 }}>{product ? `Edit Product — ${product.name}` : 'New Product'}</span>
+        <span style={{ fontSize: 11, padding: '2px 10px', borderRadius: 10, fontWeight: 700, textTransform: 'capitalize',
+          background: status === 'active' ? '#E8F5E9' : status === 'inactive' ? '#FDECEA' : '#FFF8E1',
+          color: status === 'active' ? '#2E7D32' : status === 'inactive' ? '#C62828' : '#B26A00' }}>{status}</span>
+        <div style={{ marginLeft: 'auto', display: 'flex', gap: 8 }}>
           <button type="button" onClick={onClose} style={{ padding: '7px 16px', border: '1px solid #C8C8C8', background: '#fff', borderRadius: 4, fontSize: 13, cursor: 'pointer' }}>Cancel</button>
-          <button type="button" onClick={save} disabled={saving || !name} style={{ padding: '7px 18px', border: 'none', background: saving || !name ? '#9CB8D8' : ACCENT, color: '#fff', borderRadius: 4, fontSize: 13, fontWeight: 600, cursor: saving || !name ? 'not-allowed' : 'pointer' }}>{saving ? 'Saving…' : 'Save'}</button>
+          <button type="button" onClick={save} disabled={saving || uploading || !name}
+            style={{ padding: '7px 22px', border: 'none', background: saving || !name ? '#9CB8D8' : ACCENT, color: '#fff', borderRadius: 4, fontSize: 13, fontWeight: 600, cursor: saving || !name ? 'not-allowed' : 'pointer' }}>
+            {saving ? 'Saving…' : '✓ Save Product'}
+          </button>
+        </div>
+      </div>
+
+      {/* Body */}
+      <div style={{ flex: 1, overflowY: 'auto' }}>
+        <div style={{ maxWidth: 900, margin: '0 auto', padding: '16px 24px 60px' }}>
+          {err && <div style={{ background: '#FDF3F2', border: '1px solid #F1BBBB', color: '#C42B1C', padding: '8px 12px', borderRadius: 4, fontSize: 12, marginBottom: 10 }}>{err}</div>}
+
+          {sectionHead('Basics')}
+          <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr', gap: 12 }}>
+            <div>{lbl('Name *')}<input value={name} onChange={(e) => setName(e.target.value)} style={inputStyle} /></div>
+            <div>{lbl('Brand')}<input value={brand} onChange={(e) => setBrand(e.target.value)} style={inputStyle} /></div>
+            <div>{lbl('SKU')}<input value={sku} onChange={(e) => setSku(e.target.value)} style={inputStyle} /></div>
+          </div>
+          {lbl('Short description (shown on the product card)')}
+          <input value={shortDesc} onChange={(e) => setShortDesc(e.target.value)} style={inputStyle} maxLength={500} />
+          {lbl('Full description')}
+          <textarea rows={4} value={description} onChange={(e) => setDescription(e.target.value)} style={{ ...inputStyle, resize: 'vertical' }} />
+          {lbl('Tags (comma separated)')}
+          <input value={tags} onChange={(e) => setTags(e.target.value)} style={inputStyle} placeholder="new arrival, summer, bestseller" />
+
+          {sectionHead('Category')}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+            <div>
+              {lbl('Category (filter chip)')}
+              {!newCat ? (
+                <select value={category}
+                  onChange={(e) => {
+                    if (e.target.value === '__new__') { setNewCat(true); setCategory(''); }
+                    else { setCategory(e.target.value); setSubcategory(''); }
+                  }} style={inputStyle}>
+                  <option value="">— No category —</option>
+                  {cats.map((c) => <option key={c.id} value={c.name}>{c.icon ? `${c.icon} ` : ''}{c.name}</option>)}
+                  <option value="__new__">＋ New category…</option>
+                </select>
+              ) : (
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <input value={category} onChange={(e) => setCategory(e.target.value)} style={inputStyle} placeholder="Type new category name" autoFocus />
+                  <button type="button" onClick={() => { setNewCat(false); setCategory(''); }}
+                    style={{ fontSize: 12, padding: '0 10px', border: '1px solid #C8C8C8', background: '#fff', borderRadius: 4, cursor: 'pointer', color: '#555', whiteSpace: 'nowrap' }}>pick existing</button>
+                </div>
+              )}
+            </div>
+            <div>
+              {lbl('Subcategory (under the chosen category)')}
+              {!newSub ? (
+                <select value={subcategory} disabled={!category.trim()}
+                  onChange={(e) => {
+                    if (e.target.value === '__new__') { setNewSub(true); setSubcategory(''); }
+                    else setSubcategory(e.target.value);
+                  }} style={inputStyle}>
+                  <option value="">— No subcategory —</option>
+                  {subcatsForCat.map((s) => <option key={s.id} value={s.name}>{s.name}</option>)}
+                  <option value="__new__">＋ New subcategory…</option>
+                </select>
+              ) : (
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <input value={subcategory} onChange={(e) => setSubcategory(e.target.value)} style={inputStyle} placeholder="Type new subcategory" autoFocus />
+                  <button type="button" onClick={() => { setNewSub(false); setSubcategory(''); }}
+                    style={{ fontSize: 12, padding: '0 10px', border: '1px solid #C8C8C8', background: '#fff', borderRadius: 4, cursor: 'pointer', color: '#555', whiteSpace: 'nowrap' }}>pick existing</button>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {sectionHead('Pricing')}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 12 }}>
+            <div>{lbl('Original price')}<input type="number" value={originalPrice} onChange={(e) => { setOriginalPrice(e.target.value); recalc(e.target.value, discountPct); }} style={inputStyle} /></div>
+            <div>{lbl('Discount %')}<input type="number" min={0} max={99} value={discountPct} onChange={(e) => { setDiscountPct(e.target.value); recalc(originalPrice, e.target.value); }} style={inputStyle} /></div>
+            <div>{lbl('Selling price (auto)')}<input type="number" value={price} onChange={(e) => setPrice(e.target.value)} style={{ ...inputStyle, fontWeight: 700 }} /></div>
+            <div>{lbl('Cost price (internal)')}<input type="number" value={costPrice} onChange={(e) => setCostPrice(e.target.value)} style={inputStyle} /></div>
+            <div>{lbl('Currency')}<input value={currency} onChange={(e) => setCurrency(e.target.value)} style={inputStyle} /></div>
+          </div>
+
+          {sectionHead('Images (first = main; click a thumbnail to make it main)')}
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'center', marginTop: 8 }}>
+            {images.map((img, i) => (
+              <div key={img + i} style={{ position: 'relative' }}>
+                <img src={upUrl(img)} alt="" onClick={() => i > 0 && setImages([img, ...images.filter((_, j) => j !== i)])}
+                  style={{ width: 76, height: 76, objectFit: 'cover', borderRadius: 6, cursor: i > 0 ? 'pointer' : 'default',
+                    border: i === 0 ? `2px solid ${ACCENT}` : '1px solid #E0E0E0' }} />
+                {i === 0 && <span style={{ position: 'absolute', bottom: 2, left: 2, fontSize: 9, background: ACCENT, color: '#fff', padding: '1px 5px', borderRadius: 3, fontWeight: 700 }}>MAIN</span>}
+                <button type="button" onClick={() => setImages(images.filter((_, j) => j !== i))}
+                  style={{ position: 'absolute', top: -6, right: -6, width: 18, height: 18, borderRadius: '50%', border: 'none', background: '#C42B1C', color: '#fff', fontSize: 10, cursor: 'pointer', lineHeight: 1 }}>✕</button>
+              </div>
+            ))}
+            <label style={{ width: 76, height: 76, border: '1px dashed #BBB', borderRadius: 6, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: ACCENT, fontSize: 22, background: '#FAFAFA' }}>
+              +
+              <input type="file" accept="image/*" multiple onChange={uploadImgs} style={{ display: 'none' }} />
+            </label>
+            {uploading && <span style={{ fontSize: 11, color: '#888' }}>Uploading…</span>}
+          </div>
+
+          {sectionHead('Videos (upload or YouTube links)')}
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'center', marginTop: 8 }}>
+            {videos.map((v, i) => (
+              <div key={v.src + i} style={{ position: 'relative', width: 100 }}>
+                {v.type === 'youtube'
+                  ? <img src={`https://img.youtube.com/vi/${ytId(v.src)}/mqdefault.jpg`} alt="" style={{ width: 100, height: 64, objectFit: 'cover', borderRadius: 6, border: '1px solid #E0E0E0' }} />
+                  : <video src={upUrl(v.src)} muted style={{ width: 100, height: 64, objectFit: 'cover', borderRadius: 6, border: '1px solid #E0E0E0', background: '#000' }} />}
+                <span style={{ position: 'absolute', bottom: 4, left: 4, fontSize: 9, background: 'rgba(0,0,0,.7)', color: '#fff', padding: '1px 5px', borderRadius: 3 }}>{v.type === 'youtube' ? '▶ YouTube' : '▶ Video'}</span>
+                <button type="button" onClick={() => setVideos(videos.filter((_, j) => j !== i))}
+                  style={{ position: 'absolute', top: -6, right: -6, width: 18, height: 18, borderRadius: '50%', border: 'none', background: '#C42B1C', color: '#fff', fontSize: 10, cursor: 'pointer', lineHeight: 1 }}>✕</button>
+              </div>
+            ))}
+            <label style={{ width: 100, height: 64, border: '1px dashed #BBB', borderRadius: 6, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: ACCENT, fontSize: 12, background: '#FAFAFA', fontWeight: 600 }}>
+              + Upload
+              <input type="file" accept="video/*" onChange={uploadVideo} style={{ display: 'none' }} />
+            </label>
+          </div>
+          <div style={{ display: 'flex', gap: 8, marginTop: 8, maxWidth: 480 }}>
+            <input value={ytUrl} onChange={(e) => setYtUrl(e.target.value)} placeholder="Paste YouTube link…" style={inputStyle} />
+            <button type="button" onClick={addYt} disabled={!ytUrl.trim()}
+              style={{ fontSize: 12, padding: '0 14px', border: '1px solid #C8C8C8', background: '#fff', borderRadius: 4, cursor: 'pointer', whiteSpace: 'nowrap', color: '#333' }}>+ Add link</button>
+          </div>
+
+          {sectionHead('Variants')}
+          <VariantChips label="Sizes" type="size" options={options.size || []} selected={variants.sizes || []} onChange={(v) => setVariants({ ...variants, sizes: v })} />
+          <VariantChips label="Colors" type="color" options={options.color || []} selected={variants.colors || []} onChange={(v) => setVariants({ ...variants, colors: v })} />
+          <VariantChips label="Materials" type="material" options={options.material || []} selected={variants.materials || []} onChange={(v) => setVariants({ ...variants, materials: v })} />
+          <VariantChips label="Dimensions" type="dimension" options={options.dimension || []} selected={variants.dimensions || []} onChange={(v) => setVariants({ ...variants, dimensions: v })} />
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+            <div>{lbl('Style / Model')}<input value={variants.style || ''} onChange={(e) => setVariants({ ...variants, style: e.target.value })} style={inputStyle} /></div>
+            <div>{lbl('Weight')}<input value={variants.weight || ''} onChange={(e) => setVariants({ ...variants, weight: e.target.value })} style={inputStyle} placeholder="2.5 kg" /></div>
+          </div>
+
+          {sectionHead('Status')}
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginTop: 8 }}>
+            {(['draft', 'active', 'inactive'] as const).map((s) => (
+              <button key={s} type="button" onClick={() => setStatus(s)}
+                style={{ padding: '6px 18px', borderRadius: 999, fontSize: 12.5, fontWeight: 700, cursor: 'pointer', textTransform: 'capitalize', fontFamily: 'inherit',
+                  border: status === s ? `1px solid ${ACCENT}` : '1px solid #D5D5D5',
+                  background: status === s ? ACCENT : '#fff', color: status === s ? '#fff' : '#555' }}>
+                {s}
+              </button>
+            ))}
+            <span style={{ fontSize: 11.5, color: '#888' }}>Only <b>Active</b> products appear on the storefront.</span>
+            {product?.created_by && <span style={{ marginLeft: 'auto', fontSize: 11.5, color: '#888' }}>Created by: <b>{product.created_by}</b></span>}
+          </div>
+          <div style={{ display: 'flex', gap: 10, alignItems: 'center', marginTop: 12 }}>
+            <Toggle on={featured} onChange={setFeatured} />
+            <span style={{ fontSize: 12.5, fontWeight: 600, color: '#444' }}>Featured</span>
+            <span style={{ fontSize: 11.5, color: '#888' }}>— featured products are listed first on the storefront</span>
+          </div>
         </div>
       </div>
     </div>
@@ -1576,13 +1948,18 @@ function CrudDialog({ config, row, onClose, onSaved }: {
   const toggleFields = config.fields.filter((f) => f.type === 'toggle');
 
   return (
-    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.3)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}
-      onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
-      <div style={{ background: '#fff', borderRadius: 6, width: '100%', maxWidth: 580, maxHeight: '90vh', display: 'flex', flexDirection: 'column', boxShadow: '0 8px 40px rgba(0,0,0,0.2)', fontFamily: FONT, border: '1px solid #C8C8C8' }}>
+    <div style={{ position: 'fixed', inset: 0, background: '#F3F3F3', zIndex: 1000, display: 'flex', flexDirection: 'column' }}>
+      <div style={{ background: '#fff', width: '100%', height: '100%', display: 'flex', flexDirection: 'column', fontFamily: FONT }}>
 
         {/* Title bar */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px 10px', borderBottom: '1px solid #E5E5E5', flexShrink: 0 }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 16px', borderBottom: '1px solid #E5E5E5', flexShrink: 0, background: '#F9F9F9' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <button type="button" onClick={onClose} aria-label="Back"
+              style={{ width: 34, height: 34, background: '#fff', border: '1px solid #DCDCDC', borderRadius: 6, cursor: 'pointer', fontSize: 15, color: '#333', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+              onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.background = '#EFEFEF'; }}
+              onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.background = '#fff'; }}>
+              ←
+            </button>
             <div style={{ width: 20, height: 20, background: ACCENT, borderRadius: 2, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: 10 }}>
               {isEdit ? '✎' : '+'}
             </div>
@@ -1599,7 +1976,7 @@ function CrudDialog({ config, row, onClose, onSaved }: {
         </div>
 
         {/* Form body */}
-        <form onSubmit={handleSubmit} style={{ flex: 1, overflowY: 'auto', padding: '14px 16px' }}>
+        <form onSubmit={handleSubmit} style={{ flex: 1, overflowY: 'auto', padding: '18px 24px 40px', maxWidth: 1100, width: '100%', margin: '0 auto' }}>
           {error && (
             <div style={{ background: '#FDF3F2', border: '1px solid #F1BBBB', color: '#C42B1C', padding: '8px 12px', borderRadius: 3, fontSize: 12, marginBottom: 12 }}>
               {error}
@@ -1609,13 +1986,32 @@ function CrudDialog({ config, row, onClose, onSaved }: {
           {/* Two-column layout for short fields */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: '10px 16px' }}>
             {textFields.map((f) => (
-              <div key={f.key} style={{ gridColumn: (f.type === 'textarea' || f.type === 'time-picker' || f.type === 'user-search' || f.type === 'business-search' || f.type === 'category-search' || f.type === 'gallery' || f.type === 'cover' || f.type === 'services' || f.type === 'products') ? '1 / -1' : undefined }}>
+              <div key={f.key} style={{ gridColumn: (f.type === 'textarea' || f.type === 'time-picker' || f.type === 'user-search' || f.type === 'business-search' || f.type === 'category-search' || f.type === 'gallery' || f.type === 'cover' || f.type === 'services' || f.type === 'products' || f.type === 'page-sections' || f.type === 'keywords-input') ? '1 / -1' : undefined }}>
                 <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: '#444', marginBottom: 4 }}>
                   {f.label}{f.required && <span style={{ color: '#C42B1C', marginLeft: 2 }}>*</span>}
                 </label>
 
                 {f.type === 'text' && (
                   <input type="text" value={form[f.key] ?? ''} onChange={(e) => set(f.key, e.target.value)} required={f.required} placeholder={f.placeholder} style={inputStyle} />
+                )}
+                {f.type === 'page-sections' && (
+                  <PageSectionsEditor value={form[f.key] ?? ''} seedRow={row} onChange={(v) => set(f.key, v)} />
+                )}
+                {f.type === 'keywords-input' && (
+                  <KeywordsInput value={form[f.key] ?? ''} onChange={(v) => set(f.key, v)} />
+                )}
+                {f.type === 'color-picker' && (
+                  <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                    <input type="color" value={/^#[0-9a-fA-F]{6}$/.test(form[f.key] || '') ? form[f.key] : '#6C5CE7'}
+                      onChange={(e) => set(f.key, e.target.value)}
+                      style={{ width: 42, height: 34, padding: 2, border: '1px solid #C8C8C8', borderRadius: 4, cursor: 'pointer', background: '#fff' }} />
+                    <input type="text" value={form[f.key] ?? ''} onChange={(e) => set(f.key, e.target.value)}
+                      placeholder={f.placeholder || 'blank = default theme'} style={inputStyle} />
+                    {form[f.key] && (
+                      <button type="button" onClick={() => set(f.key, '')} title="Reset to default"
+                        style={{ padding: '6px 10px', border: '1px solid #C8C8C8', borderRadius: 4, background: '#fff', cursor: 'pointer', fontSize: 12 }}>✕</button>
+                    )}
+                  </div>
                 )}
                 {f.type === 'number' && (
                   <input type="number" value={form[f.key] ?? ''} onChange={(e) => set(f.key, e.target.value)} required={f.required} style={inputStyle} />

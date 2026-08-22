@@ -6,7 +6,7 @@ const DOC_COLORS = [
   { bg: '#E14C8B', soft: '#FDEEF3' },
   { bg: '#1D6FE0', soft: '#EAF2FE' },
   { bg: '#E8890C', soft: '#FEF4E6' },
-  { bg: '#6C5CE7', soft: '#F1EEFE' },
+  { bg: 'var(--primary)', soft: '#F1EEFE' },
   { bg: '#00A5B8', soft: '#E4F6F9' },
 ];
 export function docColor(specialtyId?: number) {

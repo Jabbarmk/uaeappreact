@@ -1,8 +1,55 @@
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
+import { useState } from 'react';
 import api from '../../api';
 
 const FONT = "'Segoe UI',Inter,sans-serif";
+
+// Pending customer reviews on this owner's businesses — approve/reject inline.
+function PendingReviews() {
+  const qc = useQueryClient();
+  const [busy, setBusy] = useState<number | null>(null);
+  const { data } = useQuery({
+    queryKey: ['my-pending-reviews'],
+    queryFn: () => api.get('/user/reviews/pending').then((r) => r.data),
+  });
+  const reviews: any[] = data?.reviews || [];
+  if (!reviews.length) return null;
+
+  const decide = async (id: number, action: 'approve' | 'reject') => {
+    setBusy(id);
+    try {
+      await api.post(`/user/reviews/${id}/decision`, { action });
+      qc.invalidateQueries({ queryKey: ['my-pending-reviews'] });
+    } finally { setBusy(null); }
+  };
+
+  return (
+    <div style={{ marginBottom: 16, background: '#fff', borderRadius: 12, boxShadow: '0 2px 8px rgba(0,0,0,0.06)', overflow: 'hidden' }}>
+      <div style={{ padding: '12px 16px', borderBottom: '1px solid #F0F0F0', display: 'flex', alignItems: 'center', gap: 8 }}>
+        <span style={{ fontSize: 16 }}>⭐</span>
+        <span style={{ fontWeight: 700, fontSize: 14, color: '#1a1a1a' }}>Reviews Awaiting Your Approval</span>
+        <span style={{ marginLeft: 'auto', background: '#F57C00', color: '#fff', borderRadius: 10, padding: '1px 8px', fontSize: 11, fontWeight: 700 }}>{reviews.length}</span>
+      </div>
+      {reviews.map((r) => (
+        <div key={r.id} style={{ padding: '12px 16px', borderBottom: '1px solid #F5F5F5' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+            <span style={{ fontWeight: 600, fontSize: 13.5, color: '#1a1a1a' }}>{r.client_name}</span>
+            <span style={{ fontSize: 12, color: '#F5A623' }}>{'★'.repeat(Number(r.rating) || 5)}</span>
+            <span style={{ fontSize: 11, color: '#888' }}>on {r.business_name}</span>
+          </div>
+          <div style={{ fontSize: 13, color: '#444', margin: '6px 0 8px' }}>“{r.review}”</div>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <button onClick={() => decide(r.id, 'approve')} disabled={busy === r.id}
+              style={{ padding: '5px 14px', background: '#E8F5E9', color: '#2E7D32', border: '1px solid #A5D6A7', borderRadius: 6, fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: FONT }}>✓ Approve</button>
+            <button onClick={() => decide(r.id, 'reject')} disabled={busy === r.id}
+              style={{ padding: '5px 14px', background: '#FDF3F2', color: '#C42B1C', border: '1px solid #F1BBBB', borderRadius: 6, fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: FONT }}>✕ Reject</button>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
 
 function StatusBadge({ status }: { status: string }) {
   const c = status === 'approved' ? { bg: '#E8F5E9', color: '#2E7D32' }
@@ -34,6 +81,8 @@ export default function MyBusinessesPage() {
             + Add New
           </Link>
         </div>
+
+        <PendingReviews />
 
         {isLoading ? (
           <div style={{ textAlign: 'center', padding: 40, color: '#888' }}>Loading…</div>

@@ -65,7 +65,7 @@ export default function ClassifiedsPage() {
       <Link to="/realestate" style={{ display: 'block', margin: '4px 16px 8px', borderRadius: 18, overflow: 'hidden', position: 'relative', height: 96, textDecoration: 'none' }}>
         <img src="https://images.unsplash.com/photo-1512453979798-5ea266f8880c?w=800&h=200&fit=crop" alt="Real Estate"
           style={{ width: '100%', height: '100%', objectFit: 'cover' }} loading="lazy" />
-        <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(135deg,rgba(108,92,231,.85),rgba(0,206,201,.55))', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 18px' }}>
+        <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(135deg,rgba(var(--primary-rgb),.85),rgba(0,206,201,.55))', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 18px' }}>
           <div>
             <div style={{ color: '#fff', fontSize: 16, fontWeight: 800 }}>Real Estate</div>
             <div style={{ color: 'rgba(255,255,255,.9)', fontSize: 12, marginTop: 2 }}>Rooms, flats, villas &amp; off-plan projects</div>

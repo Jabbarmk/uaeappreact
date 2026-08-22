@@ -5,7 +5,7 @@ import api from '../../api';
 const FONT = "'Segoe UI',Inter,sans-serif";
 const ACCENT = '#0067C0';
 
-type Tab = 'all' | 'businesses' | 'jobs' | 'classifieds' | 'properties' | 'companies' | 'projects' | 'events';
+type Tab = 'all' | 'businesses' | 'jobs' | 'classifieds' | 'properties' | 'companies' | 'projects' | 'events' | 'reviews';
 
 interface ApprovalItem {
   id: number;
@@ -14,16 +14,18 @@ interface ApprovalItem {
   created_at: string;
   user_name: string;
   user_email: string;
-  type: 'business' | 'job' | 'classified' | 'property' | 'company' | 'project' | 'event';
+  type: 'business' | 'job' | 'classified' | 'property' | 'company' | 'project' | 'event' | 'review';
   category_id?: number | null;
   category_name?: string | null;
   requested_category_name?: string | null;
+  rating?: number;
+  review?: string;
 }
 
 interface Category { id: number; name: string; group_name?: string }
 
 function TypeIcon({ type }: { type: string }) {
-  const icons: Record<string, string> = { business: '🏢', job: '💼', classified: '🏷️', property: '🏠', company: '🏢', project: '🏗️', event: '🎉' };
+  const icons: Record<string, string> = { business: '🏢', job: '💼', classified: '🏷️', property: '🏠', company: '🏢', project: '🏗️', event: '🎉', review: '⭐' };
   return <span style={{ fontSize: 20 }}>{icons[type] || '📄'}</span>;
 }
 
@@ -67,7 +69,8 @@ export default function AdminApprovalsPage() {
   const companies: ApprovalItem[] = data?.companies || [];
   const projects: ApprovalItem[] = data?.projects || [];
   const events: ApprovalItem[] = data?.events || [];
-  const all = [...businesses, ...jobs, ...classifieds, ...properties, ...companies, ...projects, ...events].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+  const reviews: ApprovalItem[] = data?.reviews || [];
+  const all = [...businesses, ...jobs, ...classifieds, ...properties, ...companies, ...projects, ...events, ...reviews].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
 
   const tabs: { key: Tab; label: string; count: number }[] = [
     { key: 'all', label: 'All', count: all.length },
@@ -78,9 +81,10 @@ export default function AdminApprovalsPage() {
     { key: 'companies', label: 'RE Companies', count: companies.length },
     { key: 'projects', label: 'Projects', count: projects.length },
     { key: 'events', label: 'Events', count: events.length },
+    { key: 'reviews', label: 'Reviews', count: reviews.length },
   ];
 
-  const byTab: Record<Tab, ApprovalItem[]> = { all, businesses, jobs, classifieds, properties, companies, projects, events };
+  const byTab: Record<Tab, ApprovalItem[]> = { all, businesses, jobs, classifieds, properties, companies, projects, events, reviews };
   const items = byTab[tab];
 
   return (
@@ -124,7 +128,18 @@ export default function AdminApprovalsPage() {
                       {item.type === 'business' && item.category_name && !item.requested_category_name && (
                         <span style={{ fontSize: 11, padding: '2px 7px', background: '#EAF2FB', color: ACCENT, borderRadius: 8, fontWeight: 600 }}>{item.category_name}</span>
                       )}
+                      {item.type === 'review' && (
+                        <span style={{ fontSize: 11, padding: '2px 7px', background: '#EAF2FB', color: ACCENT, borderRadius: 8, fontWeight: 600 }}>on {item.category_name}</span>
+                      )}
+                      {item.type === 'review' && item.rating != null && (
+                        <span style={{ fontSize: 12, color: '#F5A623', fontWeight: 700 }}>{'★'.repeat(Number(item.rating))}{'☆'.repeat(5 - Number(item.rating))}</span>
+                      )}
                     </div>
+                    {item.type === 'review' && item.review && (
+                      <div style={{ fontSize: 13, color: '#444', marginTop: 6, background: '#F8F9FC', border: '1px solid #EEF0F6', borderRadius: 8, padding: '8px 10px' }}>
+                        “{item.review}”
+                      </div>
+                    )}
                     <div style={{ fontSize: 12, color: '#888', marginTop: 4 }}>
                       By <strong style={{ color: '#555' }}>{item.user_name || 'Unknown'}</strong>
                       {item.user_email ? ` (${item.user_email})` : ''}

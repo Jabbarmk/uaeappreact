@@ -18,7 +18,7 @@ export default function OfferDetailPage() {
     ? `https://wa.me/${offer.business_whatsapp.replace(/\D/g, '')}?text=${encodeURIComponent(`Hi, I want to order: ${offer.title} (${offer.currency} ${Math.round(offer.price)})`)}`
     : null;
 
-  const COLORS = ['#6C5CE7','#00B894','#FD79A8','#FDCB6E','#0984E3','#E17055'];
+  const COLORS = ['var(--primary)','#00B894','#FD79A8','#FDCB6E','#0984E3','#E17055'];
   const infoRows = [
     ['fa-map-marker-alt', 'Location', offer.business_address],
     ['fa-calendar-alt', 'Valid from', offer.valid_from ? new Date(offer.valid_from).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : null],
@@ -70,7 +70,7 @@ export default function OfferDetailPage() {
         <h2 style={{ fontSize: 20, fontWeight: 800, color: '#1A1A2E', margin: '0 0 10px' }}>{offer.title}</h2>
         {offer.description && <p style={{ fontSize: 14, color: '#636E8A', lineHeight: 1.6, margin: '0 0 16px' }}>{offer.description}</p>}
         <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, marginBottom: 16 }}>
-          <span style={{ fontSize: 28, fontWeight: 800, color: '#6C5CE7' }}>{offer.currency} {Math.round(offer.price).toLocaleString()}</span>
+          <span style={{ fontSize: 28, fontWeight: 800, color: 'var(--primary)' }}>{offer.currency} {Math.round(offer.price).toLocaleString()}</span>
           {offer.original_price && offer.original_price > offer.price && (
             <span style={{ fontSize: 15, color: '#9BA4B5', textDecoration: 'line-through' }}>{offer.currency} {Math.round(offer.original_price).toLocaleString()}</span>
           )}
@@ -84,13 +84,13 @@ export default function OfferDetailPage() {
           )}
           {offer.business_phone && (
             <a href={`tel:${offer.business_phone}`}
-              style={{ flex: 1, padding: '13px 0', background: '#6C5CE7', color: '#fff', borderRadius: 12, fontSize: 14, fontWeight: 700, textDecoration: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+              style={{ flex: 1, padding: '13px 0', background: 'var(--primary)', color: '#fff', borderRadius: 12, fontSize: 14, fontWeight: 700, textDecoration: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
               <i className="fas fa-phone"></i> Call Now
             </a>
           )}
           {!waLink && !offer.business_phone && (
             <Link to={`/businesses/${offer.business_id}`}
-              style={{ flex: 1, padding: '13px 0', background: '#6C5CE7', color: '#fff', borderRadius: 12, fontSize: 14, fontWeight: 700, textDecoration: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+              style={{ flex: 1, padding: '13px 0', background: 'var(--primary)', color: '#fff', borderRadius: 12, fontSize: 14, fontWeight: 700, textDecoration: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
               <i className="fas fa-store"></i> View Business
             </Link>
           )}
@@ -123,7 +123,7 @@ export default function OfferDetailPage() {
           <h3 style={{ fontSize: 15, fontWeight: 800, margin: '0 0 14px', color: '#1A1A2E' }}>Info</h3>
           {infoRows.map(([icon, label, val]) => (
             <div key={label} style={{ display: 'flex', alignItems: 'flex-start', gap: 10, marginBottom: 10 }}>
-              <div style={{ width: 32, height: 32, background: '#f0f2f8', borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#6C5CE7', fontSize: 13, flexShrink: 0 }}>
+              <div style={{ width: 32, height: 32, background: '#f0f2f8', borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--primary)', fontSize: 13, flexShrink: 0 }}>
                 <i className={`fas ${icon}`}></i>
               </div>
               <div>

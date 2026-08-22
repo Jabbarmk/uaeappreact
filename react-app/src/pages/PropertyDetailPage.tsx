@@ -100,7 +100,7 @@ export default function PropertyDetailPage() {
             <h3 style={{ fontSize: 15, fontWeight: 700, marginBottom: 10, color: 'var(--text)' }}>Amenities</h3>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
               {amenities.map((a, i) => (
-                <span key={i} style={{ fontSize: 12, fontWeight: 600, color: 'var(--primary)', background: 'rgba(108,92,231,.1)', borderRadius: 20, padding: '6px 14px' }}>
+                <span key={i} style={{ fontSize: 12, fontWeight: 600, color: 'var(--primary)', background: 'rgba(var(--primary-rgb),.1)', borderRadius: 20, padding: '6px 14px' }}>
                   <i className="fas fa-check" style={{ marginRight: 6, fontSize: 10 }}></i>{a}
                 </span>
               ))}

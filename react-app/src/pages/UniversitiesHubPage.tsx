@@ -35,7 +35,7 @@ export default function UniversitiesHubPage() {
       <div style={{ position: 'relative', margin: 16, borderRadius: 20, overflow: 'hidden', height: 170 }}>
         <img src="https://images.unsplash.com/photo-1523050854058-8df90110c9f1?w=800&h=340&fit=crop" alt="Universities"
           style={{ width: '100%', height: '100%', objectFit: 'cover' }} loading="lazy" />
-        <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(135deg,rgba(108,92,231,.85),rgba(0,206,201,.6))', display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: 24 }}>
+        <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(135deg,rgba(var(--primary-rgb),.85),rgba(0,206,201,.6))', display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: 24 }}>
           <div style={{ color: 'rgba(255,255,255,.85)', fontSize: 12, fontWeight: 600, letterSpacing: 1, textTransform: 'uppercase', marginBottom: 6 }}>Study in the UAE</div>
           <div style={{ color: '#fff', fontSize: 22, fontWeight: 800 }}>Universities &amp; Courses</div>
           <div style={{ color: 'rgba(255,255,255,.9)', fontSize: 13, marginTop: 8 }}>Diplomas, degrees, PhDs &amp; professional courses</div>
@@ -82,7 +82,7 @@ export default function UniversitiesHubPage() {
                 style={{ flexShrink: 0, width: 230, background: '#fff', borderRadius: 16, overflow: 'hidden', boxShadow: '0 4px 16px rgba(0,0,0,.08)', textDecoration: 'none' }}>
                 <CourseThumb url={c.imageUrl} icon={c.category_icon} w="100%" h={112} radius={0} />
                 <div style={{ padding: '12px 14px' }}>
-                  <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--primary)', background: 'rgba(108,92,231,.1)', padding: '2px 8px', borderRadius: 50 }}>{c.level_icon} {c.level_name}</span>
+                  <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--primary)', background: 'rgba(var(--primary-rgb),.1)', padding: '2px 8px', borderRadius: 50 }}>{c.level_icon} {c.level_name}</span>
                   <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text)', marginTop: 8, lineHeight: 1.3 }}>{c.name}</div>
                   <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 4 }}>{c.university_name}</div>
                   <div style={{ fontSize: 13, fontWeight: 800, color: 'var(--primary)', marginTop: 6 }}>{fmtFee(c.fee_per_year, c.currency)}<small style={{ fontWeight: 600, color: 'var(--text-secondary)' }}>/year</small></div>
@@ -99,7 +99,7 @@ export default function UniversitiesHubPage() {
         <div style={{ display: 'flex', gap: 8, overflowX: 'auto', padding: '0 16px 10px', scrollbarWidth: 'none' }}>
           {institutionTypes.map((t) => (
             <Link key={t.id} to={`/universities/courses?institution_type=${t.id}`}
-              style={{ flexShrink: 0, padding: '6px 13px', borderRadius: 50, border: '1.5px solid rgba(108,92,231,.2)', background: '#fff', color: 'var(--text-secondary)', fontSize: 12, fontWeight: 600, textDecoration: 'none' }}>
+              style={{ flexShrink: 0, padding: '6px 13px', borderRadius: 50, border: '1.5px solid rgba(var(--primary-rgb),.2)', background: '#fff', color: 'var(--text-secondary)', fontSize: 12, fontWeight: 600, textDecoration: 'none' }}>
               {t.icon} {t.name}
             </Link>
           ))}

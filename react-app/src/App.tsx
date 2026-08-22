@@ -1,8 +1,50 @@
 import { lazy, Suspense } from 'react';
 import { Routes, Route, Navigate, Outlet } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
 import Layout from './components/Layout';
 import AdminLayout from './components/AdminLayout';
 import { useAuth } from './context/AuthContext';
+import api from './api';
+
+// ── Admin-set theme colors → CSS variable overrides ──────────────────────────
+
+function parseHex(hex: string): [number, number, number] | null {
+  const m = /^#?([0-9a-f]{6})$/i.exec((hex || '').trim());
+  if (!m) return null;
+  const n = parseInt(m[1], 16);
+  return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
+}
+const toHex = (r: number, g: number, b: number) =>
+  '#' + [r, g, b].map((v) => Math.round(Math.min(255, Math.max(0, v))).toString(16).padStart(2, '0')).join('');
+const darken = (rgb: [number, number, number], f: number) => toHex(rgb[0] * f, rgb[1] * f, rgb[2] * f);
+const lighten = (rgb: [number, number, number], f: number) =>
+  toHex(rgb[0] + (255 - rgb[0]) * f, rgb[1] + (255 - rgb[1]) * f, rgb[2] + (255 - rgb[2]) * f);
+
+function ThemeStyle() {
+  const { data } = useQuery({
+    queryKey: ['theme'],
+    queryFn: () => api.get('/home/theme').then((r) => r.data),
+    staleTime: 5 * 60_000,
+    retry: false,
+  });
+  if (!data) return null;
+  const vars: string[] = [];
+  const p = data.primary ? parseHex(data.primary) : null;
+  if (p) {
+    vars.push(`--primary:${data.primary}`, `--primary-rgb:${p.join(', ')}`);
+    // Derive dark/light shades unless the admin set them explicitly.
+    vars.push(`--primary-dark:${data.primaryDark || darken(p, 0.84)}`);
+    vars.push(`--primary-light:${data.primaryLight || lighten(p, 0.45)}`);
+  } else {
+    if (data.primaryDark) vars.push(`--primary-dark:${data.primaryDark}`);
+    if (data.primaryLight) vars.push(`--primary-light:${data.primaryLight}`);
+  }
+  const s = data.secondary ? parseHex(data.secondary) : null;
+  if (s) vars.push(`--secondary:${data.secondary}`, `--secondary-rgb:${s.join(', ')}`);
+  if (data.accent) vars.push(`--accent:${data.accent}`);
+  if (!vars.length) return null;
+  return <style>{`:root{${vars.join(';')}}`}</style>;
+}
 
 const Home             = lazy(() => import('./pages/HomePage'));
 const Categories       = lazy(() => import('./pages/CategoriesPage'));
@@ -33,6 +75,8 @@ const Profile          = lazy(() => import('./pages/ProfilePage'));
 const DynamicPage      = lazy(() => import('./pages/DynamicPage'));
 const Search           = lazy(() => import('./pages/SearchPage'));
 const Collections      = lazy(() => import('./pages/CollectionsPage'));
+const ShopProductDetail = lazy(() => import('./pages/ProductDetailPage'));
+const BusinessReviews  = lazy(() => import('./pages/BusinessReviewsPage'));
 const CollectionDetail = lazy(() => import('./pages/CollectionDetailPage'));
 
 // Auth pages
@@ -68,9 +112,10 @@ const AdminUniversitiesPage = lazy(() => import('./pages/admin/AdminUniversities
 const AdminVloggersPage = lazy(() => import('./pages/admin/AdminVloggersPage'));
 const AdminHospitalsPage = lazy(() => import('./pages/admin/AdminHospitalsPage'));
 const AdminHomeLayoutPage = lazy(() => import('./pages/admin/AdminHomeLayoutPage'));
+const AdminRealEstateLayoutPage = lazy(() => import('./pages/admin/AdminRealEstateLayoutPage'));
 
 function PageLoader() {
-  return <div style={{ padding: 40, textAlign: 'center', color: '#6C5CE7' }}>Loading…</div>;
+  return <div style={{ padding: 40, textAlign: 'center', color: 'var(--primary)' }}>Loading…</div>;
 }
 
 function RequireAuth() {
@@ -83,6 +128,7 @@ function RequireAuth() {
 export default function App() {
   return (
     <Suspense fallback={<PageLoader />}>
+      <ThemeStyle />
       <Routes>
         {/* Public routes */}
         <Route element={<Layout />}>
@@ -90,6 +136,8 @@ export default function App() {
           <Route path="categories" element={<Categories />} />
           <Route path="businesses" element={<Businesses />} />
           <Route path="businesses/:id" element={<BusinessDetail />} />
+          <Route path="businesses/:id/products/:pid" element={<ShopProductDetail />} />
+          <Route path="businesses/:id/reviews" element={<BusinessReviews />} />
           <Route path="classifieds" element={<Classifieds />} />
           <Route path="classifieds/list" element={<ClassifiedList />} />
           <Route path="classifieds/:id" element={<ClassifiedDetail />} />
@@ -155,6 +203,7 @@ export default function App() {
         <Route path="admin" element={<AdminLayout />}>
           <Route index element={<AdminDashboard />} />
           <Route path="home-layout"           element={<AdminHomeLayoutPage />} />
+          <Route path="realestate-layout"     element={<AdminRealEstateLayoutPage />} />
           <Route path="sliders"               element={<AdminCrudPage />} />
           <Route path="main-categories"       element={<AdminCrudPage />} />
           <Route path="home-categories"       element={<AdminCrudPage />} />

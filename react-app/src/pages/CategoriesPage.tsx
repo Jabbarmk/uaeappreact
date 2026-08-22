@@ -2,6 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import { Link, useSearchParams, useNavigate } from 'react-router-dom';
 import { useState } from 'react';
 import api from '../api';
+import { catGridStyle, catItemStyle, catEmojiStyle } from '../catItemStyle';
 
 // Where a category tag / grid item should go when tapped.
 function catLink(cat: { id: number; group_name?: string }) {
@@ -20,6 +21,7 @@ export default function CategoriesPage() {
   });
 
   const groups: Record<string, any[]> = data?.groups || {};
+  const itemSt = data?.itemStyle || null;
 
   // Filter-tag row: default = top-10 clicked categories; 2+ letters = categories starting with the text.
   const tagQuery = search.trim();
@@ -100,13 +102,13 @@ export default function CategoriesPage() {
       {Object.entries(groups).map(([groupName, cats]) => (
         <div className="biz-cat-group" key={groupName}>
           <h3>{groupName}</h3>
-          <div className="biz-cat-grid">
+          <div className="biz-cat-grid" style={catGridStyle(itemSt)}>
             {cats.map((cat: any) => {
               // Doctors & Specialists sub-categories open the doctors listing for that specialty.
               const to = groupName === 'Doctors & Specialists' ? `/doctors?specialty=${cat.id}` : `/businesses?cat=${cat.id}`;
               return (
-                <Link key={cat.id} to={to} className="biz-cat-item">
-                  <div className="emoji">{cat.icon}</div>
+                <Link key={cat.id} to={to} className="biz-cat-item" style={catItemStyle(itemSt)}>
+                  <div className="emoji" style={catEmojiStyle(itemSt)}>{cat.icon}</div>
                   <span>{cat.name}</span>
                 </Link>
               );

@@ -10,6 +10,7 @@ const FONT = "'Segoe UI', 'Inter', system-ui, sans-serif";
 const NAV_ITEMS = [
   { label: 'Dashboard',            path: '/admin',                       icon: '⊞' },
   { label: 'Home Layout',          path: '/admin/home-layout',           icon: '🏠' },
+  { label: 'Real Estate Layout',   path: '/admin/realestate-layout',     icon: '🏗' },
   { label: 'Sliders',              path: '/admin/sliders',               icon: '▶' },
   { label: 'Main Categories',      path: '/admin/main-categories',       icon: '⊟' },
   { label: 'Home Categories',      path: '/admin/home-categories',       icon: '⊞' },

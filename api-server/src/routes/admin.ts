@@ -234,6 +234,39 @@ function crudRoutes(table: string, imageFolder?: string, opts: CrudOpts = {}) {
   return r;
 }
 
+// ── Real Estate hub layout (sections config JSON in site_settings) ───────────
+
+router.get('/re-layout', requireAdmin, async (_req, res, next) => {
+  try {
+    const row = await queryOne<any>("SELECT setting_value FROM site_settings WHERE setting_key='realestate_layout'");
+    let layout: any[] = [];
+    try { layout = JSON.parse(row?.setting_value || '[]'); } catch { layout = []; }
+    res.json({ layout });
+  } catch (err) { next(err); }
+});
+
+router.put('/re-layout', requireAdmin, async (req, res, next) => {
+  try {
+    const layout = JSON.stringify((req.body as any).layout ?? []);
+    await query(
+      "INSERT INTO site_settings (setting_key, setting_value) VALUES ('realestate_layout', ?) ON DUPLICATE KEY UPDATE setting_value = ?",
+      [layout, layout]
+    );
+    res.json({ ok: true });
+  } catch (err) { next(err); }
+});
+
+// ── All distinct business keywords (suggestions for the keywords input) ──────
+
+router.get('/business-keywords', requireAdmin, async (_req, res, next) => {
+  try {
+    const rows = await query<any>("SELECT keywords FROM businesses WHERE keywords IS NOT NULL AND keywords != ''");
+    const set = new Set<string>();
+    rows.forEach((r) => String(r.keywords).split(',').forEach((k) => { const v = k.trim().toLowerCase(); if (v) set.add(v); }));
+    res.json([...set].sort());
+  } catch (err) { next(err); }
+});
+
 // ── Business search (for slider linking) ─────────────────────────────────────
 
 router.get('/businesses/search', requireAdmin, async (req, res, next) => {
@@ -611,6 +644,7 @@ router.use('/course-categories', crudRoutes('course_categories', undefined, { se
 router.use('/study-levels', crudRoutes('study_levels', undefined, { searchCols: ['name'] }));
 router.use('/courses', crudRoutes('courses', 'courses', { searchCols: ['name'], filterCols: ['study_level_id', 'course_category_id'] }));
 router.use('/sliders', crudRoutes('sliders', 'slides'));
+router.use('/re-banners', crudRoutes('re_banners', 'banners'));
 router.use('/main-categories', crudRoutes('main_categories', undefined, { searchCols: ['name'] }));
 router.use('/home-categories', crudRoutes('home_categories', undefined, { searchCols: ['name'] }));
 router.use('/popular-categories', crudRoutes('popular_categories', 'categories', { searchCols: ['name'] }));
@@ -767,7 +801,11 @@ router.delete('/businesses/:id/service-items/:iid', requireAdmin, async (req, re
 });
 
 // ── Business products (Template-2 storefront) ───────────────────────────────────
-const PRODUCT_FIELDS = ['category', 'name', 'image', 'price', 'original_price', 'currency', 'description'];
+const PRODUCT_FIELDS = [
+  'category', 'subcategory', 'name', 'short_description', 'image', 'price', 'original_price',
+  'cost_price', 'discount_percent', 'currency', 'description', 'brand', 'tags', 'sku',
+  'images', 'videos', 'variants', 'status', 'featured',
+];
 router.get('/businesses/:id/products', requireAdmin, async (req, res, next) => {
   try {
     const rows = await query<any>('SELECT * FROM business_products WHERE business_id=? ORDER BY sort_order, id', [req.params.id]);
@@ -781,8 +819,15 @@ router.post('/businesses/:id/products', requireAdmin, async (req, res, next) => 
     const ord = (await queryOne<any>('SELECT COALESCE(MAX(sort_order),-1)+1 AS n FROM business_products WHERE business_id=?', [req.params.id]))?.n ?? 0;
     const clean = (v: any) => (v === '' || v === undefined ? null : v);
     const r = await query<any>(
-      'INSERT INTO business_products (business_id, category, name, image, price, original_price, currency, description, sort_order) VALUES (?,?,?,?,?,?,?,?,?)',
-      [req.params.id, clean(b.category), b.name || 'Product', clean(b.image), clean(b.price), clean(b.original_price), b.currency || 'AED', clean(b.description), ord]
+      `INSERT INTO business_products (business_id, category, subcategory, name, short_description, image, price,
+         original_price, cost_price, discount_percent, currency, description, brand, tags, sku,
+         images, videos, variants, status, featured, created_by, sort_order)
+       VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+      [req.params.id, clean(b.category), clean(b.subcategory), b.name || 'Product', clean(b.short_description),
+       clean(b.image), clean(b.price), clean(b.original_price), clean(b.cost_price), clean(b.discount_percent),
+       b.currency || 'AED', clean(b.description), clean(b.brand), clean(b.tags), clean(b.sku),
+       clean(b.images), clean(b.videos), clean(b.variants), b.status || 'draft', b.featured ? 1 : 0,
+       (req.session as any).adminName || 'admin', ord]
     ) as any;
     res.json({ id: r.insertId, imageUrl: b.image ? getImageUrl(b.image, 'businesses') : null });
   } catch (err) { next(err); }
@@ -804,6 +849,58 @@ router.put('/businesses/:id/products/:pid', requireAdmin, async (req, res, next)
 router.delete('/businesses/:id/products/:pid', requireAdmin, async (req, res, next) => {
   try {
     await query('DELETE FROM business_products WHERE id=? AND business_id=?', [req.params.pid, req.params.id]);
+    res.json({ ok: true });
+  } catch (err) { next(err); }
+});
+
+// ── Product subcategories (per business, under a product category) ────────────
+
+router.get('/businesses/:id/product-subcategories', requireAdmin, async (req, res, next) => {
+  try {
+    const rows = await query<any>(
+      'SELECT * FROM business_product_subcategories WHERE business_id=? ORDER BY sort_order, name', [req.params.id]);
+    res.json({ subcategories: rows });
+  } catch (err) { next(err); }
+});
+
+router.post('/businesses/:id/product-subcategories', requireAdmin, async (req, res, next) => {
+  try {
+    const { category, name } = req.body as Record<string, any>;
+    if (!category || !name) return res.status(400).json({ error: 'category and name required' });
+    const existing = await queryOne<any>(
+      'SELECT id FROM business_product_subcategories WHERE business_id=? AND category=? AND name=?',
+      [req.params.id, category, String(name).trim()]);
+    if (existing) return res.json({ id: existing.id, existed: true });
+    const r = await query<any>(
+      'INSERT INTO business_product_subcategories (business_id, category, name) VALUES (?,?,?)',
+      [req.params.id, category, String(name).trim()]) as any;
+    res.json({ id: r.insertId });
+  } catch (err) { next(err); }
+});
+
+router.delete('/businesses/:id/product-subcategories/:sid', requireAdmin, async (req, res, next) => {
+  try {
+    await query('DELETE FROM business_product_subcategories WHERE id=? AND business_id=?', [req.params.sid, req.params.id]);
+    res.json({ ok: true });
+  } catch (err) { next(err); }
+});
+
+// ── Common variant options (global, seeded; type-to-add grows the list) ───────
+
+router.get('/variant-options', requireAdmin, async (_req, res, next) => {
+  try {
+    const rows = await query<any>('SELECT type, value FROM product_variant_options ORDER BY type, sort_order, value');
+    const grouped: Record<string, string[]> = {};
+    rows.forEach((r) => { (grouped[r.type] = grouped[r.type] || []).push(r.value); });
+    res.json(grouped);
+  } catch (err) { next(err); }
+});
+
+router.post('/variant-options', requireAdmin, async (req, res, next) => {
+  try {
+    const { type, value } = req.body as Record<string, any>;
+    if (!type || !value) return res.status(400).json({ error: 'type and value required' });
+    await query('INSERT IGNORE INTO product_variant_options (type, value, sort_order) VALUES (?,?,99)', [type, String(value).trim()]);
     res.json({ ok: true });
   } catch (err) { next(err); }
 });

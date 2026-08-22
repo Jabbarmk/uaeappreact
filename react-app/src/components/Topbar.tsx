@@ -9,7 +9,7 @@ export default function Topbar() {
     const topbar = document.querySelector('.topbar') as HTMLElement | null;
     if (!topbar) return;
     const onScroll = () => {
-      topbar.style.boxShadow = window.scrollY > 40 ? '0 4px 20px rgba(108,92,231,0.08)' : 'none';
+      topbar.style.boxShadow = window.scrollY > 40 ? '0 4px 20px rgba(var(--primary-rgb),0.08)' : 'none';
     };
     window.addEventListener('scroll', onScroll, { passive: true });
     return () => window.removeEventListener('scroll', onScroll);

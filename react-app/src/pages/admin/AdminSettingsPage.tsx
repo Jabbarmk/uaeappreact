@@ -7,13 +7,27 @@ const FONT = "'Segoe UI', 'Inter', system-ui, sans-serif";
 
 const SMTP_KEYS = ['smtp_host', 'smtp_port', 'smtp_user', 'smtp_pass'];
 
-const BIZ_LIST_KEYS = ['biz_featured_img_height', 'biz_row_img_height', 'home_slider_height', 'biz_client_logo_size'];
+const BIZ_LIST_KEYS = ['biz_featured_img_height', 'biz_row_img_height', 'home_slider_height', 'home_slider_width', 'biz_client_logo_size', 'cat_item_width', 'cat_item_height', 'cat_item_radius'];
 
 const BIZ_LIST_FIELDS = [
   { key: 'home_slider_height', label: 'Home Slider Height (px)', placeholder: 'blank = default (650)' },
+  { key: 'home_slider_width', label: 'Home Slider Width (px)', placeholder: 'blank = default (98% of screen)' },
+  { key: 'cat_item_width', label: 'Category Button Width (px) — Categories & Search pages; row count adapts', placeholder: 'blank = default (4 per row)' },
+  { key: 'cat_item_height', label: 'Category Button Height (px)', placeholder: 'blank = auto' },
+  { key: 'cat_item_radius', label: 'Category Button Corner Radius (px)', placeholder: 'blank = default (14)' },
   { key: 'biz_featured_img_height', label: 'Featured Card Image Height (px)', placeholder: 'blank = auto (16:9)' },
   { key: 'biz_row_img_height', label: 'Compact Row Image Height (px)', placeholder: 'blank = default (118)' },
   { key: 'biz_client_logo_size', label: 'Clients & Partners Logo Size (px)', placeholder: 'blank = default (58)' },
+];
+
+const THEME_KEYS = ['theme_primary', 'theme_primary_dark', 'theme_primary_light', 'theme_secondary', 'theme_accent'];
+
+const THEME_FIELDS = [
+  { key: 'theme_primary',       label: 'Primary Color',                    fallback: '#6C5CE7' },
+  { key: 'theme_secondary',     label: 'Secondary Color',                  fallback: '#8B5CF6' },
+  { key: 'theme_accent',        label: 'Accent Color',                     fallback: '#00CEC9' },
+  { key: 'theme_primary_dark',  label: 'Primary Dark (auto if blank)',     fallback: '#5A4BD1' },
+  { key: 'theme_primary_light', label: 'Primary Light (auto if blank)',    fallback: '#A29BFE' },
 ];
 
 const SMTP_FIELDS = [
@@ -82,7 +96,7 @@ export default function AdminSettingsPage() {
     } finally { setTesting(false); }
   };
 
-  const otherEntries = Object.entries(form).filter(([k]) => !SMTP_KEYS.includes(k) && !BIZ_LIST_KEYS.includes(k));
+  const otherEntries = Object.entries(form).filter(([k]) => !SMTP_KEYS.includes(k) && !BIZ_LIST_KEYS.includes(k) && !THEME_KEYS.includes(k));
 
   return (
     <div style={{ fontFamily: FONT, maxWidth: 760 }}>
@@ -182,6 +196,36 @@ export default function AdminSettingsPage() {
                     style={inputStyle} />
                 </div>
               ))}
+            </div>
+          </div>
+
+          {/* ── Theme Colors ──────────────────────────────────────────────── */}
+          <div style={{ background: '#fff', border: '1px solid #E5E5E5', borderRadius: 8, marginBottom: 20, overflow: 'hidden' }}>
+            <div style={{ padding: '14px 18px', borderBottom: '1px solid #E5E5E5', background: '#F9F9F9', display: 'flex', alignItems: 'center', gap: 10 }}>
+              <span style={{ fontSize: 18 }}>🎨</span>
+              <div>
+                <div style={{ fontWeight: 700, fontSize: 14, color: '#1a1a1a' }}>Theme Colors</div>
+                <div style={{ fontSize: 12, color: '#888', marginTop: 2 }}>App-wide color theme. Blank = default. Dark/light shades auto-derive from Primary unless set.</div>
+              </div>
+            </div>
+            <div style={{ padding: '18px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+              {THEME_FIELDS.map((f) => (
+                <div key={f.key}>
+                  <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: '#555', marginBottom: 5 }}>{f.label}</label>
+                  <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                    <input type="color" value={/^#[0-9a-fA-F]{6}$/.test(form[f.key] || '') ? form[f.key] : f.fallback}
+                      onChange={(e) => set(f.key, e.target.value)}
+                      style={{ width: 42, height: 34, padding: 2, border: '1px solid #C8C8C8', borderRadius: 4, cursor: 'pointer', background: '#fff' }} />
+                    <input type="text" value={form[f.key] ?? ''} placeholder={`blank = default (${f.fallback})`}
+                      onChange={(e) => set(f.key, e.target.value)} style={inputStyle} />
+                    {form[f.key] && <button onClick={() => set(f.key, '')} title="Reset to default"
+                      style={{ padding: '6px 10px', border: '1px solid #C8C8C8', borderRadius: 4, background: '#fff', cursor: 'pointer', fontSize: 12 }}>✕</button>}
+                  </div>
+                </div>
+              ))}
+            </div>
+            <div style={{ margin: '0 18px 14px', padding: '10px 12px', background: '#F0F7FF', border: '1px solid #B3D1F0', borderRadius: 6, fontSize: 12, color: '#004A90' }}>
+              Colors apply across the whole app (buttons, nav, gradients, badges). Save, then refresh the site to see the change.
             </div>
           </div>
 

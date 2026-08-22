@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import { requireUser } from '../middleware/userAuth';
 import { query, queryOne } from '../db/pool';
 import { getImageUrl } from '../services/imageUrl';
 
@@ -26,7 +27,7 @@ router.get('/search', async (req, res, next) => {
                FROM businesses b LEFT JOIN business_categories bc ON bc.id = b.category_id
                WHERE b.is_active = 1`;
     const params: unknown[] = [];
-    if (q) { sql += ' AND b.name LIKE ?'; params.push(`%${q}%`); }
+    if (q) { sql += ' AND (b.name LIKE ? OR b.keywords LIKE ?)'; params.push(`%${q}%`, `%${q}%`); }
     if (categoryId) { sql += ' AND b.category_id = ?'; params.push(categoryId); }
     sql += ' ORDER BY b.rating DESC, b.name ASC LIMIT 30';
     const results = await query<any>(sql, params);
@@ -40,6 +41,7 @@ router.get('/', async (req, res, next) => {
     const catId = req.query.cat;
     let sql = `SELECT b.id, b.name, b.tagline, b.description, b.image, b.address, b.phone, b.whatsapp,
                b.rating, b.distance, b.emirate, b.featured, b.sort_order, b.latitude, b.longitude,
+               b.is_verified, b.color, b.keywords,
                bc.name as category_name
                FROM businesses b
                LEFT JOIN business_categories bc ON b.category_id = bc.id
@@ -50,23 +52,22 @@ router.get('/', async (req, res, next) => {
     const businesses = await query<any>(sql, params);
 
     let catName = 'All Businesses';
-    let banner: any = null;
+    let banners: any[] = [];
     if (catId) {
       const cat = await queryOne<{ name: string }>('SELECT name FROM business_categories WHERE id = ?', [catId]);
       if (cat) catName = cat.name;
-      // Admin-managed top banner for this category (if any).
-      const b = await queryOne<any>(
-        'SELECT image, video, title, subtitle, link, business_id FROM category_banners WHERE category_id = ? AND is_active = 1 ORDER BY sort_order, id LIMIT 1',
+      // Admin-managed top banners for this category — multiple rows auto-slide.
+      const rows = await query<any>(
+        'SELECT image, video, title, subtitle, link, business_id FROM category_banners WHERE category_id = ? AND is_active = 1 ORDER BY sort_order, id',
         [catId]
-      ).catch(() => null);
-      if (b && (b.image || b.video)) {
-        banner = {
-          ...b,
-          imageUrl: b.image ? getImageUrl(b.image, 'banners') : null,
-          videoUrl: b.video ? getImageUrl(b.video, 'banners') : null,
-        };
-      }
+      ).catch(() => []);
+      banners = (rows as any[]).filter((b) => b.image || b.video).map((b) => ({
+        ...b,
+        imageUrl: b.image ? getImageUrl(b.image, 'banners') : null,
+        videoUrl: b.video ? getImageUrl(b.video, 'banners') : null,
+      }));
     }
+    const banner = banners[0] || null;
 
     // Admin-controlled listing image heights (px) from site_settings.
     const hRows = await query<any>(
@@ -78,6 +79,7 @@ router.get('/', async (req, res, next) => {
     res.json({
       catName,
       banner,
+      banners,
       imgHeights: {
         featured: Number(hMap.biz_featured_img_height) || null,
         row: Number(hMap.biz_row_img_height) || null,
@@ -88,9 +90,57 @@ router.get('/', async (req, res, next) => {
 });
 
 // Detail
+// Public product detail (active only; internal fields stripped).
+router.get('/:id/products/:pid', async (req, res, next) => {
+  try {
+    const biz = await queryOne<any>(
+      'SELECT id, name, whatsapp, phone, is_online_store, store_url, color FROM businesses WHERE id = ? AND is_active = 1',
+      [req.params.id]);
+    if (!biz) return res.status(404).json({ error: 'Business not found' });
+    const p = await queryOne<any>(
+      "SELECT * FROM business_products WHERE id = ? AND business_id = ? AND (status='active' OR status IS NULL)",
+      [req.params.pid, req.params.id]);
+    if (!p) return res.status(404).json({ error: 'Product not found' });
+    const { cost_price, created_by, ...pub } = p;
+    res.json({
+      business: biz,
+      product: { ...pub, imageUrl: pub.image ? getImageUrl(pub.image, 'businesses') : null },
+    });
+  } catch (err) { next(err); }
+});
+
+// ── User reviews (one per user per business; pending until approved) ──────────
+
+router.post('/:id/reviews', requireUser, async (req, res, next) => {
+  try {
+    const uid = (req.session as any).userId as number;
+    const bizId = Number(req.params.id);
+    const rating = Math.min(5, Math.max(1, Number((req.body as any).rating) || 5));
+    const text = String((req.body as any).review || '').trim().slice(0, 2000);
+    if (!text) return res.status(400).json({ error: 'Review text is required' });
+    const user = await queryOne<any>('SELECT name FROM users WHERE id=?', [uid]);
+    await query(
+      `INSERT INTO business_testimonials (business_id, user_id, client_name, rating, review, status, sort_order)
+       VALUES (?,?,?,?,?,'pending',999)
+       ON DUPLICATE KEY UPDATE rating=VALUES(rating), review=VALUES(review), status='pending', client_name=VALUES(client_name)`,
+      [bizId, uid, user?.name || 'Customer', rating, text]
+    );
+    res.json({ ok: true });
+  } catch (err) { next(err); }
+});
+
+router.delete('/:id/reviews', requireUser, async (req, res, next) => {
+  try {
+    const uid = (req.session as any).userId as number;
+    await query('DELETE FROM business_testimonials WHERE business_id=? AND user_id=?', [Number(req.params.id), uid]);
+    res.json({ ok: true });
+  } catch (err) { next(err); }
+});
+
 router.get('/:id', async (req, res, next) => {
   try {
     const id = Number(req.params.id);
+    const viewerId = Number((req.session as any)?.userId) || 0;
     const biz = await queryOne<any>(
       `SELECT b.*, bc.name AS category_name
        FROM businesses b
@@ -105,7 +155,12 @@ router.get('/:id', async (req, res, next) => {
       query('SELECT * FROM business_videos WHERE business_id = ? ORDER BY sort_order', [id]),
       query('SELECT * FROM business_reels WHERE business_id = ? ORDER BY sort_order', [id]),
       query('SELECT * FROM business_services WHERE business_id = ? ORDER BY sort_order', [id]),
-      query('SELECT * FROM business_testimonials WHERE business_id = ? ORDER BY sort_order', [id]),
+      // Public sees approved reviews; the signed-in reviewer also sees their own pending/rejected one.
+      query(`SELECT id, client_name, client_photo, client_company, rating, review, status, created_at,
+                    (user_id IS NOT NULL AND user_id = ?) AS is_own
+             FROM business_testimonials
+             WHERE business_id = ? AND (status = 'approved' OR (user_id IS NOT NULL AND user_id = ?))
+             ORDER BY sort_order, id DESC`, [viewerId, id, viewerId]),
       query('SELECT * FROM business_clients WHERE business_id = ? ORDER BY sort_order', [id]),
     ]).catch(() => [[], [], [], [], [], []]);
 
@@ -122,9 +177,11 @@ router.get('/:id', async (req, res, next) => {
     const coverRows = await query<any>('SELECT type, file FROM business_cover_media WHERE business_id=? ORDER BY sort_order, id', [id]).catch(() => []);
     const coverMedia = (coverRows as any[]).map((m) => ({ type: m.type, src: getImageUrl(m.file, 'cover') }));
 
-    // Template-2 storefront products.
-    const productRows = await query<any>('SELECT * FROM business_products WHERE business_id=? ORDER BY sort_order, id', [id]).catch(() => []);
-    const products = (productRows as any[]).map((p) => ({ ...p, imageUrl: getImageUrl(p.image, 'businesses') }));
+    // Template-2 storefront products (public = active only; featured first; cost price stays internal).
+    const productRows = await query<any>(
+      "SELECT * FROM business_products WHERE business_id=? AND (status='active' OR status IS NULL) ORDER BY featured DESC, sort_order, id", [id]
+    ).catch(() => []);
+    const products = (productRows as any[]).map(({ cost_price, created_by, ...p }) => ({ ...p, imageUrl: getImageUrl(p.image, 'businesses') }));
 
     const vlogger = await queryOne<any>('SELECT * FROM vlogger_profiles WHERE business_id=?', [id]).catch(() => null);
     const doctorRows = await query<any>(
@@ -153,6 +210,9 @@ router.get('/:id', async (req, res, next) => {
       productCategories: (await query<any>(
         'SELECT * FROM business_product_categories WHERE business_id=? ORDER BY sort_order, name', [id]
       ).catch(() => [])).map((c: any) => ({ ...c, imageUrl: getImageUrl(c.image, 'businesses') })),
+      productSubcategories: await query<any>(
+        'SELECT category, name FROM business_product_subcategories WHERE business_id=? ORDER BY sort_order, name', [id]
+      ).catch(() => []),
       clients: (clients as any[]).map((c) => ({ ...c, logoUrl: getImageUrl(c.logo, 'businesses') })),
       clientLogoSize: Number((await queryOne<any>(
         "SELECT setting_value FROM site_settings WHERE setting_key = 'biz_client_logo_size'"

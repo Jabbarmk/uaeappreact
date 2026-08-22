@@ -22,54 +22,61 @@ export default function RealEstateCompanyPage() {
   const projects: any[] = data.projects || [];
 
   const contact = [
-    c.phone && { icon: 'fas fa-phone', label: 'Call', href: `tel:${c.phone}`, bg: 'var(--primary)' },
-    c.whatsapp && { icon: 'fab fa-whatsapp', label: 'WhatsApp', href: `https://wa.me/${c.whatsapp}`, bg: '#00B894' },
-    c.email && { icon: 'fas fa-envelope', label: 'Email', href: `mailto:${c.email}`, bg: 'var(--warm)' },
-    c.website && { icon: 'fas fa-globe', label: 'Website', href: c.website, bg: 'var(--dark)' },
-  ].filter(Boolean) as { icon: string; label: string; href: string; bg: string }[];
+    c.phone && { icon: 'fas fa-phone', label: 'Call', href: `tel:${c.phone}`, cls: 'call' },
+    c.whatsapp && { icon: 'fab fa-whatsapp', label: 'WhatsApp', href: `https://wa.me/${c.whatsapp}`, cls: 'wa' },
+    c.email && { icon: 'fas fa-envelope', label: 'Email', href: `mailto:${c.email}`, cls: 'email' },
+    c.website && { icon: 'fas fa-globe', label: 'Website', href: c.website, cls: 'web' },
+  ].filter(Boolean) as { icon: string; label: string; href: string; cls: string }[];
 
   return (
     <>
       <div className="page-topbar">
         <Link to={-1 as any} className="back-btn"><i className="fas fa-arrow-left"></i></Link>
         <h1 style={{ flex: 1, fontSize: 15, overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis' }}>{c.name}</h1>
-        <div className="right-actions"><i className="fas fa-share-alt"></i></div>
+        <div className="right-actions">
+          <button onClick={() => { if (navigator.share) navigator.share({ title: c.name, url: window.location.href }); }}
+            style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--dark)', fontSize: 16, padding: 4 }}>
+            <i className="fas fa-share-alt"></i>
+          </button>
+        </div>
       </div>
 
-      {/* Banner + logo overlay — company-specific hero */}
-      <div style={{ position: 'relative' }}>
-        <div style={{ height: 150, background: 'linear-gradient(135deg,var(--primary),var(--accent))', overflow: 'hidden' }}>
-          {c.banner && <img src={c.bannerUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', opacity: 0.92 }} loading="lazy" />}
-        </div>
-        <div style={{ display: 'flex', alignItems: 'flex-end', gap: 14, padding: '0 16px', marginTop: -42 }}>
+      {/* Banner — rounded card, gradient fallback */}
+      <div style={{ margin: '12px 16px 0', height: 160, borderRadius: 20, overflow: 'hidden', background: 'linear-gradient(135deg,var(--primary),var(--primary-dark))', boxShadow: '0 8px 26px rgba(13,27,42,0.12)' }}>
+        {c.banner && <img src={c.bannerUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} loading="lazy" />}
+      </div>
+
+      {/* Header card overlapping the banner: logo + name + stats */}
+      <div style={{ margin: '-38px 16px 0', position: 'relative', zIndex: 5, background: '#fff', borderRadius: 20, padding: '14px 16px', boxShadow: '0 12px 30px rgba(22,32,64,.10)', border: '1px solid rgba(255,255,255,.6)' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
           <img src={c.logoUrl} alt={c.name}
-            style={{ width: 88, height: 88, borderRadius: 20, objectFit: 'cover', border: '4px solid #fff', boxShadow: '0 6px 20px rgba(0,0,0,.15)', background: '#fff', flexShrink: 0 }} />
-          <div style={{ paddingBottom: 8, minWidth: 0 }}>
-            <div style={{ fontSize: 19, fontWeight: 800, color: 'var(--text)' }}>{c.name}</div>
-            {c.emirate && <div style={{ fontSize: 13, color: 'var(--text-secondary)', marginTop: 2 }}><i className="fas fa-map-marker-alt" style={{ marginRight: 5, color: 'var(--primary)' }}></i>{c.emirate}</div>}
+            style={{ width: 68, height: 68, borderRadius: 18, objectFit: 'cover', border: '3px solid #fff', boxShadow: '0 4px 16px rgba(0,0,0,.14)', background: '#fff', flexShrink: 0 }} />
+          <div style={{ minWidth: 0, flex: 1 }}>
+            <div style={{ fontSize: 18, fontWeight: 800, color: 'var(--dark)', lineHeight: 1.2 }}>{c.name}</div>
+            {c.emirate && <div style={{ fontSize: 12.5, color: 'var(--text-secondary)', marginTop: 4, fontWeight: 600 }}><i className="fas fa-map-marker-alt" style={{ marginRight: 5, color: 'var(--primary)' }}></i>{c.emirate}</div>}
+          </div>
+        </div>
+        <div style={{ display: 'flex', marginTop: 14, paddingTop: 12, borderTop: '1px solid #F1F2F8' }}>
+          <div style={{ flex: 1, textAlign: 'center' }}>
+            <div style={{ fontSize: 19, fontWeight: 800, color: 'var(--primary)', lineHeight: 1 }}>{properties.length}</div>
+            <div style={{ fontSize: 11, color: 'var(--text-secondary)', fontWeight: 600, marginTop: 3 }}>Listings</div>
+          </div>
+          <div style={{ width: 1, background: '#F1F2F8' }} />
+          <div style={{ flex: 1, textAlign: 'center' }}>
+            <div style={{ fontSize: 19, fontWeight: 800, color: 'var(--primary)', lineHeight: 1 }}>{projects.length}</div>
+            <div style={{ fontSize: 11, color: 'var(--text-secondary)', fontWeight: 600, marginTop: 3 }}>Projects</div>
           </div>
         </div>
       </div>
 
-      {/* Stats */}
-      <div style={{ display: 'flex', gap: 10, padding: '16px 16px 8px' }}>
-        <div style={{ flex: 1, textAlign: 'center', background: '#fff', borderRadius: 14, padding: '12px 8px', boxShadow: '0 2px 10px rgba(0,0,0,.05)' }}>
-          <div style={{ fontSize: 20, fontWeight: 800, color: 'var(--primary)' }}>{properties.length}</div>
-          <div style={{ fontSize: 11, color: 'var(--text-secondary)', fontWeight: 600 }}>Listings</div>
-        </div>
-        <div style={{ flex: 1, textAlign: 'center', background: '#fff', borderRadius: 14, padding: '12px 8px', boxShadow: '0 2px 10px rgba(0,0,0,.05)' }}>
-          <div style={{ fontSize: 20, fontWeight: 800, color: 'var(--primary)' }}>{projects.length}</div>
-          <div style={{ fontSize: 11, color: 'var(--text-secondary)', fontWeight: 600 }}>Projects</div>
-        </div>
-      </div>
-
-      {/* Contact buttons */}
+      {/* Contact — same action style as business pages */}
       {contact.length > 0 && (
-        <div style={{ display: 'flex', gap: 8, padding: '6px 16px 12px', flexWrap: 'wrap' }}>
+        <div className="bd-actions" style={{ justifyContent: 'center' }}>
           {contact.map((b) => (
-            <a key={b.label} href={b.href} target={b.label === 'Website' ? '_blank' : undefined} rel="noopener noreferrer"
-              style={{ flex: '1 1 0', minWidth: 70, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, padding: '10px 6px', background: b.bg, color: '#fff', borderRadius: 12, fontSize: 11, fontWeight: 700, textDecoration: 'none' }}>
-              <i className={b.icon} style={{ fontSize: 16 }}></i>{b.label}
+            <a key={b.label} href={b.href} className={`bd-action ${b.cls}`}
+              target={b.label === 'Website' ? '_blank' : undefined} rel="noopener noreferrer">
+              <div className="bd-action-icon"><i className={b.icon}></i></div>
+              <span>{b.label}</span>
             </a>
           ))}
         </div>
@@ -77,10 +84,14 @@ export default function RealEstateCompanyPage() {
 
       {/* About */}
       {c.about && (
-        <div style={{ padding: '4px 16px 12px' }}>
-          <h3 style={{ fontSize: 15, fontWeight: 700, marginBottom: 6, color: 'var(--text)' }}>About</h3>
-          <p style={{ fontSize: 13, lineHeight: 1.7, color: 'var(--text-secondary)', margin: 0 }}>{c.about}</p>
-          {c.address && <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 8 }}><i className="fas fa-location-dot" style={{ marginRight: 6, color: 'var(--primary)' }}></i>{c.address}</div>}
+        <div style={{ margin: '2px 16px 14px', background: '#fff', borderRadius: 16, padding: '14px 16px', border: '1px solid #EEEDF5', boxShadow: '0 3px 12px rgba(13,27,42,0.05)' }}>
+          <h3 style={{ fontSize: 13, fontWeight: 800, margin: '0 0 8px', color: 'var(--dark)', textTransform: 'uppercase', letterSpacing: 0.4 }}>About</h3>
+          <p style={{ fontSize: 13.5, lineHeight: 1.65, color: 'var(--text-secondary)', margin: 0 }}>{c.about}</p>
+          {c.address && (
+            <div style={{ fontSize: 12.5, color: 'var(--text-secondary)', marginTop: 10, paddingTop: 10, borderTop: '1px solid #F1F2F8', fontWeight: 600 }}>
+              <i className="fas fa-location-dot" style={{ marginRight: 6, color: 'var(--primary)' }}></i>{c.address}
+            </div>
+          )}
         </div>
       )}
 
@@ -120,7 +131,7 @@ export default function RealEstateCompanyPage() {
                   <img src={p.imageUrl} alt={p.name} style={{ width: 110, height: 90, objectFit: 'cover', flexShrink: 0 }} loading="lazy"
                     onError={(e) => { (e.target as HTMLImageElement).src = PROP_FALLBACK; }} />
                   <div style={{ padding: '10px 12px 10px 0', flex: 1, minWidth: 0 }}>
-                    <span style={{ fontSize: 9, fontWeight: 700, color: 'var(--primary)', background: 'rgba(108,92,231,.1)', padding: '2px 8px', borderRadius: 50 }}>OFF-PLAN</span>
+                    <span style={{ fontSize: 9, fontWeight: 700, color: 'var(--primary)', background: 'rgba(var(--primary-rgb),.1)', padding: '2px 8px', borderRadius: 50 }}>OFF-PLAN</span>
                     <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text)', marginTop: 5 }}>{p.name}</div>
                     <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 2 }}>{p.location} · Handover {p.handover}</div>
                     <div style={{ fontSize: 13, fontWeight: 800, color: 'var(--primary)', marginTop: 4 }}>From {fmtPrice(p.starting_price, p.currency)}</div>

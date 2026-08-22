@@ -4,7 +4,7 @@ import { useState } from 'react';
 import api from '../api';
 
 const LOGO_COLORS = [
-  ['#6C5CE7','#8B5CF6'], ['#00B894','#00CEC9'], ['#FD79A8','#FF6B6B'],
+  ['var(--primary)','var(--secondary)'], ['#00B894','#00CEC9'], ['#FD79A8','#FF6B6B'],
   ['#FDCB6E','#F39C12'], ['#0984E3','#74B9FF'], ['#E17055','#D63031'],
 ];
 
@@ -35,7 +35,7 @@ export default function JobsPage() {
       <div style={{ position: 'relative', margin: 16, borderRadius: 20, overflow: 'hidden', height: 180 }}>
         <img src="https://images.unsplash.com/photo-1497366216548-37526070297c?w=800&h=360&fit=crop"
           alt="Jobs UAE" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} loading="lazy" decoding="async" />
-        <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(135deg,rgba(139,92,246,0.80),rgba(108,92,231,0.65))', display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: 24 }}>
+        <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(135deg,rgba(var(--secondary-rgb),0.80),rgba(var(--primary-rgb),0.65))', display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: 24 }}>
           <div style={{ color: 'rgba(255,255,255,.8)', fontSize: 12, fontWeight: 600, letterSpacing: 1, textTransform: 'uppercase', marginBottom: 6 }}>UAE Job Market</div>
           <div style={{ color: '#fff', fontSize: 22, fontWeight: 800, lineHeight: 1.2 }}>Find Your Dream Job</div>
           <div style={{ color: 'rgba(255,255,255,.85)', fontSize: 13, marginTop: 8 }}>Top companies hiring right now</div>

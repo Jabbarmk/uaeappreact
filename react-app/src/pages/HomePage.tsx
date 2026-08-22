@@ -312,7 +312,7 @@ function HeroSection({ cfg }: { cfg: any }) {
   return (
     <div className="hm-hero">
       <div className="hm-greet">{greeting()} 👋</div>
-      <h1 className="hm-title">{parts.join(' ')} <span>{last}</span></h1>
+      <h1 className="hm-title" style={{ fontSize: Number(cfg.settings?.titleSize) || 24 }}>{parts.join(' ')} <span>{last}</span></h1>
       <form className="hm-search" onSubmit={submitSearch}>
         <i className="fas fa-search"></i>
         <input type="search" value={q} onChange={(e) => setQ(e.target.value)}
@@ -334,36 +334,51 @@ function HeroSection({ cfg }: { cfg: any }) {
 function ExploreSection({ cfg, menu }: { cfg: any; menu: any[] }) {
   const set = cfg.settings || {};
   const ref = useRef<HTMLDivElement>(null);
-  const imgStyle = set.style === 'images';
-  useAutoStep(ref, imgStyle && !!set.auto, set.timer);
+  const copyRef = useRef<HTMLDivElement>(null);
   const items = menu.length ? menu : MENU_FALLBACK;
+  const imgStyle = set.style === 'images';
+  const auto = !!set.auto && items.length > 1;
+  const radiusPct = set.radius === undefined || set.radius === '' ? (imgStyle ? 15 : 32) : Math.min(50, Math.max(0, Number(set.radius)));
+  const tileW = Number(set.tileW) || (imgStyle ? 118 : 50);
+  const tileH = Number(set.tileH) || (imgStyle ? 84 : 63);
+  const textSize = Number(set.textSize) || (imgStyle ? 11.5 : 10.5);
+  const radius = Math.round(Math.min(tileW, tileH) * radiusPct / 100);
+  useMarquee(ref, copyRef, auto, set.speed);
+
+  const iconTile = (m: any) => (
+    <Link key={m.id} to={m.link} className={`hm-tile ${m.tone}`} style={auto ? { width: tileW + 12 } : undefined}>
+      <div className="hm-tile-icon" style={{ width: tileW, height: tileH, borderRadius: radius, fontSize: Math.round(tileW * 0.54) }}>
+        {m.imageUrl && !m.icon
+          ? <img src={m.imageUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+          : <i className={`fas ${m.icon || 'fa-star'}`}></i>}
+      </div>
+      <span style={{ fontSize: textSize }}>{m.label}</span>
+    </Link>
+  );
+
+  const imgCard = (m: any) => (
+    <Link key={m.id} to={m.link} className="hm-exp-card" style={{ width: tileW, borderRadius: radius }}>
+      {m.imageUrl
+        ? <img src={m.imageUrl} alt={m.label} loading="lazy" decoding="async" style={{ height: tileH }} />
+        : <div className={`hm-exp-fallback ${m.tone}`} style={{ height: tileH }}><i className={`fas ${m.icon || 'fa-star'}`}></i></div>}
+      <div className="hm-exp-label" style={{ fontSize: textSize }}>{m.label}</div>
+    </Link>
+  );
+
+  const renderItem = imgStyle ? imgCard : iconTile;
 
   return (
     <>
-      <SectionHead title={cfg.title || 'Explore SmartUAE'} />
-      {imgStyle ? (
-        <div className="hm-explore-cards" ref={ref}>
-          {items.map((m: any) => (
-            <Link key={m.id} to={m.link} className="hm-exp-card">
-              {m.imageUrl
-                ? <img src={m.imageUrl} alt={m.label} loading="lazy" decoding="async" />
-                : <div className={`hm-exp-fallback ${m.tone}`}><i className={`fas ${m.icon || 'fa-star'}`}></i></div>}
-              <div className="hm-exp-label">{m.label}</div>
-            </Link>
-          ))}
+      <SectionHead title={cfg.title || 'Explore SmartUAE'} size={Number(set.titleSize) || 17} />
+      {imgStyle || auto ? (
+        // Horizontal row; duplicated content when the marquee is on.
+        <div className="hm-explore-row" ref={ref}>
+          <div className="hm-exp-copy" ref={copyRef}>{items.map(renderItem)}</div>
+          {auto && <div className="hm-exp-copy">{items.map(renderItem)}</div>}
         </div>
       ) : (
         <div className="hm-grid">
-          {items.map((m: any) => (
-            <Link key={m.id} to={m.link} className={`hm-tile ${m.tone}`}>
-              <div className="hm-tile-icon">
-                {m.imageUrl && !m.icon
-                  ? <img src={m.imageUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: 16 }} />
-                  : <i className={`fas ${m.icon || 'fa-star'}`}></i>}
-              </div>
-              <span>{m.label}</span>
-            </Link>
-          ))}
+          {items.map(renderItem)}
         </div>
       )}
     </>
@@ -408,11 +423,14 @@ function PopularSection({ cfg, cats }: { cfg: any; cats: any[] }) {
 function StatsSection({ cfg, stats }: { cfg: any; stats: any }) {
   const set = cfg.settings || {};
   return (
-    <div className="hm-stats">
-      <div className="hm-stat"><div className="hm-stat-num">{stats.businesses}+</div><div className="hm-stat-lbl">{set.label1 || 'Businesses'}</div></div>
-      <div className="hm-stat"><div className="hm-stat-num">{stats.jobs}+</div><div className="hm-stat-lbl">{set.label2 || 'Active Jobs'}</div></div>
-      <div className="hm-stat"><div className="hm-stat-num">{stats.classifieds}+</div><div className="hm-stat-lbl">{set.label3 || 'Listings'}</div></div>
-    </div>
+    <>
+      {cfg.title && <SectionHead title={cfg.title} size={Number(set.titleSize) || 17} />}
+      <div className="hm-stats">
+        <div className="hm-stat"><div className="hm-stat-num">{stats.businesses}+</div><div className="hm-stat-lbl">{set.label1 || 'Businesses'}</div></div>
+        <div className="hm-stat"><div className="hm-stat-num">{stats.jobs}+</div><div className="hm-stat-lbl">{set.label2 || 'Active Jobs'}</div></div>
+        <div className="hm-stat"><div className="hm-stat-num">{stats.classifieds}+</div><div className="hm-stat-lbl">{set.label3 || 'Listings'}</div></div>
+      </div>
+    </>
   );
 }
 
@@ -459,6 +477,7 @@ export default function HomePage() {
 
   const sliders = data?.sliders?.length ? data.sliders : SLIDER_FALLBACKS;
   const sliderH: number = data?.sliderHeight || 650;
+  const sliderW: number | null = data?.sliderWidth || null;
   const homeCats = data?.homeCategories || [];
   const popCats = data?.popularCategories || [];
   const stats = data?.stats || { businesses: 50, jobs: 30, classifieds: 100 };
@@ -468,7 +487,12 @@ export default function HomePage() {
 
   const renderSection = (cfg: any) => {
     switch (cfg.key) {
-      case 'slider':      return <div className="hm-slider-wrap" key="slider"><Slider slides={sliders} /></div>;
+      case 'slider':      return (
+        <div className="hm-slider-wrap" key="slider">
+          {cfg.title && <SectionHead title={cfg.title} size={Number(cfg.settings?.titleSize) || 17} />}
+          <Slider slides={sliders} />
+        </div>
+      );
       case 'featured':    return <FeaturedSection key="featured" cfg={cfg} cats={homeCats} />;
       case 'hero':        return <HeroSection key="hero" cfg={cfg} />;
       case 'explore':     return <ExploreSection key="explore" cfg={cfg} menu={menu} />;
@@ -510,7 +534,7 @@ export default function HomePage() {
         .hm-iconbtn:active{transform:scale(0.92)}
 
         /* ── Slider wrap: spacing under the sticky bar ── */
-        .hm-slider-wrap{margin-top:12px}
+        .hm-slider-wrap{margin-top:6px}
 
         /* ── Hero ── */
         .hm-hero{background:linear-gradient(150deg,var(--primary) 0%,var(--primary-dark) 55%,#3E3277 100%);padding:24px 16px 20px;border-radius:26px;margin:20px 12px 0;position:relative;overflow:hidden}
@@ -540,25 +564,26 @@ export default function HomePage() {
         .hm-tile-icon{width:50px;height:63px;border-radius:16px;display:flex;align-items:center;justify-content:center;padding:0;margin:0;font-size:27px;transition:transform .15s ease;overflow:hidden}
         .hm-tile:active .hm-tile-icon{transform:scale(0.92)}
         .hm-tile span{font-size:10.5px;font-weight:700;color:var(--dark);text-align:center;line-height:1.2}
-        .hm-tile.purple .hm-tile-icon{background:rgba(108,92,231,0.12);color:var(--primary)}
+        .hm-tile.purple .hm-tile-icon{background:rgba(var(--primary-rgb),0.12);color:var(--primary)}
         .hm-tile.teal .hm-tile-icon{background:rgba(0,206,201,0.13);color:#00A8A3}
         .hm-tile.amber .hm-tile-icon{background:rgba(253,203,110,0.22);color:#E17055}
         .hm-tile.pink .hm-tile-icon{background:rgba(232,67,147,0.11);color:#E84393}
 
-        /* ── Explore: image cards ── */
-        .hm-explore-cards{display:flex;gap:10px;padding:0 16px 4px;overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch}
-        .hm-explore-cards::-webkit-scrollbar{display:none}
-        .hm-exp-card{flex-shrink:0;width:118px;text-decoration:none;border-radius:18px;overflow:hidden;background:#fff;border:1px solid #EEEDF5;box-shadow:0 3px 12px rgba(13,27,42,0.06)}
-        .hm-exp-card img{width:100%;height:84px;object-fit:cover;display:block}
-        .hm-exp-fallback{width:100%;height:84px;display:flex;align-items:center;justify-content:center;font-size:30px}
-        .hm-exp-fallback.purple{background:rgba(108,92,231,0.12);color:var(--primary)}
+        /* ── Explore: horizontal row (image cards or auto-sliding icons) ── */
+        .hm-explore-row{display:flex;gap:10px;padding:0 16px 4px;overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch}
+        .hm-explore-row::-webkit-scrollbar{display:none}
+        .hm-exp-copy{display:flex;gap:10px;flex-shrink:0;align-items:flex-start}
+        .hm-exp-card{flex-shrink:0;text-decoration:none;overflow:hidden;background:#fff;border:1px solid #EEEDF5;box-shadow:0 3px 12px rgba(13,27,42,0.06)}
+        .hm-exp-card img{width:100%;object-fit:cover;display:block}
+        .hm-exp-fallback{width:100%;display:flex;align-items:center;justify-content:center;font-size:30px}
+        .hm-exp-fallback.purple{background:rgba(var(--primary-rgb),0.12);color:var(--primary)}
         .hm-exp-fallback.teal{background:rgba(0,206,201,0.13);color:#00A8A3}
         .hm-exp-fallback.amber{background:rgba(253,203,110,0.22);color:#E17055}
         .hm-exp-fallback.pink{background:rgba(232,67,147,0.11);color:#E84393}
         .hm-exp-label{padding:8px 6px;font-size:11.5px;font-weight:700;color:var(--dark);text-align:center;line-height:1.2}
 
-        /* ── Constrain admin slider height regardless of image size ── */
-        .slide{height:${sliderH}px;background:transparent;box-shadow:none}
+        /* ── Constrain admin slider height/width regardless of image size ── */
+        .slide{height:${sliderH}px;flex:0 0 ${sliderW ? `${sliderW}px` : '98%'};max-width:100%;background:transparent;box-shadow:none}
         .slide img{width:100%;height:100%;object-fit:cover}
 
         /* ── Featured categories ── */
@@ -570,7 +595,7 @@ export default function HomePage() {
         .hm-cat-icon{background:#fff;border:1px solid #EEEDF5;box-shadow:0 3px 12px rgba(13,27,42,0.06);display:flex;align-items:center;justify-content:center;flex-shrink:0}
         .hm-cat span{font-size:11px;font-weight:600;color:var(--dark);text-align:center;line-height:1.25;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
         .hm-cat-inside{flex-direction:column;gap:3px;padding:4px 3px;box-sizing:border-box}
-        .hm-cat-more{background:rgba(108,92,231,0.10);border-color:rgba(108,92,231,0.18)}
+        .hm-cat-more{background:rgba(var(--primary-rgb),0.10);border-color:rgba(var(--primary-rgb),0.18)}
         .hm-cat-lbl-in{font-size:10px;font-weight:700;color:var(--dark);text-align:center;line-height:1.15;max-width:100%;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
 
         /* ── Popular ── */
@@ -581,7 +606,7 @@ export default function HomePage() {
         .hm-pop-card .label{position:absolute;bottom:0;left:0;right:0;padding:18px 10px 8px;background:linear-gradient(transparent,rgba(0,0,0,0.72));color:#fff;font-size:12.5px;font-weight:700}
 
         /* ── Stats strip ── */
-        .hm-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:22px 16px 4px;background:linear-gradient(135deg,var(--primary),#8B5CF6,var(--accent));border-radius:20px;padding:18px 10px;box-shadow:0 10px 30px rgba(108,92,231,0.28)}
+        .hm-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:22px 16px 4px;background:linear-gradient(135deg,var(--primary),var(--secondary),var(--accent));border-radius:20px;padding:18px 10px;box-shadow:0 10px 30px rgba(var(--primary-rgb),0.28)}
         .hm-stat{text-align:center}
         .hm-stat-num{color:#fff;font-size:22px;font-weight:800;letter-spacing:-0.5px}
         .hm-stat-lbl{color:rgba(255,255,255,.8);font-size:11px;font-weight:600;margin-top:2px}

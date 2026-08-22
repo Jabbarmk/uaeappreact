@@ -44,7 +44,7 @@ export default function PropertyListPage() {
       <div style={{ position: 'relative', margin: 16, borderRadius: 20, overflow: 'hidden', height: 110 }}>
         <img src="https://images.unsplash.com/photo-1512453979798-5ea266f8880c?w=800&h=220&fit=crop"
           alt={catName} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} loading="lazy" decoding="async" />
-        <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(135deg,rgba(13,27,42,.6),rgba(108,92,231,.55))', display: 'flex', alignItems: 'center', padding: '16px 20px', gap: 12 }}>
+        <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(135deg,rgba(13,27,42,.6),rgba(var(--primary-rgb),.55))', display: 'flex', alignItems: 'center', padding: '16px 20px', gap: 12 }}>
           <i className="fas fa-building" style={{ color: '#fff', fontSize: 28, opacity: .9 }}></i>
           <div>
             <div style={{ color: '#fff', fontSize: 18, fontWeight: 800 }}>{catName}</div>

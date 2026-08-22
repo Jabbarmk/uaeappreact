@@ -1,7 +1,11 @@
-import { useQuery } from '@tanstack/react-query';
-import { Link, useParams } from 'react-router-dom';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useState, useEffect, useRef } from 'react';
 import api from '../api';
+import { useAuth } from '../context/AuthContext';
+import { bizThemeStyle } from '../bizTheme';
+import { useCart } from '../cart';
+import CartDrawer from '../components/CartDrawer';
 import CourseThumb from '../components/CourseThumb';
 import { fmtFee, fmtDate } from '../constants/education';
 import DoctorCard from '../components/DoctorCard';
@@ -33,16 +37,64 @@ const SVC_FALLBACKS = [
 ];
 
 const CLIENT_GRADS = [
-  'linear-gradient(135deg,#6C5CE7,#a29bfe)',
+  'linear-gradient(135deg,var(--primary),var(--primary-light))',
   'linear-gradient(135deg,#00CEC9,#00b5b0)',
   'linear-gradient(135deg,#E17055,#d35400)',
   'linear-gradient(135deg,#0984e3,#74b9ff)',
 ];
 
-const REV_FALLBACKS = [
-  { client_name: 'Ahmed Al Rashid', client_company: 'Tech Solutions LLC', rating: 5, review: 'Exceptional service and professionalism.', avatar: 'A' },
-  { client_name: 'Sara Mohammed', client_company: 'Dubai Ventures', rating: 5, review: 'Outstanding experience from start to finish.', avatar: 'S' },
-];
+// Star picker + text form for submitting/updating the signed-in user's review.
+function ReviewForm({ bizId, existing, onClose, onSaved }: { bizId: string; existing: any | null; onClose: () => void; onSaved: () => void }) {
+  const [rating, setRating] = useState(Number(existing?.rating) || 5);
+  const [text, setText] = useState(existing?.review || '');
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState('');
+
+  const submit = async () => {
+    if (!text.trim()) { setErr('Please write your review'); return; }
+    setBusy(true); setErr('');
+    try {
+      await api.post(`/businesses/${bizId}/reviews`, { rating, review: text.trim() });
+      onSaved();
+    } catch { setErr('Could not submit — try again'); setBusy(false); }
+  };
+  const remove = async () => {
+    if (!window.confirm('Delete your review?')) return;
+    setBusy(true);
+    try { await api.delete(`/businesses/${bizId}/reviews`); onSaved(); } catch { setBusy(false); }
+  };
+
+  return (
+    <div style={{ position: 'fixed', inset: 0, background: 'rgba(10,14,30,0.55)', zIndex: 950, display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }} onClick={onClose}>
+      <div style={{ background: '#fff', borderRadius: '22px 22px 0 0', width: '100%', maxWidth: 480, padding: '10px 20px 26px' }} onClick={(e) => e.stopPropagation()}>
+        <div style={{ width: 42, height: 5, borderRadius: 3, background: '#D9DEE9', margin: '0 auto 12px' }} />
+        <div style={{ fontSize: 17, fontWeight: 800, color: 'var(--dark)', marginBottom: 12 }}>{existing ? 'Edit Your Review' : 'Write a Review'}</div>
+        <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
+          {[1, 2, 3, 4, 5].map((s) => (
+            <button key={s} onClick={() => setRating(s)}
+              style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 30, color: s <= rating ? '#F5A623' : '#D9DEE9', padding: 0 }}>★</button>
+          ))}
+        </div>
+        <textarea value={text} onChange={(e) => setText(e.target.value)} rows={4} placeholder="Share your experience…"
+          style={{ width: '100%', boxSizing: 'border-box', border: '1px solid #E3E7F0', borderRadius: 14, padding: '12px 14px', fontSize: 14, fontFamily: 'inherit', resize: 'vertical', outline: 'none' }} />
+        {err && <div style={{ fontSize: 12.5, color: '#C42B1C', marginTop: 6 }}>{err}</div>}
+        <div style={{ fontSize: 11.5, color: 'var(--text-light)', marginTop: 8 }}>Your review appears publicly after approval. You can see it immediately.</div>
+        <div style={{ display: 'flex', gap: 10, marginTop: 14 }}>
+          <button onClick={submit} disabled={busy}
+            style={{ flex: 1, padding: 13, border: 'none', borderRadius: 14, background: 'linear-gradient(135deg,var(--primary),var(--primary-dark))', color: '#fff', fontSize: 14, fontWeight: 800, fontFamily: 'inherit', cursor: 'pointer', opacity: busy ? .6 : 1 }}>
+            {busy ? 'Saving…' : existing ? 'Update Review' : 'Submit Review'}
+          </button>
+          {existing && (
+            <button onClick={remove} disabled={busy}
+              style={{ padding: '13px 16px', border: '1px solid #F1BBBB', borderRadius: 14, background: '#fff', color: '#C42B1C', fontSize: 13, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer' }}>
+              Delete
+            </button>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
 
 function Lightbox({ imgs, cur, onClose, onNav }: { imgs: any[]; cur: number; onClose: () => void; onNav: (d: number) => void }) {
   useEffect(() => {
@@ -92,7 +144,7 @@ function CreatorStats({ v }: { v: any }) {
     { icon: 'fab fa-youtube', color: '#FF0000', label: 'YouTube', value: formatCount(v.youtube_subscribers) },
     { icon: 'fab fa-instagram', color: '#E1306C', label: 'Instagram', value: formatCount(v.instagram_followers) },
     { icon: 'fab fa-tiktok', color: '#010101', label: 'TikTok', value: formatCount(v.tiktok_followers) },
-    { icon: 'fas fa-eye', color: '#6C5CE7', label: 'Total Views', value: formatCount(v.total_views) },
+    { icon: 'fas fa-eye', color: 'var(--primary)', label: 'Total Views', value: formatCount(v.total_views) },
   ];
   return (
     <div className="bs-section">
@@ -153,7 +205,7 @@ function CoursePopup({ course: c, biz, onClose }: { course: any; biz: any; onClo
         </div>
         <div style={{ padding: '16px 18px 20px' }}>
           <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 8 }}>
-            <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--primary)', background: 'rgba(108,92,231,.1)', padding: '3px 10px', borderRadius: 50 }}>{c.level_icon} {c.level_name}</span>
+            <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--primary)', background: 'rgba(var(--primary-rgb),.1)', padding: '3px 10px', borderRadius: 50 }}>{c.level_icon} {c.level_name}</span>
             {c.category_name && <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-secondary)', background: '#F2F3F7', padding: '3px 10px', borderRadius: 50 }}>{c.category_icon} {c.category_name}</span>}
           </div>
           <div style={{ fontSize: 19, fontWeight: 800, color: 'var(--dark)', lineHeight: 1.25 }}>{c.name}</div>
@@ -230,55 +282,28 @@ function ServicePopup({ svc, biz, onClose }: { svc: any; biz: any; onClose: () =
   );
 }
 
-function ProductPopup({ product: p, isStore, buyUrl, biz, onClose }: { product: any; isStore: boolean; buyUrl: string; biz: any; onClose: () => void }) {
-  return (
-    <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(10,16,34,.55)', zIndex: 900, display: 'flex', alignItems: 'flex-start', justifyContent: 'center', padding: '24px 14px', overflowY: 'auto', backdropFilter: 'blur(2px)' }}>
-      <div onClick={(e) => e.stopPropagation()} style={{ background: '#fff', borderRadius: 20, width: '100%', maxWidth: 480, overflow: 'hidden', boxShadow: '0 20px 50px rgba(0,0,0,.3)' }}>
-        <div style={{ position: 'relative' }}>
-          {p.image
-            ? <img src={p.imageUrl || p.image} alt={p.name} style={{ width: '100%', height: 260, objectFit: 'cover', display: 'block' }} />
-            : <div style={{ width: '100%', height: 180, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 64, background: 'linear-gradient(135deg,#FDEEF3,#F1EEFE)' }}>🛍️</div>}
-          <button onClick={onClose} style={{ position: 'absolute', top: 12, right: 12, width: 34, height: 34, borderRadius: '50%', background: 'rgba(0,0,0,.45)', color: '#fff', border: 'none', fontSize: 18, cursor: 'pointer', backdropFilter: 'blur(4px)' }}>×</button>
-        </div>
-        <div style={{ padding: '16px 18px 22px' }}>
-          {p.category && <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--primary)', textTransform: 'uppercase', letterSpacing: '.4px', marginBottom: 6 }}>{p.category}</div>}
-          <div style={{ fontSize: 21, fontWeight: 800, color: 'var(--dark)', lineHeight: 1.25 }}>{p.name}</div>
-          {isStore && p.price != null && (
-            <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, marginTop: 10 }}>
-              <span style={{ fontSize: 22, fontWeight: 800, color: 'var(--primary)' }}>{p.currency || 'AED'} {Number(p.price).toLocaleString()}</span>
-              {p.original_price != null && Number(p.original_price) > 0 && <span style={{ fontSize: 15, color: 'var(--text-light)', textDecoration: 'line-through' }}>{p.currency || 'AED'} {Number(p.original_price).toLocaleString()}</span>}
-            </div>
-          )}
-          {p.description && <div style={{ fontSize: 14, lineHeight: 1.6, color: 'var(--text-secondary)', marginTop: 12, whiteSpace: 'pre-wrap' }}>{p.description}</div>}
-          {buyUrl && (
-            <a href={buyUrl} target="_blank" rel="noreferrer" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, marginTop: 18, padding: 14, background: 'var(--primary)', color: '#fff', borderRadius: 14, fontSize: 16, fontWeight: 700, textDecoration: 'none' }}>
-              <i className="fas fa-store"></i> Buy Online
-            </a>
-          )}
-          <ContactCTA biz={biz} />
-        </div>
-      </div>
-    </div>
-  );
-}
-
 export default function BusinessDetailPage() {
   const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
   const [lbOpen, setLbOpen] = useState(false);
   const [lbCur, setLbCur] = useState(0);
   const [lbImgs, setLbImgs] = useState<any[]>([]);
   const [aboutExpanded, setAboutExpanded] = useState(false);
   const [expandedSvc, setExpandedSvc] = useState<Set<number>>(new Set());
   const [galExpanded, setGalExpanded] = useState(false);
-  const [revExpanded, setRevExpanded] = useState(false);
   const [sliderCur, setSliderCur] = useState(0);
   const videoRefs = useRef<Record<number, HTMLVideoElement | null>>({});
 
   const [coursePopup, setCoursePopup] = useState<any>(null);
   const [doctorPopup, setDoctorPopup] = useState<any>(null);
   const [servicePopup, setServicePopup] = useState<any>(null);
-  const [productPopup, setProductPopup] = useState<any>(null);
-  const [prodCat, setProdCat] = useState('All');
+  const [prodCat, setProdCat] = useState('Featured');
+  const [prodSub, setProdSub] = useState('All');
+  const [cartOpen, setCartOpen] = useState(false);
+  const [reviewOpen, setReviewOpen] = useState(false);
+  const cartItems = useCart(id || 0);
+  const { user } = useAuth();
+  const qc = useQueryClient();
   const [docSpec, setDocSpec] = useState<number | 'all'>('all');
 
   const { data, isLoading } = useQuery({
@@ -328,11 +353,16 @@ export default function BusinessDetailPage() {
   // Managed categories (name + image/icon) first, then any legacy names still on products.
   const managedCats: any[] = data.productCategories || [];
   const usedCatNames = new Set(products.map((p) => p.category).filter(Boolean));
-  const prodCats: string[] = ['All',
+  const prodCats: string[] = ['Featured',
     ...managedCats.filter((c) => usedCatNames.has(c.name)).map((c) => c.name),
     ...Array.from(usedCatNames).filter((n) => !managedCats.some((c) => c.name === n)),
   ];
-  const filteredProducts = prodCat === 'All' ? products : products.filter((p) => p.category === prodCat);
+  const subcatsAll: any[] = data.productSubcategories || [];
+  const subcatsForCat = prodCat === 'Featured' ? [] : subcatsAll.filter((s) => s.category === prodCat);
+  // Featured tab shows featured products; if none are flagged, it falls back to all.
+  const featuredList = products.filter((p) => Number(p.featured) === 1);
+  const filteredProducts = (prodCat === 'Featured' ? (featuredList.length ? featuredList : products) : products.filter((p) => p.category === prodCat))
+    .filter((p) => prodSub === 'All' || p.subcategory === prodSub);
   const catMeta = (c: string) => managedCats.find((m) => m.name === c);
   const chipImg = (c: string) =>
     catMeta(c)?.imageUrl || products.find((p) => p.category === c && p.image)?.imageUrl || '';
@@ -347,7 +377,16 @@ export default function BusinessDetailPage() {
   const serviceSections: any[] = (data.serviceSections && data.serviceSections.length > 0)
     ? data.serviceSections
     : [{ id: 0, title: 'Services & Solutions', items: SVC_FALLBACKS }];
-  const revList = testimonials.length > 0 ? testimonials : REV_FALLBACKS;
+  const revList: any[] = testimonials;
+  const approvedRevs = revList.filter((r: any) => !r.status || r.status === 'approved');
+  const myReview = revList.find((r: any) => Number(r.is_own) === 1) || null;
+  // Real star breakdown from approved reviews (falls back to admin rating when none).
+  const revAvg = approvedRevs.length
+    ? approvedRevs.reduce((s: number, r: any) => s + Number(r.rating || 5), 0) / approvedRevs.length
+    : null;
+  const barPct = (star: number) => approvedRevs.length
+    ? Math.round(approvedRevs.filter((r: any) => Math.round(Number(r.rating || 5)) === star).length / approvedRevs.length * 100)
+    : 0;
   const clientList = clients.length > 0 ? clients : [
     { name: 'Emaar Properties' }, { name: 'Dubai Holdings' }, { name: 'Majid Al Futtaim' },
     { name: 'Al Futtaim Group' }, { name: 'ADNOC Group' }, { name: 'Emirates Group' },
@@ -362,49 +401,26 @@ export default function BusinessDetailPage() {
 
   const waLink = biz.whatsapp ? `https://wa.me/${biz.whatsapp.replace(/\D/g, '')}` : null;
 
-  return (
-    <div className="biz-detail-v2">
-      {lbOpen && <Lightbox imgs={lbImgs} cur={lbCur} onClose={closeLB} onNav={lbNav} />}
-      {coursePopup && <CoursePopup course={coursePopup} biz={biz} onClose={() => setCoursePopup(null)} />}
-      {doctorPopup && <DoctorPopup doctor={doctorPopup} onClose={() => setDoctorPopup(null)} />}
-      {servicePopup && <ServicePopup svc={servicePopup} biz={biz} onClose={() => setServicePopup(null)} />}
-      {productPopup && <ProductPopup product={productPopup} isStore={isStore} buyUrl={storeBuyUrl} biz={biz} onClose={() => setProductPopup(null)} />}
+  // ── Detail page sections: per-business show/hide + order (admin-configured).
+  // Legacy show_stats / show_clients act as defaults when no config is saved.
+  const defaultSections = ['header', 'actions', 'store', 'creator', 'doctors', 'courses', 'about', 'stats', 'services', 'gallery', 'clients', 'reviews', 'contact']
+    .map((key, i) => ({
+      key,
+      on: key === 'stats' ? (Number(biz.show_stats ?? 1) ? 1 : 0) : key === 'clients' ? (Number(biz.show_clients ?? 1) ? 1 : 0) : 1,
+      order: i + 1,
+    }));
+  let secList = defaultSections;
+  try {
+    const cfg = JSON.parse(biz.sections_config || '');
+    if (Array.isArray(cfg) && cfg.length) {
+      const known = new Set(cfg.map((s: any) => s.key));
+      secList = [...cfg, ...defaultSections.filter((d) => !known.has(d.key)).map((d, i) => ({ ...d, order: cfg.length + i + 1 }))];
+    }
+  } catch { /* default layout */ }
+  secList = secList.filter((s: any) => s.on).sort((a: any, b: any) => a.order - b.order);
 
-      <div className="bd-brandbar">
-        <Link to={-1 as any} className="bd-brand-btn"><i className="fas fa-arrow-left"></i></Link>
-        <div className="bd-brand-logo">
-          {biz.logoUrl && biz.logo
-            ? <img src={biz.logoUrl} alt={biz.name} />
-            : <span>{biz.name}</span>}
-        </div>
-        <button className="bd-brand-btn" onClick={() => { if (navigator.share) navigator.share({ title: biz.name, url: window.location.href }); }}>
-          <i className="fas fa-share-alt"></i>
-        </button>
-      </div>
-
-      <div className="bd-slider-wrap" onClick={() => openLB(sliderCur, sliderImgs)}>
-        <div className="bd-slider-track" style={{ transform: `translateX(-${sliderCur * 100}%)` }}>
-          {sliderImgs.map((img: any, i: number) => (
-            <div className="bd-slide" key={i}>
-              {img.type === 'video'
-                ? <video ref={(el) => { videoRefs.current[i] = el; }} src={img.src} muted playsInline preload="auto"
-                    loop={sliderImgs.length <= 1}
-                    onEnded={() => { if (sliderImgs.length > 1) setSliderCur((c) => (c + 1) % sliderImgs.length); }} />
-                : <img src={img.src} alt={img.caption || ''} loading={i === 0 ? undefined : 'lazy'} decoding="async"
-                    onError={(e) => { (e.target as HTMLImageElement).src = GALLERY_FALLBACKS[i % GALLERY_FALLBACKS.length].src; }} />}
-            </div>
-          ))}
-        </div>
-        <div className="bd-slide-counter">{sliderCur + 1} / {totalSlides}</div>
-        <div className="bd-zoom-hint"><i className="fas fa-search-plus"></i> Tap to zoom</div>
-        <div className="bd-slider-dots">
-          {sliderImgs.map((_: any, i: number) => (
-            <div key={i} className={`dot${i === sliderCur ? ' active' : ''}`}
-              onClick={(e) => { e.stopPropagation(); setSliderCur(i); }} data-i={i} />
-          ))}
-        </div>
-      </div>
-
+  const SEC_RENDER: Record<string, () => React.ReactNode> = {
+    header: () => (
       <div className="bd-header">
         <div className="bd-logo-row">
           <div style={{ flex: 1, minWidth: 0 }}>
@@ -416,12 +432,13 @@ export default function BusinessDetailPage() {
         <div className="bd-meta-row">
           {biz.rating > 0 && <div className="bd-rating-badge">{renderStars(avgRating)} <strong>{avgRating.toFixed(1)}</strong></div>}
           {biz.distance && <div className="bd-distance"><i className="fas fa-location-arrow"></i> {biz.distance}</div>}
-          <span className="bd-badge verified"><i className="fas fa-check-circle"></i> Verified</span>
+          {Number(biz.is_verified) === 1 && <span className="bd-badge verified"><i className="fas fa-check-circle"></i> Verified</span>}
           <span className="bd-badge open"><i className="fas fa-circle" style={{ fontSize: 7 }}></i> Open</span>
         </div>
         {biz.address && <div className="bd-address-row"><i className="fas fa-map-marker-alt"></i> {biz.address}</div>}
       </div>
-
+    ),
+    actions: () => (
       <div className="bd-actions">
         {biz.phone && <a href={`tel:${biz.phone}`} className="bd-action call"><div className="bd-action-icon"><i className="fas fa-phone"></i></div><span>Call</span></a>}
         {waLink && <a href={waLink} target="_blank" rel="noreferrer" className="bd-action wa"><div className="bd-action-icon"><i className="fab fa-whatsapp"></i></div><span>WhatsApp</span></a>}
@@ -429,110 +446,140 @@ export default function BusinessDetailPage() {
         {biz.email && <a href={`mailto:${biz.email}`} className="bd-action email"><div className="bd-action-icon"><i className="fas fa-envelope"></i></div><span>Email</span></a>}
         <a href={`https://maps.google.com/?q=${encodeURIComponent(biz.address || biz.name + ' UAE')}`} target="_blank" rel="noreferrer" className="bd-action map"><div className="bd-action-icon"><i className="fas fa-directions"></i></div><span>Directions</span></a>
       </div>
-
-      <div className="bs-divider"></div>
+    ),
+    store: () => !showStore ? null : (
       <div className="bs-page-wrap">
-
-        {showStore && (
-          <div className="store-shop">
-            {prodCats.length > 1 && (
-              <div className="store-chips">
-                {prodCats.map((c) => (
-                  <button key={c} className={`store-chip${prodCat === c ? ' active' : ''}`} onClick={() => setProdCat(c)}>
-                    <div className="store-chip-circle">
-                      {c !== 'All' && chipImg(c)
+        <div className="store-shop">
+          {prodCats.length > 1 && (
+            <div className="store-chips">
+              {prodCats.map((c) => (
+                <button key={c} className={`store-chip${prodCat === c ? ' active' : ''}`} onClick={() => { setProdCat(c); setProdSub('All'); }}>
+                  <div className="store-chip-circle">
+                    {c === 'Featured'
+                      ? <i className="fas fa-star"></i>
+                      : chipImg(c)
                         ? <img src={chipImg(c)} alt="" />
-                        : c !== 'All' && catMeta(c)?.icon
+                        : catMeta(c)?.icon
                           ? <span style={{ fontSize: 18 }}>{catMeta(c).icon}</span>
                           : <i className="fas fa-shapes"></i>}
-                    </div>
-                    <span>{c}</span>
-                  </button>
-                ))}
-              </div>
-            )}
-            <div className="bs-sh"><span className="bs-title">{prodCat === 'All' ? 'Shop' : prodCat}</span><span style={{ fontSize: 11, color: 'var(--text-light)' }}>{filteredProducts.length} items</span></div>
-            <div className="store-grid">
-              {filteredProducts.map((p) => (
-                <div key={p.id} className="store-card" onClick={() => setProductPopup(p)}>
-                  <div className="store-card-img">
+                  </div>
+                  <span>{c}</span>
+                </button>
+              ))}
+            </div>
+          )}
+          {subcatsForCat.length > 0 && (
+            <div style={{ display: 'flex', gap: 8, overflowX: 'auto', padding: '2px 2px 10px', scrollbarWidth: 'none' }}>
+              {['All', ...subcatsForCat.map((s) => s.name)].map((s) => (
+                <button key={s} onClick={() => setProdSub(s)}
+                  style={{ flexShrink: 0, padding: '6px 14px', borderRadius: 999, fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit',
+                    border: prodSub === s ? '1px solid var(--primary)' : '1px solid #E3E7F0',
+                    background: prodSub === s ? 'var(--primary)' : '#fff',
+                    color: prodSub === s ? '#fff' : 'var(--text-secondary)' }}>
+                  {s}
+                </button>
+              ))}
+            </div>
+          )}
+          <div className="bs-sh"><span className="bs-title">{prodCat === 'Featured' ? (featuredList.length ? 'Featured' : 'Shop') : prodCat}</span><span style={{ fontSize: 11, color: 'var(--text-light)' }}>{filteredProducts.length} items</span></div>
+          <div className="store-grid">
+            {filteredProducts.map((p) => {
+              const pct = p.discount_percent != null ? Math.round(Number(p.discount_percent))
+                : (p.original_price != null && Number(p.original_price) > Number(p.price || 0))
+                  ? Math.round((1 - Number(p.price) / Number(p.original_price)) * 100) : null;
+              return (
+                <div key={p.id} className="store-card" onClick={() => navigate(`/businesses/${id}/products/${p.id}`)}>
+                  <div className="store-card-img" style={{ position: 'relative' }}>
                     {p.image
                       ? <img src={p.imageUrl || p.image} alt={p.name} loading="lazy" onError={(e) => { (e.target as HTMLImageElement).style.visibility = 'hidden'; }} />
                       : <div className="store-card-ph">🛍️</div>}
+                    {pct != null && pct > 0 && (
+                      <span style={{ position: 'absolute', top: 8, left: 8, fontSize: 11, fontWeight: 800, background: '#C62828', color: '#fff', borderRadius: 8, padding: '2px 8px' }}>-{pct}%</span>
+                    )}
                   </div>
                   <div className="store-card-body">
                     <div className="store-card-name">{p.name}</div>
+                    {p.short_description && (
+                      <div style={{ fontSize: 11.5, color: 'var(--text-secondary)', lineHeight: 1.35, margin: '2px 0 4px', overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>
+                        {p.short_description}
+                      </div>
+                    )}
                     {isStore && p.price != null && (
                       <div className="store-card-price">
                         <span className="now">{p.currency || 'AED'} {Number(p.price).toLocaleString()}</span>
                         {p.original_price != null && Number(p.original_price) > 0 && <span className="was">{p.currency || 'AED'} {Number(p.original_price).toLocaleString()}</span>}
                       </div>
                     )}
-                    <button className="store-card-btn" onClick={(e) => { e.stopPropagation(); setProductPopup(p); }}>View More</button>
+                    <button className="store-card-btn" onClick={(e) => { e.stopPropagation(); navigate(`/businesses/${id}/products/${p.id}`); }}>View More</button>
                   </div>
                 </div>
-              ))}
-            </div>
+              );
+            })}
           </div>
-        )}
-
-        {data.vlogger && <CreatorStats v={data.vlogger} />}
-
-        {(data.doctors || []).length > 0 && (() => {
-          const docList: any[] = data.doctors;
-          const specs = Array.from(
-            new Map(docList.filter((d) => d.specialty_id).map((d) => [d.specialty_id, { id: d.specialty_id, name: d.specialty_name, icon: d.specialty_icon }])).values()
-          );
-          const filtered = docSpec === 'all' ? docList : docList.filter((d) => d.specialty_id === docSpec);
-          const TEAL = '#0E7C86';
-          const tab = (active: boolean): React.CSSProperties => ({
-            flexShrink: 0, display: 'inline-flex', alignItems: 'center', gap: 6, padding: '7px 14px', borderRadius: 20, cursor: 'pointer',
-            fontFamily: 'inherit', fontSize: 13, fontWeight: 600, border: `1.5px solid ${active ? TEAL : '#E1E9EA'}`,
-            background: active ? TEAL : '#fff', color: active ? '#fff' : '#3A4A4E', whiteSpace: 'nowrap',
-          });
-          return (
-            <div className="bs-section">
-              <div className="bs-sh"><span className="bs-title">Doctors</span><span style={{ fontSize: 11, color: 'var(--text-light)' }}>{filtered.length} of {docList.length}</span></div>
-              {specs.length > 1 && (
-                <div style={{ display: 'flex', gap: 8, overflowX: 'auto', padding: '2px 0 14px', scrollbarWidth: 'none' }}>
-                  <button style={tab(docSpec === 'all')} onClick={() => setDocSpec('all')}>All <span style={{ opacity: .7 }}>{docList.length}</span></button>
-                  {specs.map((s: any) => {
-                    const count = docList.filter((d) => d.specialty_id === s.id).length;
-                    return (
-                      <button key={s.id} style={tab(docSpec === s.id)} onClick={() => setDocSpec(s.id)}>
-                        {s.icon ? `${s.icon} ` : ''}{s.name} <span style={{ opacity: .7 }}>{count}</span>
-                      </button>
-                    );
-                  })}
-                </div>
-              )}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                {filtered.map((d: any) => <DoctorCard key={d.id} d={d} onOpen={setDoctorPopup} showHospital={false} />)}
-              </div>
-            </div>
-          );
-        })()}
-
-        {uniCourses.length > 0 && (
+        </div>
+      </div>
+    ),
+    creator: () => data.vlogger ? <div className="bs-page-wrap"><CreatorStats v={data.vlogger} /></div> : null,
+    doctors: () => {
+      if (!(data.doctors || []).length) return null;
+      const docList: any[] = data.doctors;
+      const specs = Array.from(
+        new Map(docList.filter((d) => d.specialty_id).map((d) => [d.specialty_id, { id: d.specialty_id, name: d.specialty_name, icon: d.specialty_icon }])).values()
+      );
+      const filtered = docSpec === 'all' ? docList : docList.filter((d) => d.specialty_id === docSpec);
+      const TEAL = '#0E7C86';
+      const tab = (active: boolean): React.CSSProperties => ({
+        flexShrink: 0, display: 'inline-flex', alignItems: 'center', gap: 6, padding: '7px 14px', borderRadius: 20, cursor: 'pointer',
+        fontFamily: 'inherit', fontSize: 13, fontWeight: 600, border: `1.5px solid ${active ? TEAL : '#E1E9EA'}`,
+        background: active ? TEAL : '#fff', color: active ? '#fff' : '#3A4A4E', whiteSpace: 'nowrap',
+      });
+      return (
+        <div className="bs-page-wrap">
           <div className="bs-section">
-            <div className="bs-sh"><span className="bs-title">Courses</span><span style={{ fontSize: 11, color: 'var(--text-light)' }}>{uniCourses.length} courses</span></div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-              {uniCourses.map((c: any) => (
-                <button key={c.id} onClick={() => setCoursePopup(c)}
-                  style={{ display: 'flex', gap: 12, alignItems: 'center', width: '100%', textAlign: 'left', background: '#fff', border: '1px solid #EEF0F6', borderRadius: 14, padding: '10px 12px', cursor: 'pointer', fontFamily: 'inherit' }}>
-                  <CourseThumb url={c.imageUrl} icon={c.category_icon} w={54} h={54} radius={11} />
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--dark)' }}>{c.name}</div>
-                    <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 2 }}>{c.level_icon} {c.level_name}{c.duration ? ` · ${c.duration}` : ''}</div>
-                    <div style={{ fontSize: 13, fontWeight: 800, color: 'var(--primary)', marginTop: 3 }}>{fmtFee(c.fee_per_year, c.currency)}<small style={{ fontWeight: 600, color: 'var(--text-secondary)' }}>/yr</small></div>
-                  </div>
-                  <span style={{ color: 'var(--primary)', fontSize: 18, flexShrink: 0 }}>›</span>
-                </button>
-              ))}
+            <div className="bs-sh"><span className="bs-title">Doctors</span><span style={{ fontSize: 11, color: 'var(--text-light)' }}>{filtered.length} of {docList.length}</span></div>
+            {specs.length > 1 && (
+              <div style={{ display: 'flex', gap: 8, overflowX: 'auto', padding: '2px 0 14px', scrollbarWidth: 'none' }}>
+                <button style={tab(docSpec === 'all')} onClick={() => setDocSpec('all')}>All <span style={{ opacity: .7 }}>{docList.length}</span></button>
+                {specs.map((s: any) => {
+                  const count = docList.filter((d) => d.specialty_id === s.id).length;
+                  return (
+                    <button key={s.id} style={tab(docSpec === s.id)} onClick={() => setDocSpec(s.id)}>
+                      {s.icon ? `${s.icon} ` : ''}{s.name} <span style={{ opacity: .7 }}>{count}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+              {filtered.map((d: any) => <DoctorCard key={d.id} d={d} onOpen={setDoctorPopup} showHospital={false} />)}
             </div>
           </div>
-        )}
-
+        </div>
+      );
+    },
+    courses: () => uniCourses.length === 0 ? null : (
+      <div className="bs-page-wrap">
+        <div className="bs-section">
+          <div className="bs-sh"><span className="bs-title">Courses</span><span style={{ fontSize: 11, color: 'var(--text-light)' }}>{uniCourses.length} courses</span></div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            {uniCourses.map((c: any) => (
+              <button key={c.id} onClick={() => setCoursePopup(c)}
+                style={{ display: 'flex', gap: 12, alignItems: 'center', width: '100%', textAlign: 'left', background: '#fff', border: '1px solid #EEF0F6', borderRadius: 14, padding: '10px 12px', cursor: 'pointer', fontFamily: 'inherit' }}>
+                <CourseThumb url={c.imageUrl} icon={c.category_icon} w={54} h={54} radius={11} />
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--dark)' }}>{c.name}</div>
+                  <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 2 }}>{c.level_icon} {c.level_name}{c.duration ? ` · ${c.duration}` : ''}</div>
+                  <div style={{ fontSize: 13, fontWeight: 800, color: 'var(--primary)', marginTop: 3 }}>{fmtFee(c.fee_per_year, c.currency)}<small style={{ fontWeight: 600, color: 'var(--text-secondary)' }}>/yr</small></div>
+                </div>
+                <span style={{ color: 'var(--primary)', fontSize: 18, flexShrink: 0 }}>›</span>
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+    ),
+    about: () => (
+      <div className="bs-page-wrap">
         <div className="bs-section">
           <div className="bs-sh"><span className="bs-title">About Us</span></div>
           <div className={`bs-about-text${aboutExpanded ? ' show' : ''}`}>{aboutText.split('\n').map((l: string, i: number) => <span key={i}>{l}<br /></span>)}</div>
@@ -540,20 +587,20 @@ export default function BusinessDetailPage() {
             {aboutExpanded ? 'Read Less ' : 'Read More '}<i className={`fas fa-chevron-${aboutExpanded ? 'up' : 'down'}`}></i>
           </button>
         </div>
-
-        {Number(biz.show_stats ?? 1) !== 0 && (
-          <>
-            <div className="bs-stats-row">
-              <div className="bs-stat"><div className="bs-stat-num">{avgRating.toFixed(1)}</div><div className="bs-stat-lbl">Rating</div></div>
-              <div className="bs-stat"><div className="bs-stat-num">{biz.established_year || new Date().getFullYear() - 5}</div><div className="bs-stat-lbl">Est. Year</div></div>
-              <div className="bs-stat"><div className="bs-stat-num">{biz.employees || '50+'}</div><div className="bs-stat-lbl">Team Size</div></div>
-              <div className="bs-stat"><div className="bs-stat-num">{revList.length}+</div><div className="bs-stat-lbl">Reviews</div></div>
-            </div>
-
-            <div className="bs-divider"></div>
-          </>
-        )}
-
+      </div>
+    ),
+    stats: () => (
+      <div className="bs-page-wrap">
+        <div className="bs-stats-row">
+          <div className="bs-stat"><div className="bs-stat-num">{avgRating.toFixed(1)}</div><div className="bs-stat-lbl">Rating</div></div>
+          <div className="bs-stat"><div className="bs-stat-num">{biz.established_year || new Date().getFullYear() - 5}</div><div className="bs-stat-lbl">Est. Year</div></div>
+          <div className="bs-stat"><div className="bs-stat-num">{biz.employees || '50+'}</div><div className="bs-stat-lbl">Team Size</div></div>
+          <div className="bs-stat"><div className="bs-stat-num">{revList.length}+</div><div className="bs-stat-lbl">Reviews</div></div>
+        </div>
+      </div>
+    ),
+    services: () => (
+      <div className="bs-page-wrap">
         {serviceSections.map((sec: any) => {
           const items: any[] = sec.items || [];
           if (!items.length) return null;
@@ -578,9 +625,10 @@ export default function BusinessDetailPage() {
             </div>
           );
         })}
-
-        <div className="bs-divider"></div>
-
+      </div>
+    ),
+    gallery: () => (
+      <div className="bs-page-wrap">
         <div className="bs-section">
           <div className="bs-sh"><span className="bs-title">Gallery</span></div>
           <div className="bs-gal-grid">
@@ -596,84 +644,104 @@ export default function BusinessDetailPage() {
             <button className="bs-expand-btn" onClick={() => setGalExpanded(true)}>View All {galleryItems.length} Photos <i className="fas fa-chevron-down"></i></button>
           )}
         </div>
-
-        <div className="bs-divider"></div>
-
-        {Number(biz.show_clients ?? 1) !== 0 && (
-          <>
-            <div className="bs-section">
-              <div className="bs-sh"><span className="bs-title">Clients &amp; Partners</span></div>
-              <div className="bs-clients-scroll">
-                {clientList.map((c: any, ci: number) => {
-                  const logoSize: number = data.clientLogoSize || 58;
-                  const sizeStyle = { width: logoSize, height: logoSize, fontSize: Math.round(logoSize * 0.34) };
-                  const inner = (
-                    <>
-                      {c.logo ? (
-                        <img src={c.logoUrl || c.logo} alt={c.name} className="bs-client-logo" style={sizeStyle} />
-                      ) : (
-                        <div className="bs-client-avatar" style={{ ...sizeStyle, background: CLIENT_GRADS[ci % CLIENT_GRADS.length] }}>{c.name[0].toUpperCase()}</div>
-                      )}
-                      <div className="bs-client-name">{c.name}</div>
-                    </>
-                  );
-                  return c.website ? (
-                    <a href={c.website} target="_blank" rel="noreferrer" className="bs-client-item" key={ci} style={{ width: logoSize + 18 }}>{inner}</a>
-                  ) : (
-                    <div className="bs-client-item" key={ci} style={{ width: logoSize + 18 }}>{inner}</div>
-                  );
-                })}
-              </div>
-            </div>
-
-            <div className="bs-divider"></div>
-          </>
-        )}
-
+      </div>
+    ),
+    clients: () => (
+      <div className="bs-page-wrap">
         <div className="bs-section">
-          <div className="bs-sh"><span className="bs-title">What Clients Say</span></div>
+          <div className="bs-sh"><span className="bs-title">Clients &amp; Partners</span></div>
+          <div className="bs-clients-scroll">
+            {clientList.map((c: any, ci: number) => {
+              // Per-business size preset wins; else the global px setting; else default.
+              const logoSize: number = biz.clients_size === 'small' ? 46 : biz.clients_size === 'medium' ? 64 : (data.clientLogoSize || 58);
+              const nameSize: number | undefined = biz.clients_size === 'small' ? 9 : biz.clients_size === 'medium' ? 11.5 : undefined;
+              const sizeStyle = { width: logoSize, height: logoSize, fontSize: Math.round(logoSize * 0.34) };
+              const inner = (
+                <>
+                  {c.logo ? (
+                    <img src={c.logoUrl || c.logo} alt={c.name} className="bs-client-logo" style={sizeStyle} />
+                  ) : (
+                    <div className="bs-client-avatar" style={{ ...sizeStyle, background: CLIENT_GRADS[ci % CLIENT_GRADS.length] }}>{c.name[0].toUpperCase()}</div>
+                  )}
+                  <div className="bs-client-name" style={nameSize ? { fontSize: nameSize } : undefined}>{c.name}</div>
+                </>
+              );
+              return c.website ? (
+                <a href={c.website} target="_blank" rel="noreferrer" className="bs-client-item" key={ci} style={{ width: logoSize + 18 }}>{inner}</a>
+              ) : (
+                <div className="bs-client-item" key={ci} style={{ width: logoSize + 18 }}>{inner}</div>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+    ),
+    reviews: () => (
+      <div className="bs-page-wrap">
+        <div className="bs-section">
+          <div className="bs-sh">
+            <span className="bs-title">What Clients Say</span>
+            <button onClick={() => (user ? setReviewOpen(true) : navigate('/auth/login'))}
+              style={{ border: 'none', borderRadius: 999, background: 'linear-gradient(135deg,var(--primary),var(--primary-dark))', color: '#fff', fontSize: 12, fontWeight: 700, padding: '7px 14px', cursor: 'pointer', fontFamily: 'inherit' }}>
+              <i className={`fas ${myReview ? 'fa-pen' : 'fa-star'}`} style={{ marginRight: 5, fontSize: 10 }}></i>
+              {myReview ? 'Edit Your Review' : 'Write a Review'}
+            </button>
+          </div>
           <div className="bs-review-summary">
             <div className="bs-rev-avg">
-              <div className="big-num">{avgRating.toFixed(1)}</div>
-              <div className="stars">{renderStars(avgRating)}</div>
-              <div className="cnt">{revList.length} reviews</div>
+              <div className="big-num">{(revAvg ?? avgRating).toFixed(1)}</div>
+              <div className="stars">{renderStars(revAvg ?? avgRating)}</div>
+              <div className="cnt">{approvedRevs.length} review{approvedRevs.length === 1 ? '' : 's'}</div>
             </div>
             <div style={{ flex: 1 }}>
-              {([[5, 72], [4, 18], [3, 6], [2, 3], [1, 1]] as [number, number][]).map(([s, pct]) => (
+              {[5, 4, 3, 2, 1].map((s) => (
                 <div className="bs-bar-row" key={s}>
                   <span className="n">{s}</span>
-                  <div className="bs-bar-track"><div className="bs-bar-fill" style={{ width: `${pct}%` }}></div></div>
+                  <div className="bs-bar-track"><div className="bs-bar-fill" style={{ width: `${barPct(s)}%` }}></div></div>
                 </div>
               ))}
             </div>
           </div>
-          {revList.map((rev: any, ri: number) => {
+          {revList.length === 0 && (
+            <div style={{ padding: '20px 0', textAlign: 'center', color: 'var(--text-secondary)', fontSize: 13.5 }}>
+              No reviews yet — be the first to share your experience!
+            </div>
+          )}
+          {revList.slice(0, 5).map((rev: any, ri: number) => {
             const name = rev.client_name || rev.name || 'Customer';
             const co = rev.client_company || rev.company || '';
             const rating = Number(rev.rating || 5);
             const text = rev.review || '';
             const avatar = rev.avatar || name[0].toUpperCase();
+            const own = Number(rev.is_own) === 1;
             return (
-              <div className={`bs-review-card${ri >= 2 && !revExpanded ? ' bs-hidden' : ''}`} key={ri}>
+              <div className="bs-review-card" key={ri} style={own && rev.status !== 'approved' ? { border: '1px dashed #F0C36D', background: '#FFFDF5' } : undefined}>
                 <div className="bs-rev-head">
                   <div className="bs-rev-avatar">{rev.client_photo ? <img src={rev.client_photo} alt="" /> : avatar}</div>
                   <div>
-                    <div className="bs-rev-name">{name}</div>
+                    <div className="bs-rev-name">{name}{own ? ' (You)' : ''}</div>
                     {co && <div className="bs-rev-co">{co}</div>}
                   </div>
+                  {own && rev.status === 'pending' && (
+                    <span style={{ marginLeft: 'auto', fontSize: 10.5, fontWeight: 700, background: '#FFF8E1', color: '#B26A00', borderRadius: 10, padding: '3px 9px' }}>⏳ Pending approval</span>
+                  )}
+                  {own && rev.status === 'rejected' && (
+                    <span style={{ marginLeft: 'auto', fontSize: 10.5, fontWeight: 700, background: '#FDECEA', color: '#C62828', borderRadius: 10, padding: '3px 9px' }}>Rejected</span>
+                  )}
                 </div>
                 <div className="bs-rev-stars">{renderStars(rating)}</div>
                 <div className="bs-rev-text">{text}</div>
               </div>
             );
           })}
-          {revList.length > 2 && !revExpanded && (
-            <button className="bs-expand-btn" onClick={() => setRevExpanded(true)}>Read All {revList.length} Reviews <i className="fas fa-chevron-down"></i></button>
+          {revList.length > 5 && (
+            <button className="bs-expand-btn" onClick={() => navigate(`/businesses/${id}/reviews`)}>View All {revList.length} Reviews <i className="fas fa-chevron-right"></i></button>
           )}
         </div>
-
-        <div className="bs-divider"></div>
-
+      </div>
+    ),
+    contact: () => (
+      <div className="bs-page-wrap">
         <div className="bs-section">
           <div className="bs-sh"><span className="bs-title">Contact &amp; Location</span></div>
           {biz.phone && (
@@ -726,6 +794,70 @@ export default function BusinessDetailPage() {
           })()}
         </div>
       </div>
+    ),
+  };
+
+  return (
+    <div className="biz-detail-v2" style={bizThemeStyle(biz.color)}>
+      {lbOpen && <Lightbox imgs={lbImgs} cur={lbCur} onClose={closeLB} onNav={lbNav} />}
+      {coursePopup && <CoursePopup course={coursePopup} biz={biz} onClose={() => setCoursePopup(null)} />}
+      {doctorPopup && <DoctorPopup doctor={doctorPopup} onClose={() => setDoctorPopup(null)} />}
+      {servicePopup && <ServicePopup svc={servicePopup} biz={biz} onClose={() => setServicePopup(null)} />}
+
+      <div className="bd-brandbar">
+        <Link to={-1 as any} className="bd-brand-btn"><i className="fas fa-arrow-left"></i></Link>
+        <div className="bd-brand-logo">
+          {biz.logoUrl && biz.logo
+            ? <img src={biz.logoUrl} alt={biz.name} />
+            : <span>{biz.name}</span>}
+        </div>
+        <div style={{ display: 'flex', gap: 8 }}>
+          {products.length > 0 && secList.some((s: any) => s.key === 'store') && (
+            <button className="bd-brand-btn" onClick={() => setCartOpen(true)} aria-label="Cart" style={{ position: 'relative' }}>
+              <i className="fas fa-shopping-cart"></i>
+              {cartItems.length > 0 && (
+                <span style={{ position: 'absolute', top: -4, right: -4, minWidth: 18, height: 18, borderRadius: 9, background: 'var(--primary)', color: '#fff', fontSize: 10.5, fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 4px' }}>
+                  {cartItems.reduce((s, i) => s + i.qty, 0)}
+                </span>
+              )}
+            </button>
+          )}
+          <button className="bd-brand-btn" onClick={() => { if (navigator.share) navigator.share({ title: biz.name, url: window.location.href }); }}>
+            <i className="fas fa-share-alt"></i>
+          </button>
+        </div>
+      </div>
+      {cartOpen && <CartDrawer biz={biz} onClose={() => setCartOpen(false)} />}
+      {reviewOpen && (
+        <ReviewForm bizId={id!} existing={myReview}
+          onClose={() => setReviewOpen(false)}
+          onSaved={() => { setReviewOpen(false); qc.invalidateQueries({ queryKey: ['business', id] }); }} />
+      )}
+
+      <div className="bd-slider-wrap" onClick={() => openLB(sliderCur, sliderImgs)}>
+        <div className="bd-slider-track" style={{ transform: `translateX(-${sliderCur * 100}%)` }}>
+          {sliderImgs.map((img: any, i: number) => (
+            <div className="bd-slide" key={i}>
+              {img.type === 'video'
+                ? <video ref={(el) => { videoRefs.current[i] = el; }} src={img.src} muted playsInline preload="auto"
+                    loop={sliderImgs.length <= 1}
+                    onEnded={() => { if (sliderImgs.length > 1) setSliderCur((c) => (c + 1) % sliderImgs.length); }} />
+                : <img src={img.src} alt={img.caption || ''} loading={i === 0 ? undefined : 'lazy'} decoding="async"
+                    onError={(e) => { (e.target as HTMLImageElement).src = GALLERY_FALLBACKS[i % GALLERY_FALLBACKS.length].src; }} />}
+            </div>
+          ))}
+        </div>
+        <div className="bd-slide-counter">{sliderCur + 1} / {totalSlides}</div>
+        <div className="bd-zoom-hint"><i className="fas fa-search-plus"></i> Tap to zoom</div>
+        <div className="bd-slider-dots">
+          {sliderImgs.map((_: any, i: number) => (
+            <div key={i} className={`dot${i === sliderCur ? ' active' : ''}`}
+              onClick={(e) => { e.stopPropagation(); setSliderCur(i); }} data-i={i} />
+          ))}
+        </div>
+      </div>
+
+      {secList.map((s: any) => { const r = SEC_RENDER[s.key]; const el = r ? r() : null; return el ? <div key={s.key}>{el}</div> : null; })}
     </div>
   );
 }

@@ -124,7 +124,7 @@ export default function UniversityDetailPage() {
 function chip(active: boolean): React.CSSProperties {
   return {
     flexShrink: 0, padding: '6px 13px', borderRadius: 50, cursor: 'pointer',
-    border: `1.5px solid ${active ? 'var(--primary)' : 'rgba(108,92,231,.2)'}`,
+    border: `1.5px solid ${active ? 'var(--primary)' : 'rgba(var(--primary-rgb),.2)'}`,
     background: active ? 'var(--primary)' : '#fff', color: active ? '#fff' : 'var(--text-secondary)',
     fontSize: 12, fontWeight: 600, whiteSpace: 'nowrap', fontFamily: 'inherit',
   };

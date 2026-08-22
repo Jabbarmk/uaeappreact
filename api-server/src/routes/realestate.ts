@@ -6,7 +6,12 @@ const router = Router();
 const F = 'realestate';
 
 const mapProp = (p: any) => ({ ...p, imageUrl: getImageUrl(p.image, F) });
-const mapCompany = (c: any) => ({ ...c, logoUrl: getImageUrl(c.logo, F), bannerUrl: getImageUrl(c.banner, F) });
+const mapCompany = (c: any) => ({
+  ...c,
+  logoUrl: getImageUrl(c.logo, F),
+  bannerUrl: getImageUrl(c.banner, F),
+  cardMediaUrl: c.card_media ? getImageUrl(c.card_media, F) : null,
+});
 const mapProject = (p: any) => ({ ...p, imageUrl: getImageUrl(p.image, F) });
 
 // ── Hub ──────────────────────────────────────────────────────────────────────
@@ -29,11 +34,27 @@ router.get('/', async (_req, res, next) => {
       })
     );
 
+    // Admin-managed page layout + hero banners.
+    const layoutRow = await queryOne<any>(
+      "SELECT setting_value FROM site_settings WHERE setting_key='realestate_layout'"
+    ).catch(() => null);
+    let layout: any[] = [];
+    try { layout = JSON.parse(layoutRow?.setting_value || '[]'); } catch { layout = []; }
+    const bannerRows = await query<any>(
+      'SELECT * FROM re_banners WHERE is_active = 1 ORDER BY sort_order, id'
+    ).catch(() => []);
+
     res.json({
       categories,
       featuredCompanies: companies.map(mapCompany),
       sections: sections.filter((s) => s.items.length > 0),
       projects: projects.map(mapProject),
+      layout,
+      banners: (bannerRows as any[]).filter((b) => b.image || b.video).map((b) => ({
+        ...b,
+        imageUrl: b.image ? getImageUrl(b.image, 'banners') : null,
+        videoUrl: b.video ? getImageUrl(b.video, 'banners') : null,
+      })),
     });
   } catch (err) { next(err); }
 });

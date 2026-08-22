@@ -1,7 +1,57 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Link, useSearchParams } from 'react-router-dom';
 import api from '../api';
+import { bizThemeStyle } from '../bizTheme';
+
+// Category banners — one static, several auto-slide with a crossfade + dots.
+function CatBannerSlider({ banners, catName }: { banners: any[]; catName: string }) {
+  const [cur, setCur] = useState(0);
+  useEffect(() => {
+    if (banners.length < 2) return;
+    const t = setInterval(() => setCur((c) => (c + 1) % banners.length), 4500);
+    return () => clearInterval(t);
+  }, [banners.length]);
+  const banner = banners[Math.min(cur, banners.length - 1)];
+  if (!banner) return null;
+
+  const inner = (
+    <div key={cur} style={{ position: 'relative', borderRadius: 20, overflow: 'hidden', boxShadow: '0 8px 30px rgba(0,0,0,0.15)', animation: 'fadeIn .5s ease' }}>
+      {banner.videoUrl ? (
+        <video src={banner.videoUrl} autoPlay muted loop playsInline
+          poster={banner.imageUrl || undefined}
+          style={{ width: '100%', height: 'auto', display: 'block' }} />
+      ) : (
+        <img src={banner.imageUrl} alt={banner.title || catName}
+          style={{ width: '100%', height: 'auto', display: 'block' }} loading="lazy" decoding="async" />
+      )}
+      {(banner.title || banner.subtitle) && (
+        <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', padding: 20, background: 'linear-gradient(to top, rgba(0,0,0,0.55), rgba(0,0,0,0) 55%)' }}>
+          {banner.title && <div style={{ color: '#fff', fontSize: 22, fontWeight: 800, lineHeight: 1.2 }}>{banner.title}</div>}
+          {banner.subtitle && <div style={{ color: 'rgba(255,255,255,.9)', fontSize: 13, marginTop: 6 }}>{banner.subtitle}</div>}
+        </div>
+      )}
+    </div>
+  );
+  const to = banner.business_id ? `/businesses/${banner.business_id}` : banner.link;
+  return (
+    <div style={{ margin: 16 }}>
+      {to ? <Link to={to} style={{ textDecoration: 'none', display: 'block' }}>{inner}</Link> : inner}
+      {banners.length > 1 && (
+        <div className="slider-dots" style={{ padding: '10px 0 0' }}>
+          {banners.map((_, i) => (
+            <div key={i} className={`dot${i === cur ? ' active' : ''}`} onClick={() => setCur(i)} />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+const VerifiedTick = () => (
+  <i className="fas fa-check-circle" title="Verified"
+    style={{ color: '#1B95E0', fontSize: 13, marginLeft: 5, verticalAlign: 'middle' }}></i>
+);
 
 const BIZ_FALLBACKS = [
   'https://images.unsplash.com/photo-1555396273-367ea4eb4db5?w=480&h=270&fit=crop',
@@ -29,6 +79,7 @@ export default function BusinessesPage() {
   const catId = params.get('cat') || '';
 
   const [tab, setTab] = useState<'popular' | 'nearme'>('popular');
+  const [search, setSearch] = useState('');
   const [emirate, setEmirate] = useState(''); // '' = UAE (all)
   const [geo, setGeo] = useState<{ lat: number; lng: number } | null>(null);
   const [geoState, setGeoState] = useState<'idle' | 'loading' | 'error'>('idle');
@@ -40,7 +91,7 @@ export default function BusinessesPage() {
 
   const businesses: any[] = data?.businesses || [];
   const catName: string = data?.catName || 'All Businesses';
-  const banner: any = data?.banner || null;
+  const banners: any[] = data?.banners || (data?.banner ? [data.banner] : []);
   // Admin-controlled image heights (px) — null falls back to CSS defaults.
   const featImgH: number | null = data?.imgHeights?.featured || null;
   const rowImgH: number | null = data?.imgHeights?.row || null;
@@ -57,10 +108,19 @@ export default function BusinessesPage() {
     );
   };
 
+  // Text filter: matches business name OR its admin-set search keywords.
+  const q = search.trim().toLowerCase();
+  const searched = useMemo(
+    () => (q ? businesses.filter((b) =>
+      String(b.name || '').toLowerCase().includes(q) || String(b.keywords || '').toLowerCase().includes(q)
+    ) : businesses),
+    [businesses, q]
+  );
+
   // Popular tab: optional emirate filter, server order (featured DESC, sort_order ASC).
   const popular = useMemo(
-    () => (emirate ? businesses.filter((b) => b.emirate === emirate) : businesses),
-    [businesses, emirate]
+    () => (emirate ? searched.filter((b) => b.emirate === emirate) : searched),
+    [searched, emirate]
   );
   const featured = popular.filter((b) => Number(b.featured) === 1);
   const regular = popular.filter((b) => Number(b.featured) !== 1);
@@ -68,7 +128,7 @@ export default function BusinessesPage() {
   // Near Me tab: businesses with coordinates, within 5 km — else 10 km — else all by distance.
   const nearby = useMemo(() => {
     if (!geo) return [];
-    const withDist = businesses
+    const withDist = searched
       .filter((b) => b.latitude != null && b.longitude != null)
       .map((b) => ({ ...b, km: distanceKm(geo.lat, geo.lng, Number(b.latitude), Number(b.longitude)) }))
       .sort((a, b) => a.km - b.km);
@@ -77,10 +137,10 @@ export default function BusinessesPage() {
     const within10 = withDist.filter((b) => b.km <= 10);
     if (within10.length) return within10;
     return withDist; // nothing within 10 km — show nearest anyway
-  }, [businesses, geo]);
+  }, [searched, geo]);
 
   const renderBigCard = (biz: any, idx: number) => (
-    <div className="biz-card" key={biz.id}>
+    <div className="biz-card" key={biz.id} style={bizThemeStyle(biz.color)}>
       {isVideoFile(biz.imageUrl) ? (
         <video src={biz.imageUrl} className="biz-img" muted autoPlay loop playsInline
           style={{ cursor: 'pointer', ...(featImgH ? { height: featImgH, aspectRatio: 'auto' } : {}) }}
@@ -94,7 +154,7 @@ export default function BusinessesPage() {
       )}
       <div className="biz-body">
         <div className="biz-rating"><i className="fas fa-star"></i> {Number(biz.rating).toFixed(1)}</div>
-        <h3>{biz.name}</h3>
+        <h3>{biz.name}{Number(biz.is_verified) === 1 && <VerifiedTick />}</h3>
         <div className="biz-type">{biz.description}</div>
         {biz.distance && <div className="biz-distance">{biz.distance}</div>}
         <div className="biz-address"><i className="fas fa-map-marker-alt"></i> {biz.address}</div>
@@ -111,7 +171,7 @@ export default function BusinessesPage() {
   const renderRow = (biz: any, idx: number) => {
     const wa = String(biz.whatsapp || biz.phone || '').replace(/\D/g, '');
     return (
-      <div className="biz-row" key={biz.id}>
+      <div className="biz-row" key={biz.id} style={bizThemeStyle(biz.color)}>
         {isVideoFile(biz.imageUrl) ? (
           <video src={biz.imageUrl} className="biz-row-img" muted autoPlay loop playsInline
             style={rowImgH ? { minHeight: rowImgH } : undefined}
@@ -125,7 +185,7 @@ export default function BusinessesPage() {
         )}
         <div className="biz-row-body">
           <div className="biz-row-head">
-            <h3>{biz.name}</h3>
+            <h3>{biz.name}{Number(biz.is_verified) === 1 && <VerifiedTick />}</h3>
             <div className="biz-row-rating"><i className="fas fa-star"></i> {Number(biz.rating).toFixed(1)}</div>
           </div>
           {biz.tagline && <div className="biz-row-tagline">{biz.tagline}</div>}
@@ -155,42 +215,27 @@ export default function BusinessesPage() {
         </div>
       </div>
 
-      {banner ? (
-        // Admin-managed banner: full width, height auto (any image size). Optional text overlay + tap link.
-        (() => {
-          const inner = (
-            <div style={{ position: 'relative', borderRadius: 20, overflow: 'hidden', boxShadow: '0 8px 30px rgba(0,0,0,0.15)' }}>
-              {banner.videoUrl ? (
-                <video src={banner.videoUrl} autoPlay muted loop playsInline
-                  poster={banner.imageUrl || undefined}
-                  style={{ width: '100%', height: 'auto', display: 'block' }} />
-              ) : (
-                <img src={banner.imageUrl} alt={banner.title || catName}
-                  style={{ width: '100%', height: 'auto', display: 'block' }} loading="lazy" decoding="async" />
-              )}
-              {(banner.title || banner.subtitle) && (
-                <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', padding: 20, background: 'linear-gradient(to top, rgba(0,0,0,0.55), rgba(0,0,0,0) 55%)' }}>
-                  {banner.title && <div style={{ color: '#fff', fontSize: 22, fontWeight: 800, lineHeight: 1.2 }}>{banner.title}</div>}
-                  {banner.subtitle && <div style={{ color: 'rgba(255,255,255,.9)', fontSize: 13, marginTop: 6 }}>{banner.subtitle}</div>}
-                </div>
-              )}
-            </div>
-          );
-          const to = banner.business_id ? `/businesses/${banner.business_id}` : banner.link;
-          return <div style={{ margin: 16 }}>{to ? <Link to={to} style={{ textDecoration: 'none', display: 'block' }}>{inner}</Link> : inner}</div>;
-        })()
+      {banners.length > 0 ? (
+        <CatBannerSlider banners={banners} catName={catName} />
       ) : (
         <div style={{ position: 'relative', margin: 16, borderRadius: 20, overflow: 'hidden', height: 160, boxShadow: '0 8px 30px rgba(0,0,0,0.15)' }}>
           <img src="https://images.unsplash.com/photo-1512453979798-5ea266f8880c?w=800&h=320&fit=crop"
             alt="UAE Business" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
             loading="lazy" decoding="async" />
-          <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(135deg,rgba(108,92,231,0.75),rgba(0,206,201,0.55))', display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: 20 }}>
+          <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(135deg,rgba(var(--primary-rgb),0.75),rgba(0,206,201,0.55))', display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: 20 }}>
             <div style={{ color: '#fff', fontSize: 11, fontWeight: 600, letterSpacing: 1, textTransform: 'uppercase', opacity: 0.8, marginBottom: 6 }}>Discover</div>
             <div style={{ color: '#fff', fontSize: 22, fontWeight: 800, lineHeight: 1.2 }}>{catName}</div>
             <div style={{ color: 'rgba(255,255,255,.85)', fontSize: 13, marginTop: 6 }}>Top-rated businesses near you</div>
           </div>
         </div>
       )}
+
+      <div className="page-search">
+        <i className="fas fa-search search-icon"></i>
+        <input type="text" placeholder="Search company or keyword…" value={search}
+          onChange={(e) => setSearch(e.target.value)} />
+        {search && <button className="filter-btn" onClick={() => setSearch('')}><i className="fas fa-times"></i></button>}
+      </div>
 
       <div className="tab-nav">
         <a href="#" className={tab === 'popular' ? 'active' : ''} onClick={(e) => { e.preventDefault(); setTab('popular'); }}>Popular</a>
@@ -231,10 +276,7 @@ export default function BusinessesPage() {
         </div>
       )}
 
-      <div className="page-search" style={{ marginBottom: 80 }}>
-        <i className="fas fa-search search-icon"></i>
-        <input type="text" placeholder="Search Company" />
-      </div>
+      <div style={{ height: 80 }} />
     </>
   );
 }

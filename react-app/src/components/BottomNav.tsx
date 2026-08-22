@@ -1,6 +1,9 @@
-import { NavLink } from 'react-router-dom';
+import { NavLink, useLocation } from 'react-router-dom';
 
 export default function BottomNav() {
+  const { pathname } = useLocation();
+  // Business detail + its product pages feel like the business's own app — no app nav.
+  if (/^\/businesses\/\d+/.test(pathname)) return null;
   return (
     <nav className="bottom-nav">
       <NavLink to="/" end className={({ isActive }) => `nav-item${isActive ? ' active' : ''}`}>

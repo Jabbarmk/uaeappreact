@@ -206,27 +206,23 @@ export default function AdminHomeLayoutPage() {
 
               {/* Per-section settings */}
               <div style={{ marginTop: 10, marginLeft: 42, display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'flex-end' }}>
-                {['featured', 'explore', 'popular', 'hero', 'collections'].includes(s.section_key) && (
-                  <div style={{ width: 200 }}>
-                    <label style={label}>Section title</label>
-                    <input style={input} value={s.title || ''} onChange={(e) => patchSection(s.section_key, { title: e.target.value })} />
-                  </div>
-                )}
+                <div style={{ width: 200 }}>
+                  <label style={label}>Section title{['slider', 'stats'].includes(s.section_key) ? ' (blank = no heading)' : ''}</label>
+                  <input style={input} value={s.title || ''} onChange={(e) => patchSection(s.section_key, { title: e.target.value })} />
+                </div>
+                <div style={{ width: 100 }}>
+                  <label style={label}>Title size (px)</label>
+                  <input style={input} type="number" min={10} max={40} value={set.titleSize ?? (s.section_key === 'hero' ? 24 : 17)}
+                    onChange={(e) => patchSettings(s.section_key, { titleSize: Math.min(40, Math.max(10, Number(e.target.value) || 17)) })} />
+                </div>
 
                 {['featured', 'popular', 'collections'].includes(s.section_key) && (
-                  <>
-                    <div style={{ width: 100 }}>
-                      <label style={label}>Title size (px)</label>
-                      <input style={input} type="number" min={10} max={32} value={set.titleSize ?? 17}
-                        onChange={(e) => patchSettings(s.section_key, { titleSize: Math.min(32, Math.max(10, Number(e.target.value) || 17)) })} />
-                    </div>
-                    <div style={{ width: 100 }}>
-                      <label style={label}>Text size (px)</label>
-                      <input style={input} type="number" min={8} max={24}
-                        value={set.textSize ?? (s.section_key === 'collections' ? 13 : s.section_key === 'popular' ? 12.5 : 11)}
-                        onChange={(e) => patchSettings(s.section_key, { textSize: Math.min(24, Math.max(8, Number(e.target.value) || 11)) })} />
-                    </div>
-                  </>
+                  <div style={{ width: 100 }}>
+                    <label style={label}>Text size (px)</label>
+                    <input style={input} type="number" min={8} max={24}
+                      value={set.textSize ?? (s.section_key === 'collections' ? 13 : s.section_key === 'popular' ? 12.5 : 11)}
+                      onChange={(e) => patchSettings(s.section_key, { textSize: Math.min(24, Math.max(8, Number(e.target.value) || 11)) })} />
+                  </div>
                 )}
 
                 {s.section_key === 'featured' && (
@@ -300,23 +296,42 @@ export default function AdminHomeLayoutPage() {
                     <div>
                       <label style={label}>Style</label>
                       <select style={input} value={set.style || 'icons'} onChange={(e) => patchSettings(s.section_key, { style: e.target.value })}>
-                        <option value="icons">Icon tiles (grid)</option>
-                        <option value="images">Image cards (scroll)</option>
+                        <option value="icons">Icon tiles</option>
+                        <option value="images">Image cards</option>
                       </select>
                     </div>
-                    {(set.style || 'icons') === 'images' && (
-                      <>
-                        <div>
-                          <label style={label}>Auto scroll</label>
-                          <Toggle on={!!set.auto} onChange={(v) => patchSettings(s.section_key, { auto: v ? 1 : 0 })} />
-                        </div>
-                        {!!set.auto && (
-                          <div style={{ width: 90 }}>
-                            <label style={label}>Timer (sec)</label>
-                            <input style={input} type="number" min={1} value={set.timer ?? 4} onChange={(e) => patchSettings(s.section_key, { timer: Number(e.target.value) || 4 })} />
-                          </div>
-                        )}
-                      </>
+                    <div style={{ width: 130 }}>
+                      <label style={label}>Corner radius % (0-50)</label>
+                      <input style={input} type="number" min={0} max={50}
+                        value={set.radius ?? ((set.style || 'icons') === 'images' ? 15 : 32)}
+                        onChange={(e) => patchSettings(s.section_key, { radius: Math.min(50, Math.max(0, Number(e.target.value) || 0)) })} />
+                    </div>
+                    <div style={{ width: 105 }}>
+                      <label style={label}>Width (px)</label>
+                      <input style={input} type="number" min={30} max={300} placeholder={(set.style || 'icons') === 'images' ? '118' : '50'}
+                        value={set.tileW ?? ''} onChange={(e) => patchSettings(s.section_key, { tileW: e.target.value === '' ? '' : Number(e.target.value) })} />
+                    </div>
+                    <div style={{ width: 105 }}>
+                      <label style={label}>Height (px)</label>
+                      <input style={input} type="number" min={30} max={300} placeholder={(set.style || 'icons') === 'images' ? '84' : '63'}
+                        value={set.tileH ?? ''} onChange={(e) => patchSettings(s.section_key, { tileH: e.target.value === '' ? '' : Number(e.target.value) })} />
+                    </div>
+                    <div style={{ width: 100 }}>
+                      <label style={label}>Text size (px)</label>
+                      <input style={input} type="number" min={8} max={24}
+                        value={set.textSize ?? ((set.style || 'icons') === 'images' ? 11.5 : 10.5)}
+                        onChange={(e) => patchSettings(s.section_key, { textSize: Math.min(24, Math.max(8, Number(e.target.value) || 10.5)) })} />
+                    </div>
+                    <div>
+                      <label style={label}>Auto slide (slow drift)</label>
+                      <Toggle on={!!set.auto} onChange={(v) => patchSettings(s.section_key, { auto: v ? 1 : 0 })} />
+                    </div>
+                    {!!set.auto && (
+                      <div style={{ width: 110 }}>
+                        <label style={label}>Speed (1-10)</label>
+                        <input style={input} type="number" min={1} max={10} value={set.speed ?? 3}
+                          onChange={(e) => patchSettings(s.section_key, { speed: Math.min(10, Math.max(1, Number(e.target.value) || 3)) })} />
+                      </div>
                     )}
                   </>
                 )}

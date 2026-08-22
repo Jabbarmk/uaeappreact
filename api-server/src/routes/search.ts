@@ -45,14 +45,14 @@ router.get('/', async (req, res, next) => {
         `SELECT b.id, b.name, b.emirate, b.phone, bc.name AS category_name, b.image, 'business' AS type
          FROM businesses b
          LEFT JOIN business_categories bc ON b.category_id = bc.id
-         WHERE b.is_active = 1 AND (b.name LIKE ? OR b.description LIKE ? OR b.tagline LIKE ?)
+         WHERE b.is_active = 1 AND (b.name LIKE ? OR b.description LIKE ? OR b.tagline LIKE ? OR b.keywords LIKE ?)
          ORDER BY b.name LIMIT ? OFFSET ?`,
-        [`%${q}%`, `%${q}%`, `%${q}%`, pageSize, offset]
+        [`%${q}%`, `%${q}%`, `%${q}%`, `%${q}%`, pageSize, offset]
       );
-      const [[{ total: bizTotal }]] = await query<any>(
-        'SELECT COUNT(*) as total FROM businesses WHERE is_active = 1 AND (name LIKE ? OR description LIKE ? OR tagline LIKE ?)',
-        [`%${q}%`, `%${q}%`, `%${q}%`]
-      ) as any;
+      const bizTotal = (await query<any>(
+        'SELECT COUNT(*) as total FROM businesses WHERE is_active = 1 AND (name LIKE ? OR description LIKE ? OR tagline LIKE ? OR keywords LIKE ?)',
+        [`%${q}%`, `%${q}%`, `%${q}%`, `%${q}%`]
+      ))[0]?.total ?? 0;
       results = [...results, ...bizRows.map((r: any) => ({ ...r, imageUrl: getImageUrl(r.image, 'businesses') }))];
       total += Number(bizTotal);
     }
@@ -64,10 +64,10 @@ router.get('/', async (req, res, next) => {
          ORDER BY posted_at DESC LIMIT ? OFFSET ?`,
         [`%${q}%`, `%${q}%`, `%${q}%`, pageSize, offset]
       );
-      const [[{ total: jobTotal }]] = await query<any>(
+      const jobTotal = (await query<any>(
         'SELECT COUNT(*) as total FROM jobs WHERE is_active = 1 AND (title LIKE ? OR company LIKE ? OR description LIKE ?)',
         [`%${q}%`, `%${q}%`, `%${q}%`]
-      ) as any;
+      ))[0]?.total ?? 0;
       results = [...results, ...jobRows];
       total += Number(jobTotal);
     }
@@ -86,6 +86,32 @@ router.get('/', async (req, res, next) => {
       );
       results = [...results, ...prodRows.map((r: any) => ({ ...r, imageUrl: getImageUrl(r.image, 'classifieds') }))];
       total += prodRows.length;
+    }
+
+    if (tab === 'offers') {
+      const offerRows = await query<any>(
+        `SELECT o.id, o.title AS name, o.emirate, oc.name AS category_name, o.image, o.price, 'offer' AS type
+         FROM offers o
+         LEFT JOIN business_categories oc ON o.category_id = oc.id
+         WHERE o.is_active = 1 AND (o.title LIKE ? OR o.description LIKE ?)
+         ORDER BY o.created_at DESC LIMIT ? OFFSET ?`,
+        [`%${q}%`, `%${q}%`, pageSize, offset]
+      );
+      results = [...results, ...offerRows.map((r: any) => ({ ...r, imageUrl: getImageUrl(r.image, 'offers') }))];
+      total += offerRows.length;
+    }
+
+    if (tab === 'events') {
+      const eventRows = await query<any>(
+        `SELECT e.id, e.title AS name, e.emirate, ec.name AS category_name, e.poster AS image, e.price, 'event' AS type
+         FROM events e
+         LEFT JOIN event_categories ec ON e.category_id = ec.id
+         WHERE e.is_active = 1 AND (e.title LIKE ? OR e.description LIKE ? OR e.venue LIKE ? OR e.organizer LIKE ?)
+         ORDER BY e.event_date DESC LIMIT ? OFFSET ?`,
+        [`%${q}%`, `%${q}%`, `%${q}%`, `%${q}%`, pageSize, offset]
+      );
+      results = [...results, ...eventRows.map((r: any) => ({ ...r, imageUrl: getImageUrl(r.image, 'events') }))];
+      total += eventRows.length;
     }
 
     if (tab === 'realestate') {

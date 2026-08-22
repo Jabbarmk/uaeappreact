@@ -25,7 +25,7 @@ export default function RealEstateProjectsPage() {
               <img src={p.imageUrl} alt={p.name} style={{ width: 120, height: 100, objectFit: 'cover', flexShrink: 0 }} loading="lazy"
                 onError={(e) => { (e.target as HTMLImageElement).src = FALLBACK; }} />
               <div style={{ padding: '12px 12px 12px 0', flex: 1, minWidth: 0 }}>
-                <span style={{ fontSize: 9, fontWeight: 700, color: 'var(--primary)', background: 'rgba(108,92,231,.1)', padding: '2px 8px', borderRadius: 50 }}>OFF-PLAN</span>
+                <span style={{ fontSize: 9, fontWeight: 700, color: 'var(--primary)', background: 'rgba(var(--primary-rgb),.1)', padding: '2px 8px', borderRadius: 50 }}>OFF-PLAN</span>
                 <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--text)', marginTop: 5 }}>{p.name}</div>
                 <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 2 }}>{p.company_name || p.developer} · {p.location}</div>
                 <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 1 }}>Handover {p.handover}</div>

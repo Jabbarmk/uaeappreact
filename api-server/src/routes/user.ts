@@ -20,6 +20,33 @@ const upload = multer({
 
 function uid(req: Request) { return (req.session as any).userId as number; }
 
+// ── Review approvals for businesses this user owns ────────────────────────────
+
+router.get('/reviews/pending', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const rows = await query<any>(`
+      SELECT t.id, t.client_name, t.rating, t.review, t.created_at, b.id AS business_id, b.name AS business_name
+      FROM business_testimonials t
+      JOIN businesses b ON b.id = t.business_id AND b.user_id = ?
+      WHERE t.status = 'pending'
+      ORDER BY t.created_at DESC`, [uid(req)]);
+    res.json({ reviews: rows });
+  } catch (err) { next(err); }
+});
+
+router.post('/reviews/:id/decision', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const action = (req.body as any).action === 'approve' ? 'approved' : 'rejected';
+    const r: any = await query(`
+      UPDATE business_testimonials t
+      JOIN businesses b ON b.id = t.business_id AND b.user_id = ?
+      SET t.status = ?
+      WHERE t.id = ?`, [uid(req), action, req.params.id]);
+    if (!r.affectedRows) return res.status(404).json({ error: 'Review not found for your businesses' });
+    res.json({ ok: true });
+  } catch (err) { next(err); }
+});
+
 // The "Other" bucket category that holds businesses with an unresolved category
 // request until an admin assigns/creates a real one.
 async function getOtherCategoryId(): Promise<number> {

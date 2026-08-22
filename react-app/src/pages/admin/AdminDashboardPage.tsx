@@ -9,7 +9,7 @@ const FONT = "'Segoe UI', 'Inter', system-ui, sans-serif";
 const KPIS: { key: string; label: string; icon: string; bg: string; fg: string; to: string }[] = [
   { key: 'businesses',  label: 'Businesses',   icon: '🏢', bg: '#EAF2FE', fg: '#1D6FE0', to: '/admin/businesses' },
   { key: 'classifieds', label: 'Classifieds',  icon: '🏷️', bg: '#E7F8F1', fg: '#0E9F6E', to: '/admin/classifieds' },
-  { key: 'properties',  label: 'Properties',   icon: '🏠', bg: '#F1EEFE', fg: '#6C5CE7', to: '/admin/properties' },
+  { key: 'properties',  label: 'Properties',   icon: '🏠', bg: '#F1EEFE', fg: 'var(--primary)', to: '/admin/properties' },
   { key: 'events',      label: 'Events',       icon: '🎉', bg: '#FDEEF3', fg: '#E14C8B', to: '/admin/events' },
   { key: 'companies',   label: 'RE Companies', icon: '◈',  bg: '#FEF4E6', fg: '#E8890C', to: '/admin/real-estate-companies' },
   { key: 'projects',    label: 'Projects',     icon: '🏗️', bg: '#EAF6FE', fg: '#0E86D4', to: '/admin/real-estate-projects' },

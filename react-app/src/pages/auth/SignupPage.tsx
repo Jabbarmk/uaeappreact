@@ -33,7 +33,7 @@ export default function SignupPage() {
     try {
       const res = await api.post('/auth/register', { ...form, otp_code: otp });
       login(res.data.user);
-      navigate('/');
+      navigate('/home');
     } catch (e: any) { setError(e.response?.data?.error || 'Registration failed'); }
     finally { setLoading(false); }
   };

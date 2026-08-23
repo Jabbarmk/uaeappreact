@@ -67,7 +67,7 @@ export function ProfileButton() {
             </Link>
           )}
 
-          <button onClick={() => { logout(); setOpen(false); navigate('/'); }}
+          <button onClick={() => { logout(); setOpen(false); navigate('/home'); }}
             style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 16px', background: 'none', border: 'none', cursor: 'pointer', color: '#C42B1C', fontSize: 13, fontWeight: 600, width: '100%', borderTop: '1px solid #F3F2F9', marginTop: 4, fontFamily: 'inherit' }}>
             ⇥ Sign out
           </button>
@@ -80,7 +80,7 @@ export function ProfileButton() {
 /** Global floating profile control. Hidden on the home page, which hosts its own top bar. */
 export default function Header() {
   const { pathname } = useLocation();
-  if (pathname === '/') return null;
+  if (pathname === '/home') return null;
 
   return (
     <div style={{ position: 'fixed', top: 0, right: 0, zIndex: 500, padding: '10px 14px' }}>

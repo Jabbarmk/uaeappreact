@@ -46,6 +46,7 @@ function ThemeStyle() {
   return <style>{`:root{${vars.join(';')}}`}</style>;
 }
 
+const Welcome          = lazy(() => import('./pages/WelcomeScreen'));
 const Home             = lazy(() => import('./pages/HomePage'));
 const Categories       = lazy(() => import('./pages/CategoriesPage'));
 const Businesses       = lazy(() => import('./pages/BusinessesPage'));
@@ -113,6 +114,7 @@ const AdminVloggersPage = lazy(() => import('./pages/admin/AdminVloggersPage'));
 const AdminHospitalsPage = lazy(() => import('./pages/admin/AdminHospitalsPage'));
 const AdminHomeLayoutPage = lazy(() => import('./pages/admin/AdminHomeLayoutPage'));
 const AdminRealEstateLayoutPage = lazy(() => import('./pages/admin/AdminRealEstateLayoutPage'));
+const AdminWelcomeScreenPage = lazy(() => import('./pages/admin/AdminWelcomeScreenPage'));
 
 function PageLoader() {
   return <div style={{ padding: 40, textAlign: 'center', color: 'var(--primary)' }}>Loading…</div>;
@@ -130,9 +132,12 @@ export default function App() {
     <Suspense fallback={<PageLoader />}>
       <ThemeStyle />
       <Routes>
+        {/* Welcome splash — no Header/BottomNav chrome, first screen every visit */}
+        <Route path="/" element={<Welcome />} />
+
         {/* Public routes */}
         <Route element={<Layout />}>
-          <Route index element={<Home />} />
+          <Route path="home" element={<Home />} />
           <Route path="categories" element={<Categories />} />
           <Route path="businesses" element={<Businesses />} />
           <Route path="businesses/:id" element={<BusinessDetail />} />
@@ -203,6 +208,7 @@ export default function App() {
         <Route path="admin" element={<AdminLayout />}>
           <Route index element={<AdminDashboard />} />
           <Route path="home-layout"           element={<AdminHomeLayoutPage />} />
+          <Route path="welcome-screen"        element={<AdminWelcomeScreenPage />} />
           <Route path="realestate-layout"     element={<AdminRealEstateLayoutPage />} />
           <Route path="sliders"               element={<AdminCrudPage />} />
           <Route path="main-categories"       element={<AdminCrudPage />} />

@@ -25,6 +25,7 @@ import pagesRouter from './routes/pages';
 import adminRouter from './routes/admin';
 import homeLayoutRouter from './routes/homeLayout';
 import collectionsRouter from './routes/collections';
+import welcomeRouter from './routes/welcome';
 import { errorHandler } from './middleware/errorHandler';
 
 const app = express();
@@ -51,6 +52,7 @@ app.use('/assets/images', express.static(path.resolve('../assets/images')));
 
 // API routes
 app.use('/api/home', homeRouter);
+app.use('/api/welcome', welcomeRouter);
 app.use('/api/collections', collectionsRouter);
 app.use('/api/search', searchRouter);
 app.use('/api/categories', categoriesRouter);

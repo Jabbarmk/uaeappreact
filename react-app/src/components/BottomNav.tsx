@@ -6,7 +6,7 @@ export default function BottomNav() {
   if (/^\/businesses\/\d+/.test(pathname)) return null;
   return (
     <nav className="bottom-nav">
-      <NavLink to="/" end className={({ isActive }) => `nav-item${isActive ? ' active' : ''}`}>
+      <NavLink to="/home" end className={({ isActive }) => `nav-item${isActive ? ' active' : ''}`}>
         <i className="fas fa-home"></i>
         <span>Home</span>
       </NavLink>

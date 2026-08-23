@@ -256,6 +256,30 @@ router.put('/re-layout', requireAdmin, async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
+// ── Welcome screen (splash) — slides CRUD + settings JSON in site_settings ───
+
+router.use('/welcome-slides', crudRoutes('welcome_slides', 'welcome'));
+
+router.get('/welcome-settings', requireAdmin, async (_req, res, next) => {
+  try {
+    const row = await queryOne<any>("SELECT setting_value FROM site_settings WHERE setting_key='welcome_screen'");
+    let settings: any = { timer: 4, radius: 24, padding: 16, style: 'fade' };
+    try { settings = { ...settings, ...JSON.parse(row?.setting_value || '{}') }; } catch { /* keep defaults */ }
+    res.json({ settings });
+  } catch (err) { next(err); }
+});
+
+router.put('/welcome-settings', requireAdmin, async (req, res, next) => {
+  try {
+    const settings = JSON.stringify((req.body as any).settings ?? {});
+    await query(
+      "INSERT INTO site_settings (setting_key, setting_value) VALUES ('welcome_screen', ?) ON DUPLICATE KEY UPDATE setting_value = ?",
+      [settings, settings]
+    );
+    res.json({ ok: true });
+  } catch (err) { next(err); }
+});
+
 // ── All distinct business keywords (suggestions for the keywords input) ──────
 
 router.get('/business-keywords', requireAdmin, async (_req, res, next) => {

@@ -26,7 +26,7 @@ export default function LoginPage() {
     try {
       const res = await api.post('/auth/login-otp', { identifier: email, otp_code: otp });
       login(res.data.user);
-      navigate('/');
+      navigate('/home');
     } catch (e: any) { setError(e.response?.data?.error || 'Login failed'); }
     finally { setLoading(false); }
   };

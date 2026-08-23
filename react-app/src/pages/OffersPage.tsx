@@ -32,7 +32,7 @@ export default function OffersPage() {
   return (
     <>
       <div className="page-topbar">
-        <Link to="/" className="back-btn"><i className="fas fa-arrow-left"></i></Link>
+        <Link to="/home" className="back-btn"><i className="fas fa-arrow-left"></i></Link>
         <h1>OFFERS</h1>
         <div className="right-actions">
           {/* Compact location selector (top-right) */}

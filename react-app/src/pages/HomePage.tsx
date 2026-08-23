@@ -507,7 +507,7 @@ export default function HomePage() {
     <>
       {/* ── Top app bar: logo + quick actions ────────────────────────── */}
       <header className="hm-topbar">
-        <Link to="/" className="hm-topbar-logo" aria-label="SmartUAE home">
+        <Link to="/home" className="hm-topbar-logo" aria-label="SmartUAE home">
           <img src="/assets/images/smatuae.png" alt="SmartUAE" />
         </Link>
         <div className="hm-topbar-actions">

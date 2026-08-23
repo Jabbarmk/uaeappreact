@@ -41,7 +41,7 @@ export default function EventsPage() {
   return (
     <>
       <div className="page-topbar">
-        <Link to="/" className="back-btn"><i className="fas fa-arrow-left"></i></Link>
+        <Link to="/home" className="back-btn"><i className="fas fa-arrow-left"></i></Link>
         <h1>EVENTS</h1>
         <div className="right-actions">
           {/* Compact location selector (top-right) */}

@@ -425,7 +425,6 @@ export default function BusinessDetailPage() {
           <div style={{ flex: 1, minWidth: 0 }}>
             <div className="bd-name">{biz.name}</div>
             {biz.category_name && <div className="bd-cat-label"><i className="fas fa-tag"></i> {biz.category_name}</div>}
-            {biz.tagline && <div className="bd-tagline">"{biz.tagline}"</div>}
           </div>
         </div>
         <div className="bd-meta-row">

@@ -188,7 +188,6 @@ export default function BusinessesPage() {
             <h3>{biz.name}{Number(biz.is_verified) === 1 && <VerifiedTick />}</h3>
             <div className="biz-row-rating"><i className="fas fa-star"></i> {Number(biz.rating).toFixed(1)}</div>
           </div>
-          {biz.tagline && <div className="biz-row-tagline">{biz.tagline}</div>}
           {biz.description && <div className="biz-row-type">{biz.description}</div>}
           <div className="biz-row-address">
             <i className="fas fa-map-marker-alt"></i> {biz.address}

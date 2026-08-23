@@ -29,7 +29,7 @@ export default function WelcomeScreen() {
   }, [total, settings.timer]);
 
   return (
-    <div style={{ height: '100dvh', display: 'flex', flexDirection: 'column', background: 'var(--dark, #0D1B2A)' }}>
+    <div style={{ height: '100dvh', display: 'flex', flexDirection: 'column', background: '#fff' }}>
       {/* Top half — full-image slider */}
       <div style={{ flex: '1 1 50%', minHeight: 0, padding: settings.padding, boxSizing: 'border-box' }}>
         <div style={{
@@ -65,8 +65,8 @@ export default function WelcomeScreen() {
       }}>
         <img src="/assets/images/smatuae.png" alt="SmartUAE" style={{ height: 44, objectFit: 'contain' }} />
         <div>
-          <h1 style={{ color: '#fff', fontSize: 24, fontWeight: 800, margin: '0 0 6px' }}>Welcome to SmartUAE</h1>
-          <p style={{ color: 'rgba(255,255,255,0.7)', fontSize: 14, margin: 0 }}>
+          <h1 style={{ color: 'var(--dark, #0D1B2A)', fontSize: 24, fontWeight: 800, margin: '0 0 6px' }}>Welcome to SmartUAE</h1>
+          <p style={{ color: '#666', fontSize: 14, margin: 0 }}>
             Businesses, offers, jobs, real estate &amp; more — all in one place.
           </p>
         </div>

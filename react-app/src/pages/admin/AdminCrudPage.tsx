@@ -5,7 +5,7 @@ import api from '../../api';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
-type FieldType = 'text' | 'textarea' | 'number' | 'select' | 'toggle' | 'date' | 'image' | 'video' | 'media' | 'map-link' | 'clients' | 'gallery' | 'cover' | 'services' | 'products' | 'business-search' | 'main-category-select' | 'category-search' | 'time-picker' | 'user-search' | 'event-category-select' | 'resource-select' | 'university-select' | 'color-picker' | 'page-sections' | 'keywords-input';
+type FieldType = 'text' | 'textarea' | 'number' | 'select' | 'toggle' | 'date' | 'image' | 'video' | 'media' | 'map-link' | 'clients' | 'gallery' | 'cover' | 'services' | 'products' | 'menu' | 'business-search' | 'main-category-select' | 'category-search' | 'time-picker' | 'user-search' | 'event-category-select' | 'resource-select' | 'university-select' | 'color-picker' | 'page-sections' | 'keywords-input';
 
 // Business detail page sections (top bar + cover slider stay fixed).
 export const BIZ_PAGE_SECTIONS: { key: string; label: string }[] = [
@@ -15,6 +15,7 @@ export const BIZ_PAGE_SECTIONS: { key: string; label: string }[] = [
   { key: 'creator',  label: 'Creator Stats (vloggers)' },
   { key: 'doctors',  label: 'Doctors' },
   { key: 'courses',  label: 'Courses' },
+  { key: 'menu',     label: 'Menu (Restaurants / Cafés / Fast Food)' },
   { key: 'about',    label: 'About Us' },
   { key: 'stats',    label: 'Stats Row (Rating / Est. / Team / Reviews)' },
   { key: 'services', label: 'Services Sections' },
@@ -245,6 +246,7 @@ const RESOURCE_CONFIGS: Record<string, ResourceConfig> = {
     { key: 'cover',            label: 'Cover Slider (multiple images + video — shown at top of the detail page)', type: 'cover' },
     { key: 'gallery',          label: 'Gallery Images (multiple — shown in the business photo gallery)', type: 'gallery' },
     { key: 'services',         label: 'Services Sections (named sections with items — e.g. "Services & Solutions")', type: 'services' },
+    { key: 'menu',             label: 'Menu Items (Restaurants/Cafés/Fast Food — named sections like Best Sellers, Breakfast, with price)', type: 'menu' },
     { key: 'store_url',        label: 'Online Store URL (Buy Online link)', type: 'text', placeholder: 'https://' },
     { key: 'products',         label: 'Products (storefront — image, name, price, category)', type: 'products' },
     { key: 'clients',          label: 'Clients & Partners (logos shown on the detail page)', type: 'clients' },
@@ -1020,6 +1022,165 @@ function ServiceItemForm({ recordId, sectionId, item, onClose, onSaved }: { reco
         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 16 }}>
           <button type="button" onClick={onClose} style={{ padding: '7px 16px', border: '1px solid #C8C8C8', background: '#fff', borderRadius: 4, fontSize: 13, cursor: 'pointer' }}>Cancel</button>
           <button type="button" onClick={save} disabled={saving || !title} style={{ padding: '7px 18px', border: 'none', background: saving || !title ? '#9CB8D8' : ACCENT, color: '#fff', borderRadius: 4, fontSize: 13, fontWeight: 600, cursor: saving || !title ? 'not-allowed' : 'pointer' }}>{saving ? 'Saving…' : 'Save'}</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── MenuManager (named sections + priced items; Restaurants/Cafés/Fast Food) ──
+
+function MenuManager({ recordId }: { recordId: number | null }) {
+  const [sections, setSections] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [editing, setEditing] = useState<{ sectionId: number; item: any | null } | null>(null);
+
+  const load = () => {
+    if (recordId == null) return;
+    setLoading(true);
+    api.get(`/admin/businesses/${recordId}/menu`).then((r) => {
+      const secs: any[] = r.data.sections || [];
+      if ((r.data.ungrouped || []).length) secs.push({ id: 0, title: 'Ungrouped', items: r.data.ungrouped, legacy: true });
+      setSections(secs);
+    }).finally(() => setLoading(false));
+  };
+  useEffect(() => { load(); }, [recordId]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  if (recordId == null) {
+    return <div style={{ fontSize: 12, color: '#888', background: '#F9F9F9', border: '1px dashed #D0D0D0', borderRadius: 4, padding: '10px 12px' }}>💡 Save this business first, then re-open it to add menu sections.</div>;
+  }
+  if (loading) return <div style={{ fontSize: 12, color: '#888' }}>Loading…</div>;
+
+  const addSection = async () => {
+    const title = window.prompt('Section name', 'Best Sellers');
+    if (!title) return;
+    const r = await api.post(`/admin/businesses/${recordId}/menu-sections`, { title });
+    setSections((p) => [...p, { id: r.data.id, title: r.data.title, items: [] }]);
+  };
+  const renameSection = async (sid: number, title: string) => { await api.put(`/admin/businesses/${recordId}/menu-sections/${sid}`, { title }); };
+  const deleteSection = async (sid: number) => {
+    if (!window.confirm('Delete this section and all its items?')) return;
+    await api.delete(`/admin/businesses/${recordId}/menu-sections/${sid}`);
+    setSections((p) => p.filter((s) => s.id !== sid));
+  };
+  const deleteItem = async (iid: number, sid: number) => {
+    if (!window.confirm('Delete this item?')) return;
+    await api.delete(`/admin/businesses/${recordId}/menu-items/${iid}`);
+    setSections((p) => p.map((s) => (s.id === sid ? { ...s, items: s.items.filter((it: any) => it.id !== iid) } : s)));
+  };
+
+  const miniBtn: React.CSSProperties = { flex: 1, padding: '3px 0', fontSize: 11, border: '1px solid #D5D5D5', background: '#fff', borderRadius: 3, cursor: 'pointer', color: '#333' };
+
+  return (
+    <div>
+      {sections.map((sec) => (
+        <div key={sec.id} style={{ border: '1px solid #E5E5E5', borderRadius: 8, padding: 12, marginBottom: 10, background: '#FBFBFD' }}>
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 10 }}>
+            {sec.legacy
+              ? <span style={{ fontSize: 13, fontWeight: 700, color: '#888', flex: 1 }}>{sec.title}</span>
+              : <input defaultValue={sec.title} onBlur={(e) => renameSection(sec.id, e.target.value)} style={{ ...inputStyle, flex: 1, fontWeight: 600 }} />}
+            {!sec.legacy && <button type="button" onClick={() => deleteSection(sec.id)} style={{ padding: '5px 10px', fontSize: 11, border: '1px solid #F1BBBB', color: '#C42B1C', background: '#FDF3F2', borderRadius: 3, cursor: 'pointer' }}>Delete section</button>}
+          </div>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+            {sec.items.map((it: any) => (
+              <div key={it.id} style={{ width: 124, border: '1px solid #E8E8E8', borderRadius: 8, overflow: 'hidden', background: '#fff' }}>
+                {it.image
+                  ? <img src={it.imageUrl || (String(it.image).startsWith('http') ? it.image : `/assets/uploads/businesses/${it.image}`)} alt="" style={{ width: '100%', height: 64, objectFit: 'cover', display: 'block' }} />
+                  : <div style={{ height: 64, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 26, background: '#F3F3F7' }}>🍽️</div>}
+                <div style={{ padding: '6px 8px' }}>
+                  <div style={{ fontSize: 12, fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{it.name}</div>
+                  {it.price != null && <div style={{ fontSize: 11, fontWeight: 700, color: ACCENT }}>{it.currency || 'AED'} {Number(it.price).toLocaleString()}</div>}
+                  <div style={{ display: 'flex', gap: 6, marginTop: 5 }}>
+                    <button type="button" onClick={() => setEditing({ sectionId: sec.id, item: it })} style={miniBtn}>Edit</button>
+                    <button type="button" onClick={() => deleteItem(it.id, sec.id)} style={{ ...miniBtn, color: '#C42B1C' }}>Del</button>
+                  </div>
+                </div>
+              </div>
+            ))}
+            {!sec.legacy && (
+              <button type="button" onClick={() => setEditing({ sectionId: sec.id, item: null })} style={{ width: 124, minHeight: 110, border: '1px dashed #BBB', borderRadius: 8, background: '#FAFAFA', color: ACCENT, fontSize: 13, cursor: 'pointer' }}>+ Add item</button>
+            )}
+          </div>
+        </div>
+      ))}
+      <button type="button" onClick={addSection} style={{ padding: '8px 16px', fontSize: 13, fontWeight: 600, border: `1px solid ${ACCENT}`, color: ACCENT, background: '#fff', borderRadius: 5, cursor: 'pointer' }}>+ Add section</button>
+      {editing && (
+        <MenuItemForm recordId={recordId} sectionId={editing.sectionId} item={editing.item}
+          onClose={() => setEditing(null)} onSaved={() => { setEditing(null); load(); }} />
+      )}
+    </div>
+  );
+}
+
+function MenuItemForm({ recordId, sectionId, item, onClose, onSaved }: { recordId: number; sectionId: number; item: any | null; onClose: () => void; onSaved: () => void }) {
+  const [name, setName] = useState(item?.name || '');
+  const [description, setDescription] = useState(item?.description || '');
+  const [image, setImage] = useState(item?.image || '');
+  const [price, setPrice] = useState(item?.price ?? '');
+  const [currency, setCurrency] = useState(item?.currency || 'AED');
+  const [isVeg, setIsVeg] = useState<string>(item?.is_veg == null ? '' : String(item.is_veg));
+  const [uploading, setUploading] = useState(false);
+  const [saving, setSaving] = useState(false);
+
+  const uploadImg = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]; if (!file) return;
+    setUploading(true);
+    try {
+      const fd = new FormData(); fd.append('file', file);
+      const res = await api.post('/admin/upload/businesses', fd, { headers: { 'Content-Type': 'multipart/form-data' } });
+      setImage(res.data.filename as string);
+    } finally { setUploading(false); }
+  };
+
+  const save = async () => {
+    setSaving(true);
+    const payload = { name, description, image, price: price === '' ? null : price, currency, is_veg: isVeg === '' ? null : Number(isVeg) };
+    try {
+      if (item) await api.put(`/admin/businesses/${recordId}/menu-items/${item.id}`, payload);
+      else await api.post(`/admin/businesses/${recordId}/menu-sections/${sectionId}/items`, payload);
+      onSaved();
+    } catch { setSaving(false); }
+  };
+
+  const preview = image ? (String(image).startsWith('http') ? image : `/assets/uploads/businesses/${image}`) : '';
+  const lbl = (t: string) => <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: '#666', margin: '10px 0 4px' }}>{t}</label>;
+
+  return (
+    <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.45)', zIndex: 1100, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
+      <div onClick={(e) => e.stopPropagation()} style={{ background: '#fff', borderRadius: 8, width: '100%', maxWidth: 460, maxHeight: '90vh', overflowY: 'auto', padding: 20, fontFamily: FONT }}>
+        <h3 style={{ margin: 0, fontSize: 16, fontWeight: 700 }}>{item ? 'Edit Menu Item' : 'New Menu Item'}</h3>
+        {lbl('Photo')}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          {preview && <img src={preview} alt="" style={{ width: 64, height: 48, objectFit: 'cover', borderRadius: 4, border: '1px solid #E0E0E0' }} />}
+          <input type="file" accept="image/*" onChange={uploadImg} style={{ fontSize: 12 }} />
+          {uploading && <span style={{ fontSize: 11, color: '#888' }}>Uploading…</span>}
+          {image && <button type="button" onClick={() => setImage('')} style={{ fontSize: 11, color: '#C42B1C', background: 'none', border: 'none', cursor: 'pointer' }}>remove</button>}
+        </div>
+        {lbl('Name')}
+        <input value={name} onChange={(e) => setName(e.target.value)} style={inputStyle} />
+        <div style={{ display: 'flex', gap: 10 }}>
+          <div style={{ flex: 1 }}>
+            {lbl('Price')}
+            <input type="number" value={price} onChange={(e) => setPrice(e.target.value)} style={inputStyle} />
+          </div>
+          <div style={{ width: 90 }}>
+            {lbl('Currency')}
+            <input value={currency} onChange={(e) => setCurrency(e.target.value)} style={inputStyle} />
+          </div>
+          <div style={{ width: 120 }}>
+            {lbl('Veg / Non-veg')}
+            <select value={isVeg} onChange={(e) => setIsVeg(e.target.value)} style={inputStyle}>
+              <option value="">—</option>
+              <option value="1">Veg</option>
+              <option value="0">Non-veg</option>
+            </select>
+          </div>
+        </div>
+        {lbl('Description')}
+        <textarea rows={3} value={description} onChange={(e) => setDescription(e.target.value)} style={{ ...inputStyle, resize: 'vertical' }} />
+        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 16 }}>
+          <button type="button" onClick={onClose} style={{ padding: '7px 16px', border: '1px solid #C8C8C8', background: '#fff', borderRadius: 4, fontSize: 13, cursor: 'pointer' }}>Cancel</button>
+          <button type="button" onClick={save} disabled={saving || !name} style={{ padding: '7px 18px', border: 'none', background: saving || !name ? '#9CB8D8' : ACCENT, color: '#fff', borderRadius: 4, fontSize: 13, fontWeight: 600, cursor: saving || !name ? 'not-allowed' : 'pointer' }}>{saving ? 'Saving…' : 'Save'}</button>
         </div>
       </div>
     </div>
@@ -1930,7 +2091,7 @@ function CrudDialog({ config, row, onClose, onSaved }: {
       const payload: Record<string, unknown> = {};
       for (const f of config.fields) {
         const v = form[f.key];
-        if (f.type === 'gallery' || f.type === 'cover' || f.type === 'services' || f.type === 'products' || f.type === 'clients') continue;  // not table columns — managed via their own endpoints
+        if (f.type === 'gallery' || f.type === 'cover' || f.type === 'services' || f.type === 'products' || f.type === 'clients' || f.type === 'menu') continue;  // not table columns — managed via their own endpoints
         if (f.type === 'toggle') payload[f.key] = v === '1' ? 1 : 0;
         else if (f.type === 'number' || f.type === 'category-search' || f.type === 'business-search' || f.type === 'user-search' || f.type === 'event-category-select' || f.type === 'resource-select' || f.type === 'university-select') payload[f.key] = v === '' ? null : Number(v);
         else payload[f.key] = v;
@@ -1986,7 +2147,7 @@ function CrudDialog({ config, row, onClose, onSaved }: {
           {/* Two-column layout for short fields */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: '10px 16px' }}>
             {textFields.map((f) => (
-              <div key={f.key} style={{ gridColumn: (f.type === 'textarea' || f.type === 'time-picker' || f.type === 'user-search' || f.type === 'business-search' || f.type === 'category-search' || f.type === 'gallery' || f.type === 'cover' || f.type === 'services' || f.type === 'products' || f.type === 'page-sections' || f.type === 'keywords-input') ? '1 / -1' : undefined }}>
+              <div key={f.key} style={{ gridColumn: (f.type === 'textarea' || f.type === 'time-picker' || f.type === 'user-search' || f.type === 'business-search' || f.type === 'category-search' || f.type === 'gallery' || f.type === 'cover' || f.type === 'services' || f.type === 'products' || f.type === 'menu' || f.type === 'page-sections' || f.type === 'keywords-input') ? '1 / -1' : undefined }}>
                 <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: '#444', marginBottom: 4 }}>
                   {f.label}{f.required && <span style={{ color: '#C42B1C', marginLeft: 2 }}>*</span>}
                 </label>
@@ -2064,6 +2225,9 @@ function CrudDialog({ config, row, onClose, onSaved }: {
                 )}
                 {f.type === 'services' && (
                   <ServicesManager recordId={isEdit && row ? Number(row.id) : null} />
+                )}
+                {f.type === 'menu' && (
+                  <MenuManager recordId={isEdit && row ? Number(row.id) : null} />
                 )}
                 {f.type === 'products' && (
                   <ProductsManager recordId={isEdit && row ? Number(row.id) : null} />

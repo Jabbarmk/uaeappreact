@@ -6,9 +6,9 @@ export default defineConfig({
   server: {
     host: true, // listen on LAN so the Android test APK can reach the dev server
     proxy: {
-      '/api': { target: 'http://localhost:4000', changeOrigin: true },
-      '/assets/uploads': { target: 'http://localhost:4000', changeOrigin: true },
-      '/assets/images': { target: 'http://localhost:4000', changeOrigin: true },
+      '/api': { target: 'http://localhost:4001', changeOrigin: true },
+      '/assets/uploads': { target: 'http://localhost:4001', changeOrigin: true },
+      '/assets/images': { target: 'http://localhost:4001', changeOrigin: true },
     },
   },
   build: {

@@ -183,6 +183,14 @@ router.get('/:id', async (req, res, next) => {
     ).catch(() => []);
     const products = (productRows as any[]).map(({ cost_price, created_by, ...p }) => ({ ...p, imageUrl: getImageUrl(p.image, 'businesses') }));
 
+    // Structured menu: named sections (Best Sellers, Combos, Breakfast, Lunch, Dinner) + priced items.
+    const menuSectionRows = await query<any>('SELECT id, title FROM business_menu_sections WHERE business_id=? ORDER BY sort_order, id', [id]).catch(() => []);
+    const menuItemRows = await query<any>('SELECT * FROM business_menu_items WHERE business_id=? AND is_available=1 ORDER BY sort_order, id', [id]).catch(() => []);
+    const menuItemsMapped = (menuItemRows as any[]).map((it) => ({ ...it, imageUrl: getImageUrl(it.image, 'businesses') }));
+    const menuSections = (menuSectionRows as any[])
+      .map((sec) => ({ id: sec.id, title: sec.title, items: menuItemsMapped.filter((it) => it.section_id === sec.id) }))
+      .filter((sec) => sec.items.length > 0);
+
     const vlogger = await queryOne<any>('SELECT * FROM vlogger_profiles WHERE business_id=?', [id]).catch(() => null);
     const doctorRows = await query<any>(
       `SELECT d.*, sc.name AS specialty_name, sc.icon AS specialty_icon
@@ -219,6 +227,7 @@ router.get('/:id', async (req, res, next) => {
       ).catch(() => null))?.setting_value) || null,
       vlogger,
       doctors,
+      menuSections,
     });
   } catch (err) { next(err); }
 });

@@ -10,6 +10,7 @@ import CourseThumb from '../components/CourseThumb';
 import { fmtFee, fmtDate } from '../constants/education';
 import DoctorCard from '../components/DoctorCard';
 import DoctorPopup from '../components/DoctorPopup';
+import MenuItemCard from '../components/MenuItemCard';
 
 function renderStars(r: number) {
   return Array.from({ length: 5 }, (_, i) => {
@@ -244,6 +245,34 @@ function CoursePopup({ course: c, biz, onClose }: { course: any; biz: any; onClo
   );
 }
 
+function MenuItemPopup({ item, biz, onClose }: { item: any; biz: any; onClose: () => void }) {
+  return (
+    <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(10,16,34,.55)', zIndex: 900, display: 'flex', alignItems: 'flex-start', justifyContent: 'center', padding: '24px 14px', overflowY: 'auto', backdropFilter: 'blur(2px)' }}>
+      <div onClick={(e) => e.stopPropagation()} style={{ background: '#fff', borderRadius: 20, width: '100%', maxWidth: 420, overflow: 'hidden', boxShadow: '0 20px 50px rgba(0,0,0,.3)' }}>
+        <div style={{ position: 'relative', height: 170, background: '#F3F3F7' }}>
+          {item.imageUrl
+            ? <img src={item.imageUrl} alt={item.name} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+            : <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 44 }}>🍽️</div>}
+          <button onClick={onClose} style={{ position: 'absolute', top: 12, right: 12, width: 34, height: 34, borderRadius: '50%', background: 'rgba(0,0,0,.45)', color: '#fff', border: 'none', fontSize: 18, cursor: 'pointer', backdropFilter: 'blur(4px)' }}>×</button>
+        </div>
+        <div style={{ padding: '16px 18px 20px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            {item.is_veg != null && (
+              <span style={{ width: 14, height: 14, border: `1.5px solid ${item.is_veg ? '#0E9F6E' : '#C42B1C'}`, borderRadius: 3, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                <span style={{ width: 7, height: 7, borderRadius: '50%', background: item.is_veg ? '#0E9F6E' : '#C42B1C' }} />
+              </span>
+            )}
+            <div style={{ fontSize: 19, fontWeight: 800, color: 'var(--dark)', lineHeight: 1.25 }}>{item.name}</div>
+          </div>
+          {item.price != null && <div style={{ fontSize: 16, fontWeight: 800, color: 'var(--primary)', marginTop: 6 }}>{item.currency || 'AED'} {Number(item.price).toLocaleString()}</div>}
+          {item.description && <div style={{ fontSize: 13.5, color: 'var(--text-secondary)', lineHeight: 1.5, marginTop: 10 }}>{item.description}</div>}
+          <ContactCTA biz={biz} />
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // Reusable WhatsApp / Email / Call call-to-action row for popups.
 function ContactCTA({ biz }: { biz: any }) {
   const wa = biz.whatsapp ? `https://wa.me/${String(biz.whatsapp).replace(/\D/g, '')}` : null;
@@ -296,6 +325,8 @@ export default function BusinessDetailPage() {
 
   const [coursePopup, setCoursePopup] = useState<any>(null);
   const [doctorPopup, setDoctorPopup] = useState<any>(null);
+  const [menuItemPopup, setMenuItemPopup] = useState<any>(null);
+  const [menuTab, setMenuTab] = useState(0);
   const [servicePopup, setServicePopup] = useState<any>(null);
   const [prodCat, setProdCat] = useState('Featured');
   const [prodSub, setProdSub] = useState('All');
@@ -402,7 +433,7 @@ export default function BusinessDetailPage() {
 
   // ── Detail page sections: per-business show/hide + order (admin-configured).
   // Legacy show_stats / show_clients act as defaults when no config is saved.
-  const defaultSections = ['header', 'actions', 'store', 'creator', 'doctors', 'courses', 'about', 'stats', 'services', 'gallery', 'clients', 'reviews', 'contact']
+  const defaultSections = ['header', 'actions', 'store', 'creator', 'doctors', 'courses', 'menu', 'about', 'stats', 'services', 'gallery', 'clients', 'reviews', 'contact']
     .map((key, i) => ({
       key,
       on: key === 'stats' ? (Number(biz.show_stats ?? 1) ? 1 : 0) : key === 'clients' ? (Number(biz.show_clients ?? 1) ? 1 : 0) : 1,
@@ -576,6 +607,31 @@ export default function BusinessDetailPage() {
         </div>
       </div>
     ),
+    menu: () => {
+      const sections: any[] = data.menuSections || [];
+      if (!sections.length) return null;
+      const active = sections[Math.min(menuTab, sections.length - 1)];
+      return (
+        <div className="bs-page-wrap">
+          <div className="bs-section">
+            <div className="bs-sh"><span className="bs-title">Menu</span></div>
+            <div style={{ display: 'flex', gap: 8, overflowX: 'auto', padding: '2px 0 14px', scrollbarWidth: 'none' }}>
+              {sections.map((s: any, i: number) => (
+                <button key={s.id} onClick={() => setMenuTab(i)}
+                  style={{ flexShrink: 0, display: 'inline-flex', alignItems: 'center', gap: 6, padding: '7px 14px', borderRadius: 20, cursor: 'pointer',
+                    fontFamily: 'inherit', fontSize: 13, fontWeight: 600, border: `1.5px solid ${i === menuTab ? 'var(--primary)' : '#E1E9EA'}`,
+                    background: i === menuTab ? 'var(--primary)' : '#fff', color: i === menuTab ? '#fff' : '#3A4A4E', whiteSpace: 'nowrap' }}>
+                  {s.title} <span style={{ opacity: .7 }}>{s.items.length}</span>
+                </button>
+              ))}
+            </div>
+            <div style={{ display: 'flex', gap: 12, overflowX: 'auto', paddingBottom: 4, scrollbarWidth: 'none' }}>
+              {active.items.map((it: any) => <MenuItemCard key={it.id} item={it} onOpen={setMenuItemPopup} />)}
+            </div>
+          </div>
+        </div>
+      );
+    },
     about: () => (
       <div className="bs-page-wrap">
         <div className="bs-section">
@@ -800,6 +856,7 @@ export default function BusinessDetailPage() {
       {lbOpen && <Lightbox imgs={lbImgs} cur={lbCur} onClose={closeLB} onNav={lbNav} />}
       {coursePopup && <CoursePopup course={coursePopup} biz={biz} onClose={() => setCoursePopup(null)} />}
       {doctorPopup && <DoctorPopup doctor={doctorPopup} onClose={() => setDoctorPopup(null)} />}
+      {menuItemPopup && <MenuItemPopup item={menuItemPopup} biz={biz} onClose={() => setMenuItemPopup(null)} />}
       {servicePopup && <ServicePopup svc={servicePopup} biz={biz} onClose={() => setServicePopup(null)} />}
 
       <div className="bd-brandbar">

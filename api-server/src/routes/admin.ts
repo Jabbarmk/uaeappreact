@@ -824,6 +824,75 @@ router.delete('/businesses/:id/service-items/:iid', requireAdmin, async (req, re
   } catch (err) { next(err); }
 });
 
+// ── Business menu: named sections + items with price (Restaurants/Cafés/Fast Food) ─
+router.get('/businesses/:id/menu', requireAdmin, async (req, res, next) => {
+  try {
+    const sections = await query<any>('SELECT id, title, sort_order FROM business_menu_sections WHERE business_id=? ORDER BY sort_order, id', [req.params.id]);
+    const items = await query<any>('SELECT * FROM business_menu_items WHERE business_id=? ORDER BY sort_order, id', [req.params.id]);
+    const mapped = items.map((it) => ({ ...it, imageUrl: it.image ? getImageUrl(it.image, 'businesses') : null }));
+    res.json({
+      sections: sections.map((s) => ({ ...s, items: mapped.filter((i) => i.section_id === s.id) })),
+      ungrouped: mapped.filter((i) => !i.section_id),
+    });
+  } catch (err) { next(err); }
+});
+
+router.post('/businesses/:id/menu-sections', requireAdmin, async (req, res, next) => {
+  try {
+    const title = String(req.body.title || '').trim() || 'Menu';
+    const ord = (await queryOne<any>('SELECT COALESCE(MAX(sort_order),-1)+1 AS n FROM business_menu_sections WHERE business_id=?', [req.params.id]))?.n ?? 0;
+    const r = await query<any>('INSERT INTO business_menu_sections (business_id, title, sort_order) VALUES (?,?,?)', [req.params.id, title, ord]) as any;
+    res.json({ id: r.insertId, title, items: [] });
+  } catch (err) { next(err); }
+});
+
+router.put('/businesses/:id/menu-sections/:sid', requireAdmin, async (req, res, next) => {
+  try {
+    await query('UPDATE business_menu_sections SET title=? WHERE id=? AND business_id=?', [String(req.body.title || '').trim(), req.params.sid, req.params.id]);
+    res.json({ ok: true });
+  } catch (err) { next(err); }
+});
+
+router.delete('/businesses/:id/menu-sections/:sid', requireAdmin, async (req, res, next) => {
+  try {
+    await query('DELETE FROM business_menu_sections WHERE id=? AND business_id=?', [req.params.sid, req.params.id]);
+    res.json({ ok: true });
+  } catch (err) { next(err); }
+});
+
+const MENU_ITEM_FIELDS = ['name', 'description', 'image', 'price', 'currency', 'is_veg', 'is_available'];
+router.post('/businesses/:id/menu-sections/:sid/items', requireAdmin, async (req, res, next) => {
+  try {
+    const b = req.body as Record<string, any>;
+    const ord = (await queryOne<any>('SELECT COALESCE(MAX(sort_order),-1)+1 AS n FROM business_menu_items WHERE section_id=?', [req.params.sid]))?.n ?? 0;
+    const r = await query<any>(
+      'INSERT INTO business_menu_items (business_id, section_id, name, description, image, price, currency, is_veg, sort_order) VALUES (?,?,?,?,?,?,?,?,?)',
+      [req.params.id, req.params.sid, b.name || 'Item', b.description || null, b.image || null, b.price || null, b.currency || 'AED', b.is_veg ?? null, ord]
+    ) as any;
+    res.json({ id: r.insertId, imageUrl: b.image ? getImageUrl(b.image, 'businesses') : null });
+  } catch (err) { next(err); }
+});
+
+router.put('/businesses/:id/menu-items/:iid', requireAdmin, async (req, res, next) => {
+  try {
+    const b = req.body as Record<string, any>;
+    const fields = MENU_ITEM_FIELDS.filter((f) => f in b);
+    if (fields.length) {
+      const sets = fields.map((f) => `\`${f}\` = ?`).join(',');
+      const vals = fields.map((f) => (b[f] === '' ? null : b[f]));
+      await query(`UPDATE business_menu_items SET ${sets} WHERE id=? AND business_id=?`, [...vals, req.params.iid, req.params.id]);
+    }
+    res.json({ ok: true });
+  } catch (err) { next(err); }
+});
+
+router.delete('/businesses/:id/menu-items/:iid', requireAdmin, async (req, res, next) => {
+  try {
+    await query('DELETE FROM business_menu_items WHERE id=? AND business_id=?', [req.params.iid, req.params.id]);
+    res.json({ ok: true });
+  } catch (err) { next(err); }
+});
+
 // ── Business products (Template-2 storefront) ───────────────────────────────────
 const PRODUCT_FIELDS = [
   'category', 'subcategory', 'name', 'short_description', 'image', 'price', 'original_price',

@@ -46,7 +46,7 @@ export default function JobDetailPage() {
   if (isLoading) return <div style={{ padding: 40, textAlign: 'center' }}>Loading…</div>;
   if (!data?.job) return <div style={{ padding: 40 }}>Not found. <Link to="/jobs">Back</Link></div>;
 
-  const { job, profile } = data;
+  const { job, profile, similarJobs = [] } = data;
   const titleLower = (job.title || '').toLowerCase();
   let heroBg = 'https://images.unsplash.com/photo-1497366216548-37526070297c?w=800&h=320&fit=crop';
   if (titleLower.includes('design') || titleLower.includes('ux')) heroBg = 'https://images.unsplash.com/photo-1561070791-2526d30994b5?w=800&h=320&fit=crop';
@@ -142,6 +142,23 @@ export default function JobDetailPage() {
         <div className="job-section">
           <h3><i className="fas fa-gift" style={{ color: 'var(--primary)', marginRight: 8, fontSize: 14 }}></i>Benefits &amp; Perks</h3>
           <ul>{job.benefits.split('\n').filter((b: string) => b.trim()).map((b: string, i: number) => <li key={i}>{b.trim()}</li>)}</ul>
+        </div>
+      )}
+
+      {similarJobs.length > 0 && (
+        <div className="job-section">
+          <h3><i className="fas fa-layer-group" style={{ color: 'var(--primary)', marginRight: 8, fontSize: 14 }}></i>Similar Jobs</h3>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 8 }}>
+            {similarJobs.map((sj: any) => (
+              <Link key={sj.id} to={`/jobs/${sj.id}`} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 12px', background: '#fff', border: '1px solid #EEE', borderRadius: 10, textDecoration: 'none', color: 'inherit' }}>
+                <div>
+                  <div style={{ fontSize: 13, fontWeight: 700 }}>{sj.title}</div>
+                  <div style={{ fontSize: 12, color: 'var(--text-light)' }}>{sj.company} · {sj.location}</div>
+                </div>
+                <span style={{ fontSize: 11, color: 'var(--primary)', fontWeight: 700 }}>{sj.job_type}</span>
+              </Link>
+            ))}
+          </div>
         </div>
       )}
 

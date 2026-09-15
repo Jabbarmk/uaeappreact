@@ -212,6 +212,19 @@ router.get('/jobs/:id/applicants', async (req: Request, res: Response, next: Nex
   } catch (err) { next(err); }
 });
 
+// Update an applicant's status on one of my jobs (shortlist/reject).
+router.put('/jobs/:id/applicants/:appId', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const job = await queryOne<any>('SELECT id FROM jobs WHERE id=? AND user_id=?', [req.params.id, uid(req)]);
+    if (!job) return res.status(404).json({ error: 'Not found' });
+    const { status } = req.body as { status?: string };
+    if (!['pending', 'shortlisted', 'rejected'].includes(status || '')) return res.status(400).json({ error: 'Invalid status' });
+    const result = await query<any>('UPDATE job_applications SET status=? WHERE id=? AND job_id=?', [status, req.params.appId, req.params.id]) as any;
+    if (!result.affectedRows) return res.status(404).json({ error: 'Application not found' });
+    res.json({ ok: true });
+  } catch (err) { next(err); }
+});
+
 // ── My applications (jobs I applied to) ───────────────────────────────────────
 router.get('/applied-jobs', async (req: Request, res: Response, next: NextFunction) => {
   try {

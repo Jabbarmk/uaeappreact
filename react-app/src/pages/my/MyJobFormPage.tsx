@@ -20,6 +20,8 @@ export default function MyJobFormPage() {
   const [error, setError] = useState('');
   const [bizOpen, setBizOpen] = useState(false);
   const bizRef = useRef<HTMLDivElement>(null);
+  const [aiBusy, setAiBusy] = useState<string>('');
+  const [aiError, setAiError] = useState('');
 
   const { data: myJobs } = useQuery({
     queryKey: ['my-jobs'],
@@ -71,6 +73,18 @@ export default function MyJobFormPage() {
     navigate('/my/businesses/new');
   };
 
+  const aiContext = () => ({ title: form.title, company: form.company, jobType: form.job_type, location: form.location, description: form.description });
+
+  const runAi = async (action: string, endpoint: string, apply: (text: string) => void) => {
+    if (!form.title.trim()) { setAiError('Enter a job title first so AI has something to work with.'); return; }
+    setAiError(''); setAiBusy(action);
+    try {
+      const r = await api.post(`/jobs${endpoint}`, aiContext());
+      apply(r.data.text || '');
+    } catch { setAiError('AI request failed. You can still write this manually.'); }
+    finally { setAiBusy(''); }
+  };
+
   const submit = async () => {
     if (!form.title.trim()) return setError('Job title is required');
     setError(''); setLoading(true);
@@ -84,6 +98,7 @@ export default function MyJobFormPage() {
   };
 
   const inp: React.CSSProperties = { width: '100%', padding: '10px 12px', border: '1px solid #E0E0E0', borderRadius: 8, fontSize: 14, boxSizing: 'border-box', fontFamily: FONT, outline: 'none' };
+  const aiBtnStyle: React.CSSProperties = { fontSize: 11, fontWeight: 700, color: '#6C4FCE', background: '#F3F0FF', border: '1px solid #DCD3F7', borderRadius: 12, padding: '3px 10px', cursor: 'pointer', fontFamily: FONT };
   const lbl = (text: string) => <label style={{ fontSize: 12, color: '#888', fontWeight: 600, display: 'block', marginBottom: 4 }}>{text}</label>;
 
   const filteredBiz = businesses.filter(b => b.name.toLowerCase().includes(form.company.toLowerCase()));
@@ -170,9 +185,34 @@ export default function MyJobFormPage() {
             <div>{lbl('Currency')}<input value={form.currency} onChange={e => set('currency', e.target.value)} placeholder="AED" style={inp} /></div>
           </div>
 
-          <div>{lbl('Job Description')}<textarea value={form.description} onChange={e => set('description', e.target.value)} placeholder="Describe the role and responsibilities" rows={4} style={{ ...inp, resize: 'vertical' }} /></div>
-          <div>{lbl('Requirements')}<textarea value={form.requirements} onChange={e => set('requirements', e.target.value)} placeholder="Skills and qualifications needed" rows={3} style={{ ...inp, resize: 'vertical' }} /></div>
+          <div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              {lbl('Job Description')}
+              <div style={{ display: 'flex', gap: 6, marginBottom: 4 }}>
+                <button type="button" disabled={!!aiBusy} onClick={() => runAi('gen-desc', '/ai/generate-description', (t) => set('description', t))}
+                  style={aiBtnStyle}>{aiBusy === 'gen-desc' ? '✨ …' : '✨ Generate'}</button>
+                {form.description && (
+                  <button type="button" disabled={!!aiBusy} onClick={() => runAi('improve-desc', '/ai/improve-description', (t) => set('description', t))}
+                    style={aiBtnStyle}>{aiBusy === 'improve-desc' ? '✨ …' : '✨ Improve'}</button>
+                )}
+              </div>
+            </div>
+            <textarea value={form.description} onChange={e => set('description', e.target.value)} placeholder="Describe the role and responsibilities" rows={4} style={{ ...inp, resize: 'vertical' }} />
+          </div>
+          <div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              {lbl('Requirements')}
+              <button type="button" disabled={!!aiBusy} onClick={() => runAi('gen-reqs', '/ai/generate-qualifications', (t) => set('requirements', t))}
+                style={{ ...aiBtnStyle, marginBottom: 4 }}>{aiBusy === 'gen-reqs' ? '✨ …' : '✨ Suggest'}</button>
+            </div>
+            <textarea value={form.requirements} onChange={e => set('requirements', e.target.value)} placeholder="Skills and qualifications needed" rows={3} style={{ ...inp, resize: 'vertical' }} />
+          </div>
           <div>{lbl('Benefits')}<textarea value={form.benefits} onChange={e => set('benefits', e.target.value)} placeholder="Benefits and perks offered" rows={2} style={{ ...inp, resize: 'vertical' }} /></div>
+
+          {aiError && <div style={{ fontSize: 12, color: '#C42B1C' }}>{aiError}</div>}
+          <div style={{ fontSize: 12, color: '#5A4A99', padding: '10px 12px', background: '#F3F0FF', borderRadius: 8 }}>
+            ✨ AI-generated content is a starting point — review and edit before submitting. It won't invent salary, benefits or company facts you haven't provided.
+          </div>
 
           <div style={{ fontSize: 12, color: '#795548', padding: '10px 12px', background: '#FFF8E1', borderRadius: 8 }}>
             ℹ️ Job postings will be reviewed before going live.

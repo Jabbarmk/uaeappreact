@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link, useParams } from 'react-router-dom';
 import api from '../../api';
 
@@ -33,6 +33,8 @@ function StatusBadge({ status }: { status: string }) {
 export default function MyJobApplicantsPage() {
   const { id } = useParams();
   const [openId, setOpenId] = useState<number | null>(null);
+  const [updatingId, setUpdatingId] = useState<number | null>(null);
+  const queryClient = useQueryClient();
 
   const { data, isLoading } = useQuery<{ job: any; applicants: Applicant[] }>({
     queryKey: ['job-applicants', id],
@@ -41,6 +43,16 @@ export default function MyJobApplicantsPage() {
 
   const job = data?.job;
   const applicants = data?.applicants || [];
+
+  const setStatus = async (applicationId: number, status: string) => {
+    setUpdatingId(applicationId);
+    try {
+      await api.put(`/user/jobs/${id}/applicants/${applicationId}`, { status });
+      queryClient.setQueryData<{ job: any; applicants: Applicant[] } | undefined>(['job-applicants', id], (prev) =>
+        prev ? { ...prev, applicants: prev.applicants.map(a => a.application_id === applicationId ? { ...a, status } : a) } : prev);
+    } catch { /* leave status as-is on failure */ }
+    finally { setUpdatingId(null); }
+  };
 
   return (
     <div style={{ minHeight: '100vh', background: '#F3F3F3', paddingBottom: 80, fontFamily: FONT }}>
@@ -100,14 +112,28 @@ export default function MyJobApplicantsPage() {
                           {a.cover_letter}
                         </div>
                       )}
-                      {a.profile_id ? (
-                        <Link to={`/profile/${a.profile_id}`}
-                          style={{ display: 'inline-block', padding: '8px 18px', background: '#0067C0', color: '#fff', borderRadius: 8, textDecoration: 'none', fontSize: 13, fontWeight: 600 }}>
-                          View full CV →
-                        </Link>
-                      ) : (
-                        <div style={{ fontSize: 12, color: '#aaa' }}>This applicant hasn't published a CV.</div>
-                      )}
+                      <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center' }}>
+                        {a.profile_id ? (
+                          <Link to={`/profile/${a.profile_id}`}
+                            style={{ display: 'inline-block', padding: '8px 18px', background: '#0067C0', color: '#fff', borderRadius: 8, textDecoration: 'none', fontSize: 13, fontWeight: 600 }}>
+                            View full CV →
+                          </Link>
+                        ) : (
+                          <div style={{ fontSize: 12, color: '#aaa' }}>This applicant hasn't published a CV.</div>
+                        )}
+                        <div style={{ display: 'flex', gap: 6, marginLeft: 'auto' }}>
+                          <button type="button" disabled={updatingId === a.application_id || a.status === 'shortlisted'}
+                            onClick={() => setStatus(a.application_id, 'shortlisted')}
+                            style={{ padding: '7px 14px', background: a.status === 'shortlisted' ? '#E3F2FD' : '#fff', color: '#0067C0', border: '1px solid #B3D1F0', borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: 'pointer', opacity: updatingId === a.application_id ? 0.6 : 1 }}>
+                            ✓ Shortlist
+                          </button>
+                          <button type="button" disabled={updatingId === a.application_id || a.status === 'rejected'}
+                            onClick={() => setStatus(a.application_id, 'rejected')}
+                            style={{ padding: '7px 14px', background: a.status === 'rejected' ? '#FDF3F2' : '#fff', color: '#C42B1C', border: '1px solid #F1BBBB', borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: 'pointer', opacity: updatingId === a.application_id ? 0.6 : 1 }}>
+                            ✕ Reject
+                          </button>
+                        </div>
+                      </div>
                     </div>
                   )}
                 </div>

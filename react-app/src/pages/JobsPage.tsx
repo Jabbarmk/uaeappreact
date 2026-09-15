@@ -2,6 +2,11 @@ import { useQuery } from '@tanstack/react-query';
 import { Link, useSearchParams } from 'react-router-dom';
 import { useState } from 'react';
 import api from '../api';
+import { EMIRATES, WORK_MODELS } from '../constants/uae';
+
+const JOB_TYPES = ['Fulltime', 'Part Time', 'Contract', 'Freelance'];
+
+const filterSelectStyle: React.CSSProperties = { padding: '8px 10px', border: '1px solid #E0E0E0', borderRadius: 8, fontSize: 12, background: '#fff', color: '#333' };
 
 const LOGO_COLORS = [
   ['var(--primary)','var(--secondary)'], ['#00B894','#00CEC9'], ['#FD79A8','#FF6B6B'],
@@ -17,10 +22,23 @@ export default function JobsPage() {
   const [params] = useSearchParams();
   const [search, setSearch] = useState(params.get('search') || '');
   const [activeSearch, setActiveSearch] = useState(params.get('search') || '');
+  const [showFilters, setShowFilters] = useState(false);
+  const [emirate, setEmirate] = useState('');
+  const [jobType, setJobType] = useState('');
+  const [workModel, setWorkModel] = useState('');
+  const [sort, setSort] = useState('relevance');
 
   const { data, isLoading } = useQuery({
-    queryKey: ['jobs', activeSearch],
-    queryFn: () => api.get(`/jobs?search=${encodeURIComponent(activeSearch)}`).then((r) => r.data),
+    queryKey: ['jobs', activeSearch, emirate, jobType, workModel, sort],
+    queryFn: () => {
+      const qs = new URLSearchParams();
+      if (activeSearch) qs.set('search', activeSearch);
+      if (emirate) qs.set('emirate', emirate);
+      if (jobType) qs.set('job_type', jobType);
+      if (workModel) qs.set('work_model', workModel);
+      if (sort) qs.set('sort', sort);
+      return api.get(`/jobs?${qs.toString()}`).then((r) => r.data);
+    },
   });
 
   const jobs: any[] = data?.jobs || [];
@@ -71,16 +89,44 @@ export default function JobsPage() {
         </div>
       )}
 
-      <div className="page-search">
+      <div className="page-search" style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
         <i className="fas fa-search search-icon"></i>
         <input type="text" placeholder="Search jobs, companies..." value={search}
           onChange={(e) => setSearch(e.target.value)}
           onKeyPress={(e) => { if (e.key === 'Enter') setActiveSearch(search); }} />
+        <button type="button" onClick={() => setShowFilters((s) => !s)}
+          style={{ flexShrink: 0, border: '1px solid var(--primary)', color: 'var(--primary)', background: showFilters ? 'var(--primary)' : '#fff', WebkitTextFillColor: showFilters ? '#fff' : undefined, borderRadius: 20, padding: '7px 14px', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>
+          ⚙ Filters
+        </button>
       </div>
 
-      <div className="section-header"><h2>Featured Jobs</h2></div>
+      {showFilters && (
+        <div style={{ margin: '0 16px 12px', padding: 12, background: '#fff', borderRadius: 14, boxShadow: '0 2px 10px rgba(0,0,0,.06)', display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(120px,1fr))', gap: 8 }}>
+          <select value={emirate} onChange={(e) => setEmirate(e.target.value)} style={filterSelectStyle}>
+            <option value="">All Emirates</option>
+            {EMIRATES.map((e) => <option key={e} value={e}>{e}</option>)}
+          </select>
+          <select value={jobType} onChange={(e) => setJobType(e.target.value)} style={filterSelectStyle}>
+            <option value="">All Job Types</option>
+            {JOB_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
+          </select>
+          <select value={workModel} onChange={(e) => setWorkModel(e.target.value)} style={filterSelectStyle}>
+            <option value="">Remote/Onsite/Hybrid</option>
+            {WORK_MODELS.map((w) => <option key={w} value={w}>{w}</option>)}
+          </select>
+          <select value={sort} onChange={(e) => setSort(e.target.value)} style={filterSelectStyle}>
+            <option value="relevance">Sort: Relevance</option>
+            <option value="newest">Sort: Newest</option>
+            <option value="salary">Sort: Salary</option>
+          </select>
+        </div>
+      )}
 
-      {isLoading ? <div style={{ padding: 40, textAlign: 'center' }}>Loading…</div> : (
+      <div className="section-header"><h2>{activeSearch || emirate || jobType || workModel ? 'Results' : 'Featured Jobs'}</h2></div>
+
+      {isLoading ? <div style={{ padding: 40, textAlign: 'center' }}>Loading…</div> : jobs.length === 0 ? (
+        <div style={{ padding: 40, textAlign: 'center', color: '#888' }}>No jobs match your filters.</div>
+      ) : (
         <>
           {jobs.map((job: any, idx: number) => {
             const c = LOGO_COLORS[idx % LOGO_COLORS.length];

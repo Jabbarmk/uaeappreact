@@ -7,6 +7,8 @@ const FONT = "'Segoe UI', 'Inter', system-ui, sans-serif";
 
 const SMTP_KEYS = ['smtp_host', 'smtp_port', 'smtp_user', 'smtp_pass'];
 
+const AI_KEYS = ['openai_api_key'];
+
 const BIZ_LIST_KEYS = ['biz_featured_img_height', 'biz_row_img_height', 'home_slider_height', 'home_slider_width', 'biz_client_logo_size', 'cat_item_width', 'cat_item_height', 'cat_item_radius'];
 
 const BIZ_LIST_FIELDS = [
@@ -59,6 +61,7 @@ export default function AdminSettingsPage() {
   const [testing, setTesting] = useState(false);
   const [testResult, setTestResult] = useState<{ ok?: boolean; error?: string } | null>(null);
   const [showPass, setShowPass] = useState(false);
+  const [showAiKey, setShowAiKey] = useState(false);
 
   useEffect(() => {
     if (data) {
@@ -67,6 +70,7 @@ export default function AdminSettingsPage() {
         smtp_port: '587',
         smtp_user: '',
         smtp_pass: '',
+        openai_api_key: '',
         ...data,
       });
     }
@@ -96,7 +100,7 @@ export default function AdminSettingsPage() {
     } finally { setTesting(false); }
   };
 
-  const otherEntries = Object.entries(form).filter(([k]) => !SMTP_KEYS.includes(k) && !BIZ_LIST_KEYS.includes(k) && !THEME_KEYS.includes(k));
+  const otherEntries = Object.entries(form).filter(([k]) => !SMTP_KEYS.includes(k) && !BIZ_LIST_KEYS.includes(k) && !THEME_KEYS.includes(k) && !AI_KEYS.includes(k));
 
   return (
     <div style={{ fontFamily: FONT, maxWidth: 760 }}>
@@ -173,6 +177,39 @@ export default function AdminSettingsPage() {
               </button>
               {testResult?.ok && <span style={{ fontSize: 12, color: '#107C10', fontWeight: 600 }}>✓ Test email sent!</span>}
               {testResult?.error && <span style={{ fontSize: 12, color: '#C42B1C' }}>✕ {testResult.error}</span>}
+            </div>
+          </div>
+
+          {/* ── AI / OpenAI Settings ─────────────────────────────────────── */}
+          <div style={{ background: '#fff', border: '1px solid #E5E5E5', borderRadius: 8, marginBottom: 20, overflow: 'hidden' }}>
+            <div style={{ padding: '14px 18px', borderBottom: '1px solid #E5E5E5', background: '#F9F9F9', display: 'flex', alignItems: 'center', gap: 10 }}>
+              <span style={{ fontSize: 18 }}>🤖</span>
+              <div>
+                <div style={{ fontWeight: 700, fontSize: 14, color: '#1a1a1a' }}>AI Settings</div>
+                <div style={{ fontSize: 12, color: '#888', marginTop: 2 }}>OpenAI API key used by the Jobs module's AI assistant (job descriptions, CV parsing, candidate matching)</div>
+              </div>
+            </div>
+            <div style={{ padding: '18px' }}>
+              <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: '#555', marginBottom: 5 }}>OpenAI API Key</label>
+              <div style={{ position: 'relative' }}>
+                <input
+                  type={showAiKey ? 'text' : 'password'}
+                  value={form.openai_api_key ?? ''}
+                  onChange={(e) => set('openai_api_key', e.target.value)}
+                  placeholder="sk-..."
+                  style={inputStyle}
+                  autoComplete="new-password"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowAiKey((s) => !s)}
+                  style={{ position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: '#888', fontSize: 12, padding: '2px 4px' }}>
+                  {showAiKey ? 'Hide' : 'Show'}
+                </button>
+              </div>
+            </div>
+            <div style={{ margin: '0 18px 14px', padding: '10px 12px', background: '#F0F7FF', border: '1px solid #B3D1F0', borderRadius: 6, fontSize: 12, color: '#004A90' }}>
+              Stored on the server and used only by Jobs AI features. If this key was ever pasted somewhere outside this form, rotate it from your OpenAI dashboard.
             </div>
           </div>
 

@@ -1,0 +1,870 @@
+{
+  "info": {
+    "name": "SmartUAE API",
+    "description": "Public-facing frontend API for smartflix.ae (SmartUAE app): home, businesses, offers, jobs, real estate, classifieds, categories, events, collections, doctors, universities, search, taxonomy, welcome, pages, profiles, auth, and \"my account\" (session-user) endpoints.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "https://smatflix.ae", "type": "string" },
+    { "key": "jobId", "value": "1", "type": "string" },
+    { "key": "businessId", "value": "1", "type": "string" },
+    { "key": "offerId", "value": "1", "type": "string" },
+    { "key": "propertyId", "value": "1", "type": "string" },
+    { "key": "companyId", "value": "1", "type": "string" },
+    { "key": "projectId", "value": "1", "type": "string" },
+    { "key": "classifiedId", "value": "1", "type": "string" },
+    { "key": "eventId", "value": "1", "type": "string" },
+    { "key": "collectionId", "value": "1", "type": "string" },
+    { "key": "doctorId", "value": "1", "type": "string" },
+    { "key": "universityId", "value": "1", "type": "string" },
+    { "key": "courseId", "value": "1", "type": "string" },
+    { "key": "profileId", "value": "1", "type": "string" },
+    { "key": "applicationId", "value": "1", "type": "string" },
+    { "key": "workExperienceId", "value": "1", "type": "string" },
+    { "key": "reviewId", "value": "1", "type": "string" },
+    { "key": "productId", "value": "1", "type": "string" },
+    { "key": "imageId", "value": "1", "type": "string" },
+    { "key": "pageSlug", "value": "about", "type": "string" },
+    { "key": "categoryId", "value": "1", "type": "string" }
+  ],
+  "item": [
+    {
+      "name": "Home",
+      "item": [
+        {
+          "name": "Get Theme Colors",
+          "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/api/home/theme", "host": ["{{baseUrl}}"], "path": ["api", "home", "theme"] } }
+        },
+        {
+          "name": "Get Home Page",
+          "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/api/home", "host": ["{{baseUrl}}"], "path": ["api", "home"] } }
+        }
+      ]
+    },
+    {
+      "name": "Welcome / Splash",
+      "item": [
+        {
+          "name": "Get Welcome Slides",
+          "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/api/welcome", "host": ["{{baseUrl}}"], "path": ["api", "welcome"] } }
+        }
+      ]
+    },
+    {
+      "name": "Businesses",
+      "item": [
+        {
+          "name": "List Businesses",
+          "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/api/businesses?cat={{categoryId}}", "host": ["{{baseUrl}}"], "path": ["api", "businesses"], "query": [{ "key": "cat", "value": "{{categoryId}}", "description": "Optional category id filter" }] } }
+        },
+        {
+          "name": "Search Businesses",
+          "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/api/businesses/search?q=cafe&category_id={{categoryId}}", "host": ["{{baseUrl}}"], "path": ["api", "businesses", "search"], "query": [{ "key": "q", "value": "cafe" }, { "key": "category_id", "value": "{{categoryId}}", "description": "optional" }] } }
+        },
+        {
+          "name": "Get Business Detail",
+          "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/api/businesses/{{businessId}}", "host": ["{{baseUrl}}"], "path": ["api", "businesses", "{{businessId}}"] } }
+        },
+        {
+          "name": "Get Business Product Detail",
+          "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/api/businesses/{{businessId}}/products/{{productId}}", "host": ["{{baseUrl}}"], "path": ["api", "businesses", "{{businessId}}", "products", "{{productId}}"] } }
+        },
+        {
+          "name": "Track Business View",
+          "request": {
+            "method": "POST",
+            "url": { "raw": "{{baseUrl}}/api/businesses/view/{{businessId}}", "host": ["{{baseUrl}}"], "path": ["api", "businesses", "view", "{{businessId}}"] },
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"emirate\": \"Dubai\"\n}" }
+          }
+        },
+        {
+          "name": "Add/Update Review (auth)",
+          "request": {
+            "method": "POST",
+            "url": { "raw": "{{baseUrl}}/api/businesses/{{businessId}}/reviews", "host": ["{{baseUrl}}"], "path": ["api", "businesses", "{{businessId}}", "reviews"] },
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"rating\": 5,\n  \"review\": \"Great service!\"\n}" }
+          }
+        },
+        {
+          "name": "Delete My Review (auth)",
+          "request": { "method": "DELETE", "url": { "raw": "{{baseUrl}}/api/businesses/{{businessId}}/reviews", "host": ["{{baseUrl}}"], "path": ["api", "businesses", "{{businessId}}", "reviews"] } }
+        }
+      ]
+    },
+    {
+      "name": "Offers",
+      "item": [
+        {
+          "name": "List Offers",
+          "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/api/offers?loc=Dubai&cat={{categoryId}}", "host": ["{{baseUrl}}"], "path": ["api", "offers"], "query": [{ "key": "loc", "value": "Dubai" }, { "key": "cat", "value": "{{categoryId}}", "description": "optional" }] } }
+        },
+        {
+          "name": "Get Offer Detail",
+          "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/api/offers/{{offerId}}", "host": ["{{baseUrl}}"], "path": ["api", "offers", "{{offerId}}"] } }
+        }
+      ]
+    },
+    {
+      "name": "Jobs",
+      "item": [
+        {
+          "name": "List Jobs (with filters)",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/jobs?search=&location=&emirate=Dubai&company=&job_type=Fulltime&work_model=&salary_min=&salary_max=&featured=&posted_within_days=&sort=relevance",
+              "host": ["{{baseUrl}}"], "path": ["api", "jobs"],
+              "query": [
+                { "key": "search", "value": "", "description": "matches title/company/description" },
+                { "key": "location", "value": "" },
+                { "key": "emirate", "value": "Dubai" },
+                { "key": "company", "value": "" },
+                { "key": "job_type", "value": "Fulltime" },
+                { "key": "work_model", "value": "", "description": "Remote | Hybrid | On-site" },
+                { "key": "salary_min", "value": "" },
+                { "key": "salary_max", "value": "" },
+                { "key": "featured", "value": "", "description": "1 to filter featured only" },
+                { "key": "posted_within_days", "value": "" },
+                { "key": "sort", "value": "relevance", "description": "relevance | newest | salary" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Job Detail",
+          "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/api/jobs/{{jobId}}", "host": ["{{baseUrl}}"], "path": ["api", "jobs", "{{jobId}}"] } }
+        },
+        {
+          "name": "AI: Generate Job Description (auth)",
+          "request": {
+            "method": "POST",
+            "url": { "raw": "{{baseUrl}}/api/jobs/ai/generate-description", "host": ["{{baseUrl}}"], "path": ["api", "jobs", "ai", "generate-description"] },
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"title\": \"Software Engineer\",\n  \"company\": \"Nexora Systems\",\n  \"category\": \"IT\",\n  \"location\": \"Dubai, UAE\",\n  \"jobType\": \"Fulltime\",\n  \"experienceLevel\": \"3+ years\"\n}" }
+          }
+        },
+        {
+          "name": "AI: Improve Job Description (auth)",
+          "request": {
+            "method": "POST",
+            "url": { "raw": "{{baseUrl}}/api/jobs/ai/improve-description", "host": ["{{baseUrl}}"], "path": ["api", "jobs", "ai", "improve-description"] },
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"title\": \"Software Engineer\",\n  \"existingDescription\": \"we need dev who no good at code plz help\"\n}" }
+          }
+        },
+        {
+          "name": "AI: Generate Responsibilities (auth)",
+          "request": {
+            "method": "POST",
+            "url": { "raw": "{{baseUrl}}/api/jobs/ai/generate-responsibilities", "host": ["{{baseUrl}}"], "path": ["api", "jobs", "ai", "generate-responsibilities"] },
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"title\": \"Software Engineer\",\n  \"category\": \"IT\"\n}" }
+          }
+        },
+        {
+          "name": "AI: Generate Qualifications (auth)",
+          "request": {
+            "method": "POST",
+            "url": { "raw": "{{baseUrl}}/api/jobs/ai/generate-qualifications", "host": ["{{baseUrl}}"], "path": ["api", "jobs", "ai", "generate-qualifications"] },
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"title\": \"Software Engineer\",\n  \"experienceLevel\": \"3+ years\"\n}" }
+          }
+        },
+        {
+          "name": "AI: Suggest Skills (auth)",
+          "request": {
+            "method": "POST",
+            "url": { "raw": "{{baseUrl}}/api/jobs/ai/suggest-skills", "host": ["{{baseUrl}}"], "path": ["api", "jobs", "ai", "suggest-skills"] },
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"title\": \"Software Engineer\",\n  \"category\": \"IT\"\n}" }
+          }
+        },
+        {
+          "name": "AI: Suggest Job Titles (auth)",
+          "request": {
+            "method": "POST",
+            "url": { "raw": "{{baseUrl}}/api/jobs/ai/suggest-titles", "host": ["{{baseUrl}}"], "path": ["api", "jobs", "ai", "suggest-titles"] },
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"existingDescription\": \"Design and build scalable backend services.\"\n}" }
+          }
+        },
+        {
+          "name": "AI: Generate Screening Questions (auth)",
+          "request": {
+            "method": "POST",
+            "url": { "raw": "{{baseUrl}}/api/jobs/ai/generate-screening-questions", "host": ["{{baseUrl}}"], "path": ["api", "jobs", "ai", "generate-screening-questions"] },
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"title\": \"Software Engineer\",\n  \"experienceLevel\": \"3+ years\"\n}" }
+          }
+        },
+        {
+          "name": "AI: Generate SEO Content (auth)",
+          "request": {
+            "method": "POST",
+            "url": { "raw": "{{baseUrl}}/api/jobs/ai/generate-seo", "host": ["{{baseUrl}}"], "path": ["api", "jobs", "ai", "generate-seo"] },
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"title\": \"Software Engineer\",\n  \"company\": \"Nexora Systems\",\n  \"location\": \"Dubai, UAE\"\n}" }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Real Estate",
+      "item": [
+        {
+          "name": "Get Real Estate Hub",
+          "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/api/realestate", "host": ["{{baseUrl}}"], "path": ["api", "realestate"] } }
+        },
+        {
+          "name": "List Properties",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/realestate/properties?category=&purpose=&emirate=Dubai&search=&bedrooms=&page=1&pageSize=25",
+              "host": ["{{baseUrl}}"], "path": ["api", "realestate", "properties"],
+              "query": [
+                { "key": "category", "value": "" },
+                { "key": "purpose", "value": "", "description": "e.g. Sale | Rent" },
+                { "key": "emirate", "value": "Dubai" },
+                { "key": "search", "value": "" },
+                { "key": "bedrooms", "value": "" },
+                { "key": "page", "value": "1" },
+                { "key": "pageSize", "value": "25" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Property Detail",
+          "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/api/realestate/properties/{{propertyId}}", "host": ["{{baseUrl}}"], "path": ["api", "realestate", "properties", "{{propertyId}}"] } }
+        },
+        {
+          "name": "List Real Estate Companies",
+          "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/api/realestate/companies", "host": ["{{baseUrl}}"], "path": ["api", "realestate", "companies"] } }
+        },
+        {
+          "name": "Get Company Detail",
+          "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/api/realestate/companies/{{companyId}}", "host": ["{{baseUrl}}"], "path": ["api", "realestate", "companies", "{{companyId}}"] } }
+        },
+        {
+          "name": "List Off-Plan Projects",
+          "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/api/realestate/projects", "host": ["{{baseUrl}}"], "path": ["api", "realestate", "projects"] } }
+        },
+        {
+          "name": "Get Project Detail",
+          "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/api/realestate/projects/{{projectId}}", "host": ["{{baseUrl}}"], "path": ["api", "realestate", "projects", "{{projectId}}"] } }
+        }
+      ]
+    },
+    {
+      "name": "Classifieds",
+      "item": [
+        {
+          "name": "Get Classifieds Hub",
+          "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/api/classifieds", "host": ["{{baseUrl}}"], "path": ["api", "classifieds"] } }
+        },
+        {
+          "name": "List Classifieds",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/classifieds/list?category=&section=&search=&page=1&pageSize=25",
+              "host": ["{{baseUrl}}"], "path": ["api", "classifieds", "list"],
+              "query": [
+                { "key": "category", "value": "" },
+                { "key": "section", "value": "" },
+                { "key": "search", "value": "" },
+                { "key": "page", "value": "1" },
+                { "key": "pageSize", "value": "25" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Classified Detail",
+          "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/api/classifieds/{{classifiedId}}", "host": ["{{baseUrl}}"], "path": ["api", "classifieds", "{{classifiedId}}"] } }
+        }
+      ]
+    },
+    {
+      "name": "Categories",
+      "item": [
+        {
+          "name": "List Categories",
+          "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/api/categories?search=", "host": ["{{baseUrl}}"], "path": ["api", "categories"], "query": [{ "key": "search", "value": "" }] } }
+        },
+        {
+          "name": "Top Categories",
+          "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/api/categories/top", "host": ["{{baseUrl}}"], "path": ["api", "categories", "top"] } }
+        },
+        {
+          "name": "Category Tags (search chips)",
+          "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/api/categories/tags?q=", "host": ["{{baseUrl}}"], "path": ["api", "categories", "tags"], "query": [{ "key": "q", "value": "" }] } }
+        },
+        {
+          "name": "Track Category Click",
+          "request": { "method": "POST", "url": { "raw": "{{baseUrl}}/api/categories/track/{{categoryId}}", "host": ["{{baseUrl}}"], "path": ["api", "categories", "track", "{{categoryId}}"] } }
+        }
+      ]
+    },
+    {
+      "name": "Events",
+      "item": [
+        {
+          "name": "List Event Categories",
+          "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/api/events/categories", "host": ["{{baseUrl}}"], "path": ["api", "events", "categories"] } }
+        },
+        {
+          "name": "List Events",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/events?category=&emirate=&search=&featured=&past=&page=1&pageSize=25",
+              "host": ["{{baseUrl}}"], "path": ["api", "events"],
+              "query": [
+                { "key": "category", "value": "" },
+                { "key": "emirate", "value": "" },
+                { "key": "search", "value": "" },
+                { "key": "featured", "value": "", "description": "1 for featured only" },
+                { "key": "past", "value": "", "description": "1 to include past events" },
+                { "key": "page", "value": "1" },
+                { "key": "pageSize", "value": "25" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Event Detail",
+          "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/api/events/{{eventId}}", "host": ["{{baseUrl}}"], "path": ["api", "events", "{{eventId}}"] } }
+        }
+      ]
+    },
+    {
+      "name": "Collections",
+      "item": [
+        {
+          "name": "List Collections",
+          "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/api/collections", "host": ["{{baseUrl}}"], "path": ["api", "collections"] } }
+        },
+        {
+          "name": "Get Collection Detail",
+          "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/api/collections/{{collectionId}}", "host": ["{{baseUrl}}"], "path": ["api", "collections", "{{collectionId}}"] } }
+        }
+      ]
+    },
+    {
+      "name": "Doctors",
+      "item": [
+        {
+          "name": "Get Doctors Hub",
+          "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/api/doctors", "host": ["{{baseUrl}}"], "path": ["api", "doctors"] } }
+        },
+        {
+          "name": "List Doctors",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/doctors/list?specialty=&hospital=&emirate=&search=&available_today=&top_rated=&sort=rating&page=1&pageSize=30",
+              "host": ["{{baseUrl}}"], "path": ["api", "doctors", "list"],
+              "query": [
+                { "key": "specialty", "value": "" },
+                { "key": "hospital", "value": "", "description": "business_id" },
+                { "key": "emirate", "value": "" },
+                { "key": "search", "value": "" },
+                { "key": "available_today", "value": "", "description": "1" },
+                { "key": "top_rated", "value": "", "description": "1" },
+                { "key": "sort", "value": "rating", "description": "fee_low | fee_high | rating | experience" },
+                { "key": "page", "value": "1" },
+                { "key": "pageSize", "value": "30" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Doctor Detail",
+          "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/api/doctors/{{doctorId}}", "host": ["{{baseUrl}}"], "path": ["api", "doctors", "{{doctorId}}"] } }
+        }
+      ]
+    },
+    {
+      "name": "Universities",
+      "item": [
+        {
+          "name": "Get Universities Hub",
+          "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/api/universities", "host": ["{{baseUrl}}"], "path": ["api", "universities"] } }
+        },
+        {
+          "name": "List Universities",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/universities/list?institution_type=&search=&page=1&pageSize=25",
+              "host": ["{{baseUrl}}"], "path": ["api", "universities", "list"],
+              "query": [{ "key": "institution_type", "value": "" }, { "key": "search", "value": "" }, { "key": "page", "value": "1" }, { "key": "pageSize", "value": "25" }]
+            }
+          }
+        },
+        {
+          "name": "Browse Courses",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/universities/courses?course_category=&study_level=&institution_type=&emirate=&university=&search=&page=1&pageSize=30",
+              "host": ["{{baseUrl}}"], "path": ["api", "universities", "courses"],
+              "query": [
+                { "key": "course_category", "value": "" },
+                { "key": "study_level", "value": "" },
+                { "key": "institution_type", "value": "" },
+                { "key": "emirate", "value": "" },
+                { "key": "university", "value": "", "description": "business_id" },
+                { "key": "search", "value": "" },
+                { "key": "page", "value": "1" },
+                { "key": "pageSize", "value": "30" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Course Detail",
+          "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/api/universities/courses/{{courseId}}", "host": ["{{baseUrl}}"], "path": ["api", "universities", "courses", "{{courseId}}"] } }
+        },
+        {
+          "name": "Get University Detail",
+          "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/api/universities/{{universityId}}", "host": ["{{baseUrl}}"], "path": ["api", "universities", "{{universityId}}"] } }
+        }
+      ]
+    },
+    {
+      "name": "Search",
+      "item": [
+        {
+          "name": "Unified Search",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/search?q=cafe&tab=keyword&page=1",
+              "host": ["{{baseUrl}}"], "path": ["api", "search"],
+              "query": [{ "key": "q", "value": "cafe" }, { "key": "tab", "value": "keyword", "description": "keyword | business | jobs | products | offers | events | realestate" }, { "key": "page", "value": "1" }]
+            }
+          }
+        },
+        {
+          "name": "Top Searched Keywords",
+          "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/api/search/top-keywords", "host": ["{{baseUrl}}"], "path": ["api", "search", "top-keywords"] } }
+        },
+        {
+          "name": "Track Search Keyword",
+          "request": {
+            "method": "POST",
+            "url": { "raw": "{{baseUrl}}/api/search/track", "host": ["{{baseUrl}}"], "path": ["api", "search", "track"] },
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"keyword\": \"cafe\"\n}" }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Taxonomy",
+      "item": [
+        {
+          "name": "Search Skills",
+          "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/api/skills?search=", "host": ["{{baseUrl}}"], "path": ["api", "skills"], "query": [{ "key": "search", "value": "" }] } }
+        },
+        {
+          "name": "Search Languages",
+          "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/api/languages?search=", "host": ["{{baseUrl}}"], "path": ["api", "languages"], "query": [{ "key": "search", "value": "" }] } }
+        }
+      ]
+    },
+    {
+      "name": "Pages",
+      "item": [
+        {
+          "name": "Get Static Page",
+          "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/api/pages/{{pageSlug}}", "host": ["{{baseUrl}}"], "path": ["api", "pages", "{{pageSlug}}"] } }
+        }
+      ]
+    },
+    {
+      "name": "Profiles",
+      "item": [
+        {
+          "name": "Get Public Profile",
+          "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/api/profiles/{{profileId}}", "host": ["{{baseUrl}}"], "path": ["api", "profiles", "{{profileId}}"] } }
+        }
+      ]
+    },
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "Send OTP",
+          "request": {
+            "method": "POST",
+            "url": { "raw": "{{baseUrl}}/api/auth/send-otp", "host": ["{{baseUrl}}"], "path": ["api", "auth", "send-otp"] },
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"identifier\": \"user@example.com\",\n  \"channel\": \"email\",\n  \"type\": \"signup\"\n}" }
+          }
+        },
+        {
+          "name": "Verify OTP",
+          "request": {
+            "method": "POST",
+            "url": { "raw": "{{baseUrl}}/api/auth/verify-otp", "host": ["{{baseUrl}}"], "path": ["api", "auth", "verify-otp"] },
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"identifier\": \"user@example.com\",\n  \"otp_code\": \"123456\",\n  \"type\": \"signup\"\n}" }
+          }
+        },
+        {
+          "name": "Register",
+          "request": {
+            "method": "POST",
+            "url": { "raw": "{{baseUrl}}/api/auth/register", "host": ["{{baseUrl}}"], "path": ["api", "auth", "register"] },
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"name\": \"Test User\",\n  \"email\": \"user@example.com\",\n  \"mobile\": \"+971500000000\",\n  \"emirate\": \"Dubai\",\n  \"otp_code\": \"123456\"\n}" }
+          }
+        },
+        {
+          "name": "Login (password, legacy)",
+          "request": {
+            "method": "POST",
+            "url": { "raw": "{{baseUrl}}/api/auth/login", "host": ["{{baseUrl}}"], "path": ["api", "auth", "login"] },
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"identifier\": \"user@example.com\",\n  \"password\": \"secret\"\n}" }
+          }
+        },
+        {
+          "name": "Login via OTP",
+          "request": {
+            "method": "POST",
+            "url": { "raw": "{{baseUrl}}/api/auth/login-otp", "host": ["{{baseUrl}}"], "path": ["api", "auth", "login-otp"] },
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"identifier\": \"user@example.com\",\n  \"otp_code\": \"123456\"\n}" }
+          }
+        },
+        {
+          "name": "Reset Password",
+          "request": {
+            "method": "POST",
+            "url": { "raw": "{{baseUrl}}/api/auth/reset-password", "host": ["{{baseUrl}}"], "path": ["api", "auth", "reset-password"] },
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"identifier\": \"user@example.com\",\n  \"otp_code\": \"123456\",\n  \"new_password\": \"newSecret123\"\n}" }
+          }
+        },
+        {
+          "name": "Get Current User (auth)",
+          "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/api/auth/me", "host": ["{{baseUrl}}"], "path": ["api", "auth", "me"] } }
+        },
+        {
+          "name": "Logout",
+          "request": { "method": "POST", "url": { "raw": "{{baseUrl}}/api/auth/logout", "host": ["{{baseUrl}}"], "path": ["api", "auth", "logout"] } }
+        }
+      ]
+    },
+    {
+      "name": "My Account (auth required)",
+      "item": [
+        {
+          "name": "Profile",
+          "item": [
+            { "name": "Get My Profile", "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/api/user/profile", "host": ["{{baseUrl}}"], "path": ["api", "user", "profile"] } } },
+            {
+              "name": "Update My Profile",
+              "request": {
+                "method": "PUT",
+                "url": { "raw": "{{baseUrl}}/api/user/profile", "host": ["{{baseUrl}}"], "path": ["api", "user", "profile"] },
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "body": { "mode": "raw", "raw": "{\n  \"name\": \"Test User\",\n  \"mobile\": \"+971500000000\",\n  \"emirate\": \"Dubai\"\n}" }
+              }
+            },
+            {
+              "name": "Upload Avatar",
+              "request": {
+                "method": "POST",
+                "url": { "raw": "{{baseUrl}}/api/user/avatar", "host": ["{{baseUrl}}"], "path": ["api", "user", "avatar"] },
+                "body": { "mode": "formdata", "formdata": [{ "key": "file", "type": "file", "src": "" }] }
+              }
+            }
+          ]
+        },
+        {
+          "name": "My Businesses",
+          "item": [
+            { "name": "List My Businesses", "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/api/user/businesses", "host": ["{{baseUrl}}"], "path": ["api", "user", "businesses"] } } },
+            {
+              "name": "Create Business",
+              "request": {
+                "method": "POST",
+                "url": { "raw": "{{baseUrl}}/api/user/businesses", "host": ["{{baseUrl}}"], "path": ["api", "user", "businesses"] },
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "body": { "mode": "raw", "raw": "{\n  \"name\": \"My New Business\",\n  \"category_id\": 1,\n  \"tagline\": \"Best in town\",\n  \"description\": \"...\",\n  \"emirate\": \"Dubai\",\n  \"address\": \"...\",\n  \"phone\": \"+971500000000\",\n  \"whatsapp\": \"+971500000000\",\n  \"email\": \"biz@example.com\",\n  \"website\": \"https://example.com\"\n}" }
+              }
+            },
+            {
+              "name": "Update Business",
+              "request": {
+                "method": "PUT",
+                "url": { "raw": "{{baseUrl}}/api/user/businesses/{{businessId}}", "host": ["{{baseUrl}}"], "path": ["api", "user", "businesses", "{{businessId}}"] },
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "body": { "mode": "raw", "raw": "{\n  \"name\": \"My Updated Business\"\n}" }
+              }
+            }
+          ]
+        },
+        {
+          "name": "My Reviews",
+          "item": [
+            { "name": "List Pending Reviews (on my businesses)", "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/api/user/reviews/pending", "host": ["{{baseUrl}}"], "path": ["api", "user", "reviews", "pending"] } } },
+            {
+              "name": "Approve/Reject Review",
+              "request": {
+                "method": "POST",
+                "url": { "raw": "{{baseUrl}}/api/user/reviews/{{reviewId}}/decision", "host": ["{{baseUrl}}"], "path": ["api", "user", "reviews", "{{reviewId}}", "decision"] },
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "body": { "mode": "raw", "raw": "{\n  \"action\": \"approve\"\n}" }
+              }
+            }
+          ]
+        },
+        {
+          "name": "My Jobs",
+          "item": [
+            { "name": "List My Posted Jobs", "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/api/user/jobs", "host": ["{{baseUrl}}"], "path": ["api", "user", "jobs"] } } },
+            {
+              "name": "Post New Job",
+              "request": {
+                "method": "POST",
+                "url": { "raw": "{{baseUrl}}/api/user/jobs", "host": ["{{baseUrl}}"], "path": ["api", "user", "jobs"] },
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "body": { "mode": "raw", "raw": "{\n  \"title\": \"Software Engineer\",\n  \"company\": \"My Company\",\n  \"location\": \"Dubai, UAE\",\n  \"emirate\": \"Dubai\",\n  \"job_type\": \"Fulltime\",\n  \"work_model\": \"Hybrid\",\n  \"salary_min\": 8000,\n  \"salary_max\": 14000,\n  \"currency\": \"AED\",\n  \"description\": \"...\",\n  \"requirements\": \"...\",\n  \"benefits\": \"...\"\n}" }
+              }
+            },
+            {
+              "name": "Update My Job",
+              "request": {
+                "method": "PUT",
+                "url": { "raw": "{{baseUrl}}/api/user/jobs/{{jobId}}", "host": ["{{baseUrl}}"], "path": ["api", "user", "jobs", "{{jobId}}"] },
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "body": { "mode": "raw", "raw": "{\n  \"title\": \"Senior Software Engineer\"\n}" }
+              }
+            },
+            { "name": "List Applicants for My Job", "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/api/user/jobs/{{jobId}}/applicants", "host": ["{{baseUrl}}"], "path": ["api", "user", "jobs", "{{jobId}}", "applicants"] } } },
+            {
+              "name": "Update Applicant Status (shortlist/reject)",
+              "request": {
+                "method": "PUT",
+                "url": { "raw": "{{baseUrl}}/api/user/jobs/{{jobId}}/applicants/{{applicationId}}", "host": ["{{baseUrl}}"], "path": ["api", "user", "jobs", "{{jobId}}", "applicants", "{{applicationId}}"] },
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "body": { "mode": "raw", "raw": "{\n  \"status\": \"shortlisted\"\n}" }
+              }
+            }
+          ]
+        },
+        {
+          "name": "My Applications",
+          "item": [
+            { "name": "List Jobs I Applied To", "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/api/user/applied-jobs", "host": ["{{baseUrl}}"], "path": ["api", "user", "applied-jobs"] } } },
+            {
+              "name": "Apply to a Job",
+              "request": {
+                "method": "POST",
+                "url": { "raw": "{{baseUrl}}/api/user/applications", "host": ["{{baseUrl}}"], "path": ["api", "user", "applications"] },
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "body": { "mode": "raw", "raw": "{\n  \"job_id\": {{jobId}},\n  \"cover_letter\": \"I'm a great fit for this role...\"\n}" }
+              }
+            },
+            { "name": "Check If Already Applied", "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/api/user/applications/check/{{jobId}}", "host": ["{{baseUrl}}"], "path": ["api", "user", "applications", "check", "{{jobId}}"] } } }
+          ]
+        },
+        {
+          "name": "My CV",
+          "item": [
+            { "name": "Get My CV", "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/api/user/cv", "host": ["{{baseUrl}}"], "path": ["api", "user", "cv"] } } },
+            {
+              "name": "Update My CV",
+              "request": {
+                "method": "PUT",
+                "url": { "raw": "{{baseUrl}}/api/user/cv", "host": ["{{baseUrl}}"], "path": ["api", "user", "cv"] },
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "body": { "mode": "raw", "raw": "{\n  \"full_name\": \"Test User\",\n  \"title\": \"Software Engineer\",\n  \"email\": \"user@example.com\",\n  \"phone\": \"+971500000000\",\n  \"location\": \"Dubai, UAE\",\n  \"visa_status\": \"Employment Visa\",\n  \"notice_period\": \"Immediate\",\n  \"experience_years\": 5,\n  \"technical_skills\": \"JavaScript, React, Node.js\",\n  \"languages\": \"English, Arabic\"\n}" }
+              }
+            },
+            { "name": "List My Work Experience", "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/api/user/work-experience", "host": ["{{baseUrl}}"], "path": ["api", "user", "work-experience"] } } },
+            {
+              "name": "Add Work Experience",
+              "request": {
+                "method": "POST",
+                "url": { "raw": "{{baseUrl}}/api/user/work-experience", "host": ["{{baseUrl}}"], "path": ["api", "user", "work-experience"] },
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "body": { "mode": "raw", "raw": "{\n  \"job_title\": \"Software Engineer\",\n  \"company\": \"Nexora Systems\",\n  \"location\": \"Dubai, UAE\",\n  \"start_month\": 1,\n  \"start_year\": 2022,\n  \"is_current\": true,\n  \"description\": \"...\"\n}" }
+              }
+            },
+            {
+              "name": "Update Work Experience",
+              "request": {
+                "method": "PUT",
+                "url": { "raw": "{{baseUrl}}/api/user/work-experience/{{workExperienceId}}", "host": ["{{baseUrl}}"], "path": ["api", "user", "work-experience", "{{workExperienceId}}"] },
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "body": { "mode": "raw", "raw": "{\n  \"job_title\": \"Senior Software Engineer\"\n}" }
+              }
+            },
+            { "name": "Delete Work Experience", "request": { "method": "DELETE", "url": { "raw": "{{baseUrl}}/api/user/work-experience/{{workExperienceId}}", "host": ["{{baseUrl}}"], "path": ["api", "user", "work-experience", "{{workExperienceId}}"] } } },
+            {
+              "name": "Add Skill Tag",
+              "request": {
+                "method": "POST",
+                "url": { "raw": "{{baseUrl}}/api/user/skills", "host": ["{{baseUrl}}"], "path": ["api", "user", "skills"] },
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "body": { "mode": "raw", "raw": "{\n  \"name\": \"TypeScript\"\n}" }
+              }
+            },
+            {
+              "name": "Add Language Tag",
+              "request": {
+                "method": "POST",
+                "url": { "raw": "{{baseUrl}}/api/user/languages", "host": ["{{baseUrl}}"], "path": ["api", "user", "languages"] },
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "body": { "mode": "raw", "raw": "{\n  \"name\": \"French\"\n}" }
+              }
+            }
+          ]
+        },
+        {
+          "name": "My Classifieds",
+          "item": [
+            { "name": "List My Classifieds", "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/api/user/classifieds", "host": ["{{baseUrl}}"], "path": ["api", "user", "classifieds"] } } },
+            { "name": "Get My Classified Detail", "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/api/user/classifieds/{{classifiedId}}", "host": ["{{baseUrl}}"], "path": ["api", "user", "classifieds", "{{classifiedId}}"] } } },
+            {
+              "name": "Create Classified",
+              "request": {
+                "method": "POST",
+                "url": { "raw": "{{baseUrl}}/api/user/classifieds", "host": ["{{baseUrl}}"], "path": ["api", "user", "classifieds"] },
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "body": { "mode": "raw", "raw": "{\n  \"title\": \"iPhone 15 Pro\",\n  \"description\": \"Excellent condition\",\n  \"price\": 3500,\n  \"currency\": \"AED\",\n  \"category_id\": 1,\n  \"location\": \"Dubai\",\n  \"brand\": \"Apple\",\n  \"model\": \"iPhone 15 Pro\",\n  \"condition_status\": \"Used\",\n  \"storage\": \"256GB\"\n}" }
+              }
+            },
+            {
+              "name": "Update Classified",
+              "request": {
+                "method": "PUT",
+                "url": { "raw": "{{baseUrl}}/api/user/classifieds/{{classifiedId}}", "host": ["{{baseUrl}}"], "path": ["api", "user", "classifieds", "{{classifiedId}}"] },
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "body": { "mode": "raw", "raw": "{\n  \"price\": 3200\n}" }
+              }
+            },
+            {
+              "name": "Upload Classified Images",
+              "request": {
+                "method": "POST",
+                "url": { "raw": "{{baseUrl}}/api/user/classifieds/{{classifiedId}}/images", "host": ["{{baseUrl}}"], "path": ["api", "user", "classifieds", "{{classifiedId}}", "images"] },
+                "body": { "mode": "formdata", "formdata": [{ "key": "files", "type": "file", "src": "" }] }
+              }
+            },
+            { "name": "Delete Classified Image", "request": { "method": "DELETE", "url": { "raw": "{{baseUrl}}/api/user/classifieds/{{classifiedId}}/images/{{imageId}}", "host": ["{{baseUrl}}"], "path": ["api", "user", "classifieds", "{{classifiedId}}", "images", "{{imageId}}"] } } }
+          ]
+        },
+        {
+          "name": "My Real Estate",
+          "item": [
+            { "name": "List My Properties", "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/api/user/realestate/properties", "host": ["{{baseUrl}}"], "path": ["api", "user", "realestate", "properties"] } } },
+            { "name": "Get My Property Detail", "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/api/user/realestate/properties/{{propertyId}}", "host": ["{{baseUrl}}"], "path": ["api", "user", "realestate", "properties", "{{propertyId}}"] } } },
+            {
+              "name": "Create Property",
+              "request": {
+                "method": "POST",
+                "url": { "raw": "{{baseUrl}}/api/user/realestate/properties", "host": ["{{baseUrl}}"], "path": ["api", "user", "realestate", "properties"] },
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "body": { "mode": "raw", "raw": "{\n  \"title\": \"2BR Apartment in Marina\",\n  \"category_id\": 1,\n  \"description\": \"...\",\n  \"purpose\": \"Rent\",\n  \"price\": 120000,\n  \"currency\": \"AED\",\n  \"rent_period\": \"Yearly\",\n  \"bedrooms\": 2,\n  \"bathrooms\": 2,\n  \"area_sqft\": 1200,\n  \"furnished\": true,\n  \"emirate\": \"Dubai\",\n  \"location\": \"Dubai Marina\"\n}" }
+              }
+            },
+            {
+              "name": "Update Property",
+              "request": {
+                "method": "PUT",
+                "url": { "raw": "{{baseUrl}}/api/user/realestate/properties/{{propertyId}}", "host": ["{{baseUrl}}"], "path": ["api", "user", "realestate", "properties", "{{propertyId}}"] },
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "body": { "mode": "raw", "raw": "{\n  \"price\": 115000\n}" }
+              }
+            },
+            {
+              "name": "Upload Property Images",
+              "request": {
+                "method": "POST",
+                "url": { "raw": "{{baseUrl}}/api/user/realestate/properties/{{propertyId}}/images", "host": ["{{baseUrl}}"], "path": ["api", "user", "realestate", "properties", "{{propertyId}}", "images"] },
+                "body": { "mode": "formdata", "formdata": [{ "key": "files", "type": "file", "src": "" }] }
+              }
+            },
+            { "name": "Delete Property Image", "request": { "method": "DELETE", "url": { "raw": "{{baseUrl}}/api/user/realestate/properties/{{propertyId}}/images/{{imageId}}", "host": ["{{baseUrl}}"], "path": ["api", "user", "realestate", "properties", "{{propertyId}}", "images", "{{imageId}}"] } } },
+            { "name": "List My Companies", "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/api/user/realestate/companies", "host": ["{{baseUrl}}"], "path": ["api", "user", "realestate", "companies"] } } },
+            { "name": "Get My Company Detail", "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/api/user/realestate/companies/{{companyId}}", "host": ["{{baseUrl}}"], "path": ["api", "user", "realestate", "companies", "{{companyId}}"] } } },
+            {
+              "name": "Create Company",
+              "request": {
+                "method": "POST",
+                "url": { "raw": "{{baseUrl}}/api/user/realestate/companies", "host": ["{{baseUrl}}"], "path": ["api", "user", "realestate", "companies"] },
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "body": { "mode": "raw", "raw": "{\n  \"name\": \"My Real Estate Co\",\n  \"about\": \"...\",\n  \"phone\": \"+971500000000\",\n  \"emirate\": \"Dubai\",\n  \"address\": \"...\"\n}" }
+              }
+            },
+            {
+              "name": "Update Company",
+              "request": {
+                "method": "PUT",
+                "url": { "raw": "{{baseUrl}}/api/user/realestate/companies/{{companyId}}", "host": ["{{baseUrl}}"], "path": ["api", "user", "realestate", "companies", "{{companyId}}"] },
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "body": { "mode": "raw", "raw": "{\n  \"about\": \"Updated description\"\n}" }
+              }
+            },
+            {
+              "name": "Upload Company Logo",
+              "request": {
+                "method": "POST",
+                "url": { "raw": "{{baseUrl}}/api/user/realestate/companies/{{companyId}}/logo", "host": ["{{baseUrl}}"], "path": ["api", "user", "realestate", "companies", "{{companyId}}", "logo"] },
+                "body": { "mode": "formdata", "formdata": [{ "key": "file", "type": "file", "src": "" }] }
+              }
+            },
+            {
+              "name": "Upload Company Banner",
+              "request": {
+                "method": "POST",
+                "url": { "raw": "{{baseUrl}}/api/user/realestate/companies/{{companyId}}/banner", "host": ["{{baseUrl}}"], "path": ["api", "user", "realestate", "companies", "{{companyId}}", "banner"] },
+                "body": { "mode": "formdata", "formdata": [{ "key": "file", "type": "file", "src": "" }] }
+              }
+            },
+            { "name": "List My Projects", "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/api/user/realestate/projects", "host": ["{{baseUrl}}"], "path": ["api", "user", "realestate", "projects"] } } },
+            { "name": "Get My Project Detail", "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/api/user/realestate/projects/{{projectId}}", "host": ["{{baseUrl}}"], "path": ["api", "user", "realestate", "projects", "{{projectId}}"] } } },
+            {
+              "name": "Create Project",
+              "request": {
+                "method": "POST",
+                "url": { "raw": "{{baseUrl}}/api/user/realestate/projects", "host": ["{{baseUrl}}"], "path": ["api", "user", "realestate", "projects"] },
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "body": { "mode": "raw", "raw": "{\n  \"name\": \"Marina Heights\",\n  \"company_id\": {{companyId}},\n  \"developer\": \"Emaar\",\n  \"location\": \"Dubai Marina\",\n  \"emirate\": \"Dubai\",\n  \"description\": \"...\",\n  \"starting_price\": 900000,\n  \"currency\": \"AED\",\n  \"handover\": \"2027\"\n}" }
+              }
+            },
+            {
+              "name": "Update Project",
+              "request": {
+                "method": "PUT",
+                "url": { "raw": "{{baseUrl}}/api/user/realestate/projects/{{projectId}}", "host": ["{{baseUrl}}"], "path": ["api", "user", "realestate", "projects", "{{projectId}}"] },
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "body": { "mode": "raw", "raw": "{\n  \"starting_price\": 950000\n}" }
+              }
+            },
+            {
+              "name": "Upload Project Images",
+              "request": {
+                "method": "POST",
+                "url": { "raw": "{{baseUrl}}/api/user/realestate/projects/{{projectId}}/images", "host": ["{{baseUrl}}"], "path": ["api", "user", "realestate", "projects", "{{projectId}}", "images"] },
+                "body": { "mode": "formdata", "formdata": [{ "key": "files", "type": "file", "src": "" }] }
+              }
+            },
+            { "name": "Delete Project Image", "request": { "method": "DELETE", "url": { "raw": "{{baseUrl}}/api/user/realestate/projects/{{projectId}}/images/{{imageId}}", "host": ["{{baseUrl}}"], "path": ["api", "user", "realestate", "projects", "{{projectId}}", "images", "{{imageId}}"] } } }
+          ]
+        }
+      ]
+    }
+  ]
+}
